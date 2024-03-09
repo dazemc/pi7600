@@ -55,7 +55,7 @@ class SMS:
         :param message_type: str
         :return: str
         """
-        answer = self.send_at('AT+CMGL="REC UNREAD"', 'OK', 3)
+        answer = self.send_at(f'AT+CMGL={message_type}', 'OK', 3)
         if answer and message_type in answer:
             return answer
 
