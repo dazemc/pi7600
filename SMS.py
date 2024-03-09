@@ -1,14 +1,21 @@
+"""
+This provides SMS functionality
+"""
 import time
 from Settings import *
+from Globals import *
 
 
 # import RPi.GPIO as GPIO
 
 
 class SMS(Settings):
-    def __init__(self):
-        Settings.__init__(self)
-        self.phone_number = ""  # Number you are contacting
+    """
+    Initialize the SMS class.
+    """
+    def __init__(self, contact_number):
+        super().__init__()
+        self.phone_number = contact_number  # Number you are contacting
         self.rec_buff = ''
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
@@ -66,4 +73,5 @@ class SMS(Settings):
             except:
                 if self.ser is not None:
                     self.ser.close()
+                    sys.exit(EXIT_SUCCESS_CODE)
                 # GPIO.cleanup()
