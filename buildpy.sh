@@ -21,7 +21,7 @@ tar xvf Python-3.12.2.tgz
 cd Python-3.12.2 || exit
 echo "Building, this will take a while..."
 ./configure --enable-optimizations --with-ensurepip=install
-make -j 'nproc'
+make -j $(nproc)
 make altinstall
 echo "Resetting swap"
 dphys-swapfile swapoff
