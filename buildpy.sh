@@ -1,4 +1,4 @@
-  GNU nano 6.2                                                                                                               test.sh                                                                                                                        #!/bin/bash
+#!/bin/bash
 echo "Checking for root"
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
