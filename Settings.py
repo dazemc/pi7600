@@ -5,6 +5,7 @@ import serial
 import sys
 from Globals import *
 
+
 # import RPi.GPIO as GPIO
 
 
@@ -15,7 +16,8 @@ def py_version_check() -> bool:
     """
     try:
         if float(sys.version[:sys.version[2:].find('.') + 2]) < 3.10:
-            print("Python version must be 3.10 or greater, buildpy.sh will build latest release from source")
+            print("Python version must be 3.10 or greater, buildpy.sh will build latest stable release from source. "
+                  "Alternatively, you can use the included venv with ./venv/Scripts/activate")
             print("\nExiting...")
             return False
     except:
@@ -27,11 +29,15 @@ def py_version_check() -> bool:
 
 
 class Settings:
-    def __init__(self) -> None:
+    def __init__(self, com: str, baudrate: int) -> None:
         """
-        Initialize the Settings class.
+        Initializes Settings class
+        :param port: str
+        :param baudrate: int
         """
-        self.ser = serial.Serial("/dev/ttyUSB2", 115200)  # pi zero w should always be USB2@115200
+        self.com = com
+        self.baudrate = baudrate
+        self.ser = serial.Serial(self.com, self.baudrate)
         self.ser.flushInput()
         self.first_run = True
         if self.first_run:
