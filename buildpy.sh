@@ -14,7 +14,7 @@ dphys-swapfile swapon
 echo "Updating and installing dependencies"
 apt-get update && sudo apt-get upgrade -y
 apt-get install build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev
-echo "Downloading Python 3.13"
+echo "Downloading Python 3.12.2"
 wget https://www.python.org/ftp/python/3.12.2/Python-3.12.2.tgz
 echo "Extracting.."
 tar xvf Python-3.12.2.tgz
