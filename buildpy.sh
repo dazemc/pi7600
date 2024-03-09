@@ -1,5 +1,8 @@
-echo "Checking for su"
-sudo su || exit
+echo "Checking for root"
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
 echo "Increasing swap size"
 dphys-swapfile swapoff
 cp /etc/dphys-swapfile /etc/dphys-swapfile.bak
@@ -9,8 +12,7 @@ dphys-swapfile setup
 dphys-swapfile swapon
 echo "Updating and installing dependencies"
 apt-get update && sudo apt-get upgrade -y
-apt-get install build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsqlite3-dev libssl-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev libffi-dev
-echo "Downloading Python 3.13"
+apt-get install build-essential tk-dev libncurses5-dev libncursesw5-dev libreadline6-dev libdb5.3-dev libgdbm-dev libsq>echo "Downloading Python 3.13"
 wget https://www.python.org/ftp/python/3.13.0/Python-3.13.0a4.tgz
 echo "Extracting.."
 tar xvf Python-3.13.0a4.tgz
