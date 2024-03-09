@@ -2,20 +2,30 @@
 
 import serial
 import time
+import os
 
 
 # import RPi.GPIO as GPIO
 
 
 class SMS:
-    def __init__(self):
-        self.ser = serial.Serial("/dev/ttyUSB2", 115200)
+    def __init__(self) -> None:
+        self.ser = serial.Serial("/dev/ttyUSB2", 115200)  # pi zero w should always be USB2@115200
         self.ser.flushInput()
 
-        self.phone_number = '4253217245'  # ********** change it to the phone number you want to call
+        self.phone_number = os.environ.get(
+            'CELL',  # Can be hardcoded as str, but environment variable is best practice.
+        )
         self.rec_buff = ''
 
-    def send_at(self, command, back, timeout):
+    def send_at(self, command: str, back: str, timeout: int) -> bool | str:
+        """
+        Send AT commands over serial. Returns 'False' on error or str on success.
+        :param command: str
+        :param back: str
+        :param timeout: int
+        :return: bool | str
+        """
         self.rec_buff = ''
         self.ser.write((command + '\r\n').encode())
         time.sleep(timeout)
@@ -25,29 +35,41 @@ class SMS:
         if back not in self.rec_buff.decode():
             print(command + ' ERROR')
             print(command + ' back:\t' + self.rec_buff.decode())
-            return 0
+            return False
         else:
             return self.rec_buff.decode()
 
-    def receive_message(self):
-        self.rec_buff = ''
+    def receive_message(self, message_type: str) -> str:
+        """
+        Sends SMS command to AT
+        :param message_type: str
+        :return: str
+        """
         answer = self.send_at('AT+CMGL="REC UNREAD"', 'OK', 3)
-        if answer and 'UNREAD' in answer:
-            print(answer)
-        else:
-            return False
+        if answer and message_type in answer:
+            return answer
 
-    def read_message(self):
+    def read_message(self, message_type: str) -> str:
+        """
+        Reads message from specified message type.
+        :param message_type: str
+        :return: str
+        """
         try:
-            self.receive_message()
+            return self.receive_message(message_type)
         except:
             if self.ser is not None:
                 self.ser.close()
 
-    def listen_message(self):
+    def listen_message(self, message_type: str) -> str:
+        """
+                Starts a loop that reads message(s) from specified message type.
+                :param message_type: str
+                :return: str
+                """
         while True:
             try:
-                self.receive_message()
+                return self.receive_message(message_type)
             except:
                 if self.ser is not None:
                     self.ser.close()
