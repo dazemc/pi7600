@@ -18,7 +18,7 @@ echo "Downloading Python 3.13"
 wget https://www.python.org/ftp/python/3.12.2/Python-3.12.2.tgz
 echo "Extracting.."
 tar xvf Python-3.12.2.tgz
-cd Python-3.13.0a4 || exit
+cd Python-3.12.2 || exit
 echo "Building, this will take a while..."
 ./configure --enable-optimizations --with-ensurepip=install
 make -j 'nproc'

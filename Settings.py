@@ -14,7 +14,12 @@ class Settings:
             first_run(self)
 
 
-def first_run(self):
+def first_run(self) -> None:
+    """
+    Initial environment checks
+    :param self:
+    :return: None
+    """
     pyversion = py_version_check()
     if pyversion:
         self.first_run = False
@@ -23,6 +28,10 @@ def first_run(self):
 
 
 def py_version_check() -> bool:
+    """
+    Python minimum version check
+    :return: bool
+    """
     try:
         if float(sys.version[:sys.version[2:].find('.') + 2]) < 3.10:
             print("Python version must be 3.10 or greater, buildpy.sh will build latest release from source")
