@@ -1,32 +1,15 @@
 #!/usr/bin/python
 
-import serial
 import time
-import os
-import sys
+from Settings import *
 
 
 # import RPi.GPIO as GPIO
 
-try:
-    if float(sys.version[:sys.version[2:].find('.') + 2]) < 3.10:
-        print("Python version must be 3.10 or greater, buildpy.sh will build latest release from source")
-        print("\nExiting...")
-        sys.exit(1)
-except:
-    if input("Python version check failed. Depends on 3.10 or greater, continue anyways(y/N?") == "":
-        print("\nExiting...")
-        sys.exit(1)
 
-class SMS:
-    def __init__(self) -> None:
-        self.ser = serial.Serial("/dev/ttyUSB2", 115200)  # pi zero w should always be USB2@115200
-        self.ser.flushInput()
-
-        self.phone_number = os.environ.get(
-            'CELL',  # Can be hardcoded as str, but environment variable is best practice.
-        )
-        self.rec_buff = ''
+class SMS(Settings):
+    def __init__(self):
+        Settings.__init__(self)
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
         """

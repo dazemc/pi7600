@@ -14,9 +14,9 @@ echo "Extracting.."
 tar xvf Python-3.13.0a4.tgz
 cd Python-3.13.0a4 || exit
 echo "Building, this will take a while..."
-./configure --enable-optimizations --with-ensurepip=install
-make -j 'nproc'
-make altinstall
+sudo ./configure --enable-optimizations --with-ensurepip=install
+sudo make -j 'nproc'
+sudo make altinstall
 echo "Resetting swap"
 sudo dphys-swapfile swapoff
 sudo rm /etc/dphys-swapfile
