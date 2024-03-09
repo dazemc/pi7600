@@ -11,8 +11,6 @@ class Settings:
     def __init__(self) -> None:
         self.ser = serial.Serial("/dev/ttyUSB2", 115200)  # pi zero w should always be USB2@115200
         self.ser.flushInput()
-        self.phone_number = ""  # Number you are contacting
-        self.rec_buff = ''
         self.first_run = True
         if self.first_run:
             first_run(self)

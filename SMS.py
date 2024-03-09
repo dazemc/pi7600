@@ -10,6 +10,8 @@ from Settings import *
 class SMS(Settings):
     def __init__(self):
         Settings.__init__(self)
+        self.phone_number = ""  # Number you are contacting
+        self.rec_buff = ''
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
         """
