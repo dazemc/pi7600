@@ -15,7 +15,8 @@ def py_version_check() -> bool:
     """
     try:
         if float(sys.version[:sys.version[2:].find('.') + 2]) < 3.10:
-            print("Python version must be 3.10 or greater, buildpy.sh will build latest release from source")
+            print("Python version must be 3.10 or greater, buildpy.sh will build latest stable release from source. "
+                  "Alternatively, you can use the included venv with ./venv/Scripts/activate")
             print("\nExiting...")
             return False
     except:
