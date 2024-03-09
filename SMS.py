@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import time
 from Settings import *
 
