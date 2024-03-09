@@ -2,7 +2,9 @@
 
 import serial
 import time
-import RPi.GPIO as GPIO
+
+
+# import RPi.GPIO as GPIO
 
 
 class SMS:
@@ -35,11 +37,18 @@ class SMS:
         else:
             return False
 
-    def listen(self):
+    def read_message(self):
+        try:
+            self.receive_message()
+        except:
+            if self.ser is not None:
+                self.ser.close()
+
+    def listen_message(self):
         while True:
             try:
                 self.receive_message()
             except:
                 if self.ser is not None:
                     self.ser.close()
-                GPIO.cleanup()
+                # GPIO.cleanup()
