@@ -8,13 +8,14 @@ from Globals import *
 
 # import RPi.GPIO as GPIO
 
-
+# TODO: Send message!
 class SMS(Settings):
     """
     Initialize the SMS class.
     """
+
     def __init__(self, contact_number):
-        super().__init__()
+        super().__init__(COM, BAUDRATE)
         self.phone_number = contact_number  # Number you are contacting
         self.rec_buff = ''
 
@@ -30,7 +31,7 @@ class SMS(Settings):
         self.ser.write((command + '\r\n').encode())
         time.sleep(timeout)
         if self.ser.inWaiting():
-            time.sleep(0.01)
+            time.sleep(BUFFER_WAIT_TIME)
             self.rec_buff = self.ser.read(self.ser.inWaiting())
         if back not in self.rec_buff.decode():
             print(command + ' ERROR')
@@ -45,7 +46,7 @@ class SMS(Settings):
         :param message_type: str
         :return: str
         """
-        answer = self.send_at(f'AT+CMGL={message_type}', 'OK', 3)
+        answer = self.send_at(f'AT+CMGL={message_type}', 'OK', TIMEOUT)
         if answer and message_type in answer:
             return answer
 

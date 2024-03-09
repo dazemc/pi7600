@@ -5,6 +5,7 @@ import serial
 import sys
 from Globals import *
 
+
 # import RPi.GPIO as GPIO
 
 
@@ -28,11 +29,15 @@ def py_version_check() -> bool:
 
 
 class Settings:
-    def __init__(self) -> None:
+    def __init__(self, com: str, baudrate: int) -> None:
         """
-        Initialize the Settings class.
+        Initializes Settings class
+        :param port: str
+        :param baudrate: int
         """
-        self.ser = serial.Serial("/dev/ttyUSB2", 115200)  # pi zero w should always be USB2@115200
+        self.com = com
+        self.baudrate = baudrate
+        self.ser = serial.Serial(self.com, self.baudrate)
         self.ser.flushInput()
         self.first_run = True
         if self.first_run:
