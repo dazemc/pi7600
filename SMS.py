@@ -46,7 +46,7 @@ class SMS(Settings):
         :param message_type: str
         :return: str
         """
-        answer = self.send_at(f'AT+CMGL={message_type}', 'OK', TIMEOUT)
+        answer = self.send_at(f'AT+CMGL="{message_type}"', 'OK', TIMEOUT)
         if answer and message_type in answer:
             return answer
 
