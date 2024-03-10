@@ -1,3 +1,4 @@
+# TODO: Better error handling and logging
 """
 This provides SMS functionality
 """
@@ -5,7 +6,6 @@ from Globals import *
 from Settings import Settings
 
 
-# TODO: Send message!
 class SMS(Settings):
     """
     Initialize the SMS class.
@@ -63,11 +63,19 @@ class SMS(Settings):
         if answer:
             self.ser.write(text_message.encode())
             self.ser.write(b'\x1A')
-            answer = self.send_at('', 'OK', 20)
+            answer = self.send_at('', 'OK', SMS_SEND_TIMEOUT)  # 'OK' here means the message sent?
             if answer:
+                print(
+                    f'Number: {phone_number}\n'
+                    f'Message: {text_message}\n'
+                    f'Message sent!')
                 return True
             else:
-                print('error')
+                print(
+                    f'Error sending message...\n'
+                    f'phone_number: {phone_number}\n'
+                    f'text_message: {text_message}\n'
+                    f'Not sent!')
                 return False
         else:
             print('error%d' % answer)

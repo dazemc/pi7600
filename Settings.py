@@ -1,3 +1,4 @@
+# TODO: Try to close any open serial connections if COM port fails
 """
 This provides Settings for all modules
 """
@@ -43,14 +44,31 @@ class Settings(AT):
         :param self:
         :return: None
         """
-        pyversion = py_version_check()
-        if pyversion:
+        checks = {
+            "Python version requirements not met": py_version_check(),
+            "SIM device not ready": self.sim_ready_check()
+        }
+        if False not in checks.values():
             self.first_run = False
         else:
+            for check, result in checks.items():
+                if result is False:
+                    print(check)
+
+
+
             sys.exit(EXIT_FAILURE_CODE)
 
     def enable_verbose_logging(self) -> bool:
         buffer = self.send_at('AT+CMEE=2', 'OK', TIMEOUT)
+        if buffer:
+            return True
+        else:
+            return False
+
+
+    def sim_ready_check(self) -> bool:
+        buffer = self.send_at("AT+CPIN?", "READY", TIMEOUT)
         if buffer:
             return True
         else:
