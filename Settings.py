@@ -52,5 +52,9 @@ class Settings(AT):
         else:
             sys.exit(EXIT_FAILURE_CODE)
 
-    def enable_verbose_logging(self) -> None:
-        self.send_at('AT+CMEE=2', 'OK', TIMEOUT)
+    def enable_verbose_logging(self) -> bool:
+        buffer = self.send_at('AT+CMEE=2', 'OK', TIMEOUT)
+        if buffer:
+            return True
+        else:
+            return False
