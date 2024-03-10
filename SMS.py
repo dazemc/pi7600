@@ -14,9 +14,8 @@ class SMS(Settings):
     Initialize the SMS class.
     """
 
-    def __init__(self, contact_number):
+    def __init__(self):
         super().__init__()
-        self.phone_number = contact_number  # Number you are contacting
         self.rec_buff = ''
 
     def receive_message(self, message_type: str) -> str:
@@ -62,3 +61,19 @@ class SMS(Settings):
                     self.ser.close()
                     sys.exit(EXIT_SUCCESS_CODE)
                 # GPIO.cleanup()
+
+    def send_message(self, phone_number: str, text_message: str) -> bool:
+        self.send_at("AT+CMGF=1", "OK", 1)  # 1: SMS text mode, 0: SMS PDU mode (compression)
+        answer = self.send_at("AT+CMGS=\"" + phone_number + "\"", ">", TIMEOUT)
+        if answer:
+            self.ser.write(text_message.encode())
+            self.ser.write(b'\x1A')
+            answer = self.send_at('', 'OK', 20)
+            if answer:
+                return True
+            else:
+                print('error')
+                return False
+        else:
+            print('error%d' % answer)
+            return False
