@@ -57,7 +57,9 @@ class SMS(Settings):
         :return: str
         """
         try:
-            return self.receive_message(message_type)
+            buffer = self.receive_message(message_type)
+            print(buffer)
+            return buffer
         except:
             if self.ser is not None:
                 self.ser.close()
@@ -70,7 +72,9 @@ class SMS(Settings):
                 """
         while True:
             try:
-                return self.receive_message(message_type)
+                buffer = self.receive_message(message_type)
+                print(buffer)
+                return buffer
             except:
                 if self.ser is not None:
                     self.ser.close()
