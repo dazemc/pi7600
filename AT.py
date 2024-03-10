@@ -4,7 +4,7 @@ from Globals import *
 
 
 class AT:
-    def __init__(self, com: str, baudrate: int):
+    def __init__(self, com: str, baudrate: int) -> None:
         super().__init__()
         self.com = com
         self.baudrate = baudrate
