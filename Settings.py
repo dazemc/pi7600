@@ -55,8 +55,6 @@ class Settings(AT):
                 if result is False:
                     print(check)
 
-
-
             sys.exit(EXIT_FAILURE_CODE)
 
     def enable_verbose_logging(self) -> bool:
@@ -65,7 +63,6 @@ class Settings(AT):
             return True
         else:
             return False
-
 
     def sim_ready_check(self) -> bool:
         buffer = self.send_at("AT+CPIN?", "READY", TIMEOUT)
