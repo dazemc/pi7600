@@ -6,9 +6,6 @@ from Globals import *
 from AT import AT
 
 
-# import RPi.GPIO as GPIO
-
-
 def py_version_check() -> bool:
     """
     Python minimum version check (3.10)

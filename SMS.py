@@ -3,10 +3,7 @@ This provides SMS functionality
 """
 from Globals import *
 from Settings import Settings
-import sys
 
-
-# import RPi.GPIO as GPIO
 
 # TODO: Send message!
 class SMS(Settings):
@@ -59,8 +56,6 @@ class SMS(Settings):
             except:
                 if self.ser is not None:
                     self.ser.close()
-                    sys.exit(EXIT_SUCCESS_CODE)
-                # GPIO.cleanup()
 
     def send_message(self, phone_number: str, text_message: str) -> bool:
         self.send_at("AT+CMGF=1", "OK", 1)  # 1: SMS text mode, 0: SMS PDU mode (compression)
