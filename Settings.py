@@ -4,6 +4,9 @@ This provides Settings for all modules
 import serial
 import sys
 from Globals import *
+from AT import AT
+
+at = AT()
 
 
 # import RPi.GPIO as GPIO
@@ -54,3 +57,11 @@ class Settings:
             self.first_run = False
         else:
             sys.exit(EXIT_FAILURE_CODE)
+
+    def enable_verbose_logging(self) -> bool:
+        buffer = at.send_at(f'AT+CMEE=2', 'OK', TIMEOUT)
+        if buffer:
+            return True
+        elif not buffer:
+            print("Error sending command...")
+            return False
