@@ -45,17 +45,19 @@ class Settings(AT):
         :return: None
         """
         checks = {
-            "Python version requirements not met": py_version_check(),
-            "SIM device not ready": self.sim_ready_check()
+            "Python version requirements not met": lambda: py_version_check(),
+            "SIM device not ready": lambda: self.sim_ready_check()
         }
-        if False not in checks.values():
-            self.first_run = False
-        else:
-            for check, result in checks.items():
-                if result is False:
-                    print(check)
-
+        check_failed = False
+        for check, result_function in checks.items():
+            result = result_function()  # Call the lambda function to execute the actual check
+            if result is False:
+                check_failed = True
+                print(check)
+        if check_failed:
             sys.exit(EXIT_FAILURE_CODE)
+        else:
+            self.first_run = False
 
     def enable_verbose_logging(self) -> bool:
         buffer = self.send_at('AT+CMEE=2', 'OK', TIMEOUT)
