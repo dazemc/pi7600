@@ -1,10 +1,16 @@
-from Settings import *
 import time
+import serial
+from Globals import *
 
 
-class AT(Settings):
-    def __init__(self):
-        super().__init__(COM, BAUDRATE)
+class AT:
+    def __init__(self, com: str, baudrate: int):
+        super().__init__()
+        self.com = com
+        self.baudrate = baudrate
+        self.ser = serial.Serial(self.com, self.baudrate)
+        self.ser.flushInput()
+        self.rec_buff = ''
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
         """
@@ -14,7 +20,6 @@ class AT(Settings):
         :param timeout: int
         :return: bool | str
         """
-        self.rec_buff = ''
         self.ser.write((command + '\r\n').encode())
         time.sleep(timeout)
         if self.ser.inWaiting():

@@ -1,21 +1,21 @@
 """
 This provides SMS functionality
 """
-from AT import AT
 from Globals import *
-
-at = AT()
+from Settings import Settings
+import sys
 
 
 # import RPi.GPIO as GPIO
 
 # TODO: Send message!
-class SMS:
+class SMS(Settings):
     """
     Initialize the SMS class.
     """
 
     def __init__(self, contact_number):
+        super().__init__()
         self.phone_number = contact_number  # Number you are contacting
         self.rec_buff = ''
 
@@ -25,7 +25,7 @@ class SMS:
         :param message_type: str
         :return: str
         """
-        answer = at.send_at(f'AT+CMGL="{message_type}"', 'OK', TIMEOUT)
+        answer = self.send_at(f'AT+CMGL="{message_type}"', 'OK', TIMEOUT)
         if answer:
             if message_type != "ALL" and message_type in answer:
                 return answer

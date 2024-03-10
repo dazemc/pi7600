@@ -1,12 +1,9 @@
 """
 This provides Settings for all modules
 """
-import serial
 import sys
 from Globals import *
 from AT import AT
-
-at = AT()
 
 
 # import RPi.GPIO as GPIO
@@ -31,17 +28,14 @@ def py_version_check() -> bool:
     return True
 
 
-class Settings:
-    def __init__(self, com: str, baudrate: int) -> None:
+class Settings(AT):
+    def __init__(self) -> None:
+        super().__init__(com=COM, baudrate=BAUDRATE)
         """
         Initializes Settings class
         :param port: str
         :param baudrate: int
         """
-        self.com = com
-        self.baudrate = baudrate
-        self.ser = serial.Serial(self.com, self.baudrate)
-        self.ser.flushInput()
         self.first_run = True
         if self.first_run:
             self.perform_initial_checks()
@@ -58,10 +52,5 @@ class Settings:
         else:
             sys.exit(EXIT_FAILURE_CODE)
 
-    def enable_verbose_logging(self) -> bool:
-        buffer = at.send_at(f'AT+CMEE=2', 'OK', TIMEOUT)
-        if buffer:
-            return True
-        elif not buffer:
-            print("Error sending command...")
-            return False
+    def enable_verbose_logging(self) -> None:
+        self.send_at('AT+CMEE=2', 'OK', TIMEOUT)
