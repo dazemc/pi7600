@@ -47,8 +47,14 @@ class SMS(Settings):
         :return: str
         """
         answer = self.send_at(f'AT+CMGL="{message_type}"', 'OK', TIMEOUT)
-        if answer and message_type in answer:
-            return answer
+        if answer:
+            if message_type != "ALL" and message_type in answer:
+                return answer
+            elif message_type == "ALL":
+                return answer
+            else:
+                print(f"AT command failed, returned the following:\n{answer}")
+
 
     def read_message(self, message_type: str) -> str:
         """
@@ -58,7 +64,6 @@ class SMS(Settings):
         """
         try:
             buffer = self.receive_message(message_type)
-            print(buffer)
             return buffer
         except:
             if self.ser is not None:
@@ -73,7 +78,6 @@ class SMS(Settings):
         while True:
             try:
                 buffer = self.receive_message(message_type)
-                print(buffer)
                 return buffer
             except:
                 if self.ser is not None:
