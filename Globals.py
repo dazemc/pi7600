@@ -1,11 +1,13 @@
 """
 This provides global constants
 """
+BUFFER_CHAR_LIMIT = 559  # "AT" prefix does not count
 EXIT_SUCCESS_CODE = 0
 EXIT_FAILURE_CODE = 1
 TIMEOUT = 3
 SMS_SEND_TIMEOUT = 15
 BUFFER_WAIT_TIME = 0.01
 GPS_TIMEOUT = 1
+GPS_RETRY = 10
 BAUDRATE = 115200
 COM = "/dev/ttyUSB2"

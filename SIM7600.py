@@ -1,12 +1,13 @@
 from SMS import SMS
 from GPS import GPS
 from Settings import Settings
+from Globals import *
 
 # settings = Settings()
 # settings.enable_verbose_logging()  # Only needs to be enabled once
 
 gps = GPS()
-gps_cor = gps.get_gps_position(10)
+gps_cor = gps.get_gps_position(GPS_RETRY)
 print(gps_cor)
 
 

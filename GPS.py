@@ -30,7 +30,7 @@ class GPS(Settings):
         if not start:
             print('Closing GPS session...')
             self.rec_buff = ''
-            if self.send_at('AT+CGPS=0,1', 'OK', 1):
+            if self.send_at('AT+CGPS=0,1', 'OK', GPS_TIMEOUT):
                 return True
             else:
                 return False
@@ -39,7 +39,7 @@ class GPS(Settings):
         rec_buff = ''
         if self.gps_session(True):
             for _ in range(retries):
-                answer = self.send_at('AT+CGPSINFO', '+CGPSINFO: ', 1)
+                answer = self.send_at('AT+CGPSINFO', '+CGPSINFO: ', GPS_TIMEOUT)
                 if answer and ',,,,,,' not in answer:
                     return answer
                 elif ',,,,,,' in answer:

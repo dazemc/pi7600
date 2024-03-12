@@ -31,3 +31,10 @@ class AT:
             return False
         else:
             return self.rec_buff.decode()
+
+    def retry_last_command(self) -> bool:
+        if self.send_at('A/', 'OK', TIMEOUT):
+            return True
+        else:
+            print("Retry failed")
+            return False
