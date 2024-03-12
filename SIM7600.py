@@ -6,7 +6,7 @@ from Settings import Settings
 # settings.enable_verbose_logging()  # Only needs to be enabled once
 
 gps = GPS()
-gps_cor = gps.get_gps_position()
+gps_cor = gps.get_gps_position(10)
 print(gps_cor)
 
 
