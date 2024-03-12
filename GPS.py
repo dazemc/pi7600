@@ -23,13 +23,14 @@ class GPS(Settings):
         """
         if start:
             print('Starting GPS session...')
-            if self.send_at('AT+CGPS=0', 'OK', GPS_TIMEOUT) and self.send_at('AT+CGPS=1', 'OK', GPS_TIMEOUT):
+            if self.send_at('AT+CGPS=0,1', 'OK', GPS_TIMEOUT) and self.send_at('AT+CGPS=1,1', 'OK', GPS_TIMEOUT):
+                print("Started successfully")
                 time.sleep(2)
                 return True
         if not start:
             print('Closing GPS session...')
             self.rec_buff = ''
-            if self.send_at('AT+CGPS=0', 'OK', 1):
+            if self.send_at('AT+CGPS=0,1', 'OK', 1):
                 return True
             else:
                 return False
@@ -39,8 +40,10 @@ class GPS(Settings):
         if self.gps_session(True):
             while True:
                 answer = self.send_at('AT+CGPSINFO', '+CGPSINFO: ', 1)
-                if answer and ',,,,,,' not in rec_buff:
+                if answer and ',,,,,,' not in answer:
                     return answer
+                elif ',,,,,,' in answer:
+                    print("GPS signal not found...")
                 else:
                     print("Error accessing GPS, attempting to close session")
                     if not self.gps_session(False):
