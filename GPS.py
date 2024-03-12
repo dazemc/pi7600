@@ -51,6 +51,7 @@ class GPS(Settings):
                     else:
                         print("Done")
                     return False
+            print("Retry limit reached; GPS signal not found...")
             return False
         else:
             print("Error starting GPS session")
