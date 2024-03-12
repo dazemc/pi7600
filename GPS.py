@@ -22,7 +22,7 @@ class GPS(Settings):
         :return: bool
         """
         if start:
-            print('Start GPS session...')
+            print('Starting GPS session...')
             if self.send_at('AT+CGPS=0', 'OK', GPS_TIMEOUT) and self.send_at('AT+CGPS=1', 'OK', GPS_TIMEOUT):
                 time.sleep(2)
                 return True
@@ -31,21 +31,16 @@ class GPS(Settings):
             self.rec_buff = ''
             if self.send_at('AT+CGPS=0', 'OK', 1):
                 return True
+            else:
+                return False
 
     def get_gps_position(self) -> str | bool:
-        rec_null = True
         rec_buff = ''
         if self.gps_session(True):
-            while rec_null:
+            while True:
                 answer = self.send_at('AT+CGPSINFO', '+CGPSINFO: ', 1)
-                if answer:
-                    answer = False
-                    if ',,,,,,' in rec_buff:
-                        print(f'Error accessing GPS, returned value: \n{rec_buff}')
-                        rec_null = False
-                        time.sleep(1)
-                    else:
-                        return answer
+                if answer and ',,,,,,' not in rec_buff:
+                    return answer
                 else:
                     print("Error accessing GPS, attempting to close session")
                     if not self.gps_session(False):
@@ -53,6 +48,5 @@ class GPS(Settings):
                     else:
                         print("Done")
                     return False
-                time.sleep(1.5)
         else:
             print("Error starting GPS session")
