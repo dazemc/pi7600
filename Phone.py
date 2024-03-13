@@ -26,14 +26,16 @@ class Phone(Settings):
             while True:
                 print(f"Attempting to call {contact_number}")
                 #
-                #
+                # These 3 commands are completely useless for establishing a call.
+                # ATD will return an error code if there is no signal or network registration.
+                # IF ATD returns an error then determine source of error.
                 self.send_at('AT+CSQ', 'OK', PHONE_TIMEOUT)  # Check network quality
                 self.send_at('AT+CREG?', 'OK', PHONE_TIMEOUT)  # Check network registration
                 self.send_at('AT+CPSI?', 'OK', PHONE_TIMEOUT)  # Pretty much returns the previous two commands... Unnecessarily redundant?
                 #
                 #
                 self.send_at('ATD' + contact_number + ';', 'OK', PHONE_TIMEOUT)
-                time.sleep(20)  # Call just closes on a timer.
+                input("Press enter to end call")
                 self.ser.write('AT+CHUP\r\n'.encode())  # Hangup code, why is serial used vs send_at()?
                 print('Call disconnected')
         except:
