@@ -1,17 +1,20 @@
 from SMS import SMS
 from GPS import GPS
+from Phone import Phone
 from Settings import Settings
 from Globals import *
 
+# SETTINGS
 # settings = Settings()
 # settings.enable_verbose_logging()  # Only needs to be enabled once
 
-gps = GPS()
-gps_cor = gps.get_gps_position(GPS_RETRY)
-print(gps_cor)
+# GPS
+# gps = GPS()
+# gps_cor = gps.get_gps_position(GPS_RETRY)
+# print(gps_cor)
 
-
-# contact_number = "******"  # Number you sending to
+# SMS
+contact_number = "******"  # Number you sending to
 # message = "Hello, world!"
 # messaging = SMS()
 
@@ -21,3 +24,9 @@ print(gps_cor)
 
 # Send message, returns True on success
 # messaging.send_message(contact_number, message)
+
+# PHONE
+phone = Phone()
+phone.call(contact_number)
+
+
