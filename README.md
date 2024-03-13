@@ -10,7 +10,7 @@ Python library for accessing [7600G-H from Waveshare.](https://www.waveshare.com
 \
 \
 \
--------------KNOWN BUGS--------------
+----------KNOWN BUGS-----------
 <li>
   TypeError: unsupported operand type(s) for |: 'type' and 'type':
   <br><br>
@@ -32,4 +32,5 @@ Python library for accessing [7600G-H from Waveshare.](https://www.waveshare.com
 ----------Resources------------
 <br><br>
 [Product Page](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B))
+<br>
 [SIM7600 AT Commands](https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf)
