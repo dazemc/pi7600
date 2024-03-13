@@ -17,6 +17,7 @@ class Phone(Settings):
     def call(self, contact_number: str) -> bool:
         try:
             while True:
+                print(f"Attempting to call {contact_number}")
                 self.send_at('AT+CSQ', 'OK', PHONE_TIMEOUT)
                 self.send_at('AT+CREG?', 'OK', PHONE_TIMEOUT)
                 self.send_at('AT+CPSI?', 'OK', PHONE_TIMEOUT)
