@@ -13,7 +13,6 @@ class SMS(Settings):
 
     def __init__(self):
         super().__init__()
-        self.rec_buff = ''
 
     def receive_message(self, message_type: str) -> str:
         """

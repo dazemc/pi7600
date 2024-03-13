@@ -13,7 +13,6 @@ class GPS(Settings):
 
     def __init__(self):
         super().__init__()
-        self.rec_buff = ''
 
     def gps_session(self, start: bool) -> bool:
         """

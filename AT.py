@@ -9,7 +9,7 @@ class AT:
         self.com = com
         self.baudrate = baudrate
         self.ser = serial.Serial(self.com, self.baudrate)
-        self.ser.flushInput()
+        self.ser.flush()
         self.rec_buff = ''
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
