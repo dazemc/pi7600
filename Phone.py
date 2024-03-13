@@ -30,12 +30,13 @@ class Phone(Settings):
 
     def call_incoming(self):
         # call_incoming(): Check for incoming calls
+        # I will come back to this after I determine concurrency/interrupts/chaining AT commands
         pass
 
     def active_calls(self) -> str | bool:
         """
         Returns information on any active calls
-        :return: str
+        :return: str || bool
         """
         self.rec_buff = self.send_at('AT+CLCC?', 'OK', PHONE_TIMEOUT)
         if self.rec_buff:
