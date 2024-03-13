@@ -14,31 +14,64 @@ class Phone(Settings):
     def __init__(self):
         super().__init__()
 
-    def call(self, contact_number: str) -> bool:
-        # TODO: Break into functions
-        # init_checks(): Check for signal, network registration, open/incoming calls, etc
+    def init_checks(self):
+        pass
+        # self.send_at('AT+CSQ', 'OK', PHONE_TIMEOUT)  # Check network quality
+        # self.send_at('AT+CREG?', 'OK', PHONE_TIMEOUT)  # Check network registration
+        # self.send_at('AT+CPSI?', 'OK',PHONE_TIMEOUT)  # Pretty much returns the previous two commands... Unnecessarily redundant?
+
+    def hangup_call(self) -> bool:
+        self.rec_buff = self.send_at('AT+CHUP', 'OK', PHONE_TIMEOUT)
+        if self.rec_buff:
+            return True
+        else:
+            print("Unknown error ending call. Is serial open?")
+            return False
+
+    def call_incoming(self):
         # call_incoming(): Check for incoming calls
-        # call(): Make a call
-        # hangup_call(): Hangup a call
-        # open_call(): Function executes during call, checking if call is still open
-        # close_call(): Function executes after successful call
+        pass
+
+    def active_calls(self) -> str | bool:
+        """
+        Returns information on any active calls
+        :return: str
+        """
+        self.rec_buff = self.send_at('AT+CLCC?', 'OK', PHONE_TIMEOUT)
+        if self.rec_buff:
+            return self.rec_buff
+        else:
+            print("Error checking active calls")
+            return False
+
+    def call(self, contact_number: str, retry: int) -> bool:
+        """
+        Start outgoing call.
+        :param contact_number: str
+        :param retry: int
+        :return: bool
+        """
+        # A True return does not mean call was connected, simply means the attempt was valid without errors.
+        attempt = 1
         try:
             while True:
-                print(f"Attempting to call {contact_number}")
-                #
-                # These 3 commands are completely useless for establishing a call.
-                # ATD will return an error code if there is no signal or network registration.
+                print(f"Attempting to call {contact_number}; Attempt: {attempt}; Retry: {retry}")
                 # IF ATD returns an error then determine source of error.
-                self.send_at('AT+CSQ', 'OK', PHONE_TIMEOUT)  # Check network quality
-                self.send_at('AT+CREG?', 'OK', PHONE_TIMEOUT)  # Check network registration
-                self.send_at('AT+CPSI?', 'OK', PHONE_TIMEOUT)  # Pretty much returns the previous two commands... Unnecessarily redundant?
-                #
-                #
-                self.send_at('ATD' + contact_number + ';', 'OK', PHONE_TIMEOUT)
-                input("Press enter to end call")
-                self.ser.write('AT+CHUP\r\n'.encode())  # Hangup code, why is serial used vs send_at()?
-                print('Call disconnected')
+                if self.send_at('ATD' + contact_number + ';', 'OK', PHONE_TIMEOUT):
+                    input("Call connected!\nPress enter to end call")
+                    # self.ser.write('AT+CHUP\r\n'.encode())  # Hangup code, why is serial used vs send_at()?
+                    self.hangup_call()
+                    print('Call disconnected')
+                    return True
+                if retry != 0:
+                    print(f"Retrying call to {contact_number}; Attempt: {attempt}/{retry}")
+                    attempt += 1
+                elif retry == 0 or attempt == retry:
+                    return True
         except:
             return False
-        finally:  # TODO: Proper return for current call
-            return True
+
+    def closed_call(self) -> str:
+        # This will display information about calls that have been made/attempted
+        # Call time, connection status, error outputs, etc
+        pass
