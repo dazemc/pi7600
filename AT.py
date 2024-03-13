@@ -37,12 +37,16 @@ class AT:
             return False
 
     def close_serial(self) -> None:
-        self.clear_buffer()
-        self.ser.close()
+        try:
+            self.clear_buffer()
+            self.ser.close()
+        except:
+            print("Failed to close serial: Already closed or inaccessible")
 
     def clear_buffer(self) -> None:
-        self.ser.flush()
-        self.rec_buff = ''
+        if self.ser.in_waiting:
+            self.ser.flush()
+            self.rec_buff = ''
 
     def init_serial(self, baud, com):
         ser = serial.Serial(com, baud)
