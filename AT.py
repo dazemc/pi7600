@@ -9,7 +9,6 @@ class AT:
         self.com = com
         self.baudrate = baudrate
         self.ser = serial.Serial(self.com, self.baudrate)
-        self.ser.flush()
         self.rec_buff = ''
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
@@ -22,9 +21,9 @@ class AT:
         """
         self.ser.write((command + '\r\n').encode())
         time.sleep(timeout)
-        if self.ser.inWaiting():
+        if self.ser.in_waiting:
             time.sleep(BUFFER_WAIT_TIME)
-            self.rec_buff = self.ser.read(self.ser.inWaiting())
+            self.rec_buff = self.ser.read(self.ser.in_waiting)
         if back not in self.rec_buff.decode():
             print(command + ' ERROR')
             print(command + ' back:\t' + self.rec_buff.decode())
@@ -40,4 +39,16 @@ class AT:
             return False
 
     def close_serial(self) -> None:
+        self.clear_buffer()
         self.ser.close()
+
+    def clear_buffer(self) -> None:
+        self.ser.flush()
+        self.rec_buff = ''
+
+    def get_config(self) -> str | bool:
+        self.rec_buff = self.send_at('AT&V', 'OK', TIMEOUT)
+        if self.rec_buff:
+            return self.rec_buff
+        else:
+            return False

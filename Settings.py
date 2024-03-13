@@ -60,8 +60,8 @@ class Settings(AT):
             self.first_run = False
 
     def enable_verbose_logging(self) -> bool:
-        buffer = self.send_at('AT+CMEE=2', 'OK', TIMEOUT)
-        if buffer:
+        self.rec_buff = self.send_at('AT+CMEE=2', 'OK', TIMEOUT)
+        if self.rec_buff:
             return True
         else:
             return False
