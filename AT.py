@@ -45,10 +45,3 @@ class AT:
     def clear_buffer(self) -> None:
         self.ser.flush()
         self.rec_buff = ''
-
-    def get_config(self) -> str | bool:
-        self.rec_buff = self.send_at('AT&V', 'OK', TIMEOUT)
-        if self.rec_buff:
-            return self.rec_buff
-        else:
-            return False

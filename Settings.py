@@ -72,3 +72,10 @@ class Settings(AT):
             return True
         else:
             return False
+
+    def get_config(self) -> str | bool:
+        self.rec_buff = self.send_at('AT&V', 'OK', TIMEOUT)
+        if self.rec_buff:
+            return self.rec_buff
+        else:
+            return False
