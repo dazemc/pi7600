@@ -38,3 +38,6 @@ class AT:
         else:
             print("Retry failed")
             return False
+
+    def close_serial(self) -> None:
+        self.ser.close()

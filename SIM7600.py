@@ -28,5 +28,5 @@ contact_number = "******"  # Number you sending to
 # PHONE
 phone = Phone()
 phone.call(contact_number)
-
+phone.close_serial()
 
