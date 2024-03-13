@@ -67,6 +67,7 @@ class Phone(Settings):
                 if retry != 0:
                     print(f"Retrying call to {contact_number}; Attempt: {attempt}/{retry}")
                     attempt += 1
+                    continue
                 elif retry == 0 or attempt == retry:
                     return True
         except:

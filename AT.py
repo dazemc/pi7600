@@ -17,17 +17,21 @@ class AT:
         :param timeout: int
         :return: bool | str
         """
-        self.ser.write((command + '\r\n').encode())
-        time.sleep(timeout)
-        if self.ser.in_waiting:
-            time.sleep(BUFFER_WAIT_TIME)
-            self.rec_buff = self.ser.read(self.ser.in_waiting)
-        if back not in self.rec_buff.decode():
-            print(command + ' ERROR')
-            print(command + ' back:\t' + self.rec_buff.decode())
-            return False
+        if len(command) < BUFFER_CHAR_LIMIT:
+            self.ser.write((command + '\r\n').encode())
+            time.sleep(timeout)
+            if self.ser.in_waiting:
+                time.sleep(BUFFER_WAIT_TIME)
+                self.rec_buff = self.ser.read(self.ser.in_waiting)
+            if back not in self.rec_buff.decode():
+                print(command + ' ERROR')
+                print(command + ' back:\t' + self.rec_buff.decode())
+                return False
+            else:
+                return self.rec_buff.decode()
         else:
-            return self.rec_buff.decode()
+            print(f"AT command exceeds buffer limit of {BUFFER_CHAR_LIMIT}")
+            return False
 
     def retry_last_command(self) -> bool:
         if self.send_at('A/', 'OK', TIMEOUT):
