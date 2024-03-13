@@ -6,9 +6,7 @@ from Globals import *
 class AT:
     def __init__(self, com: str, baudrate: int) -> None:
         super().__init__()
-        self.com = com
-        self.baudrate = baudrate
-        self.ser = serial.Serial(self.com, self.baudrate)
+        self.ser = self.init_serial(baudrate, com)
         self.rec_buff = ''
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
@@ -45,3 +43,8 @@ class AT:
     def clear_buffer(self) -> None:
         self.ser.flush()
         self.rec_buff = ''
+
+    def init_serial(self, baud, com):
+        ser = serial.Serial(com, baud)
+        ser.flush()
+        return ser

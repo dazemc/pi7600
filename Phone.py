@@ -25,6 +25,7 @@ class Phone(Settings):
                 time.sleep(20)
                 self.ser.write('AT+CHUP\r\n'.encode())
                 print('Call disconnected')
-                return True
         except:
             return False
+        finally:
+            return True
