@@ -3,6 +3,7 @@
 This provides Settings for all modules
 """
 import sys
+import time
 from Globals import *
 from AT import AT
 
@@ -79,3 +80,26 @@ class Settings(AT):
             return self.rec_buff
         else:
             return False
+
+    def set_usb_os(self, os: str) -> bool:
+        """
+        USB setting for RNDIS, OS specific. "WIN" or "UNIX".
+        :param os: str
+        :return: bool
+        """
+        if os == "WIN":
+            self.send_at('AT+CUSBPIDSWITCH=9001,1,1', 'OK', TIMEOUT)
+        elif os == "UNIX":
+            self.send_at('AT+CUSBPIDSWITCH=9011,1,1', 'OK', TIMEOUT)
+        for _ in range(6):  # Wait up to 3 mins for reboot
+            time.sleep(30)
+            try:
+                self.init_serial(BAUDRATE, COM)
+                if self.send_at('AT', 'OK', TIMEOUT):
+                    print(f"Set usb for {os}")
+                    return True
+            except:
+                print("Waiting for device to reboot...")
+        print("Failed to set USB mode.")
+        return False
+
