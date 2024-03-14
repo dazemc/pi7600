@@ -29,8 +29,10 @@ Python library for accessing [7600G-H from Waveshare.](https://www.waveshare.com
   </ul>
 </li>--->
 <br><br>
-----------Resources------------
+----------Resources/Notes------------
 <br><br>
-<a href="https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B)">Product Page</a>
+<li><a href="https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B)">Product Page</a></li>
 <br>
-<a href="https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf">SIM7600 AT Commands</a>
+<li><a href="https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf">SIM7600 AT Command Manual</a></li>
+<br>
+<li><a href="https://www.waveshare.com/w/upload/7/79/SIM7X00_Series_TCPIP_Application_Note_V1.00.pdf"> SIM7X00 TCPIP Manual</a></li>
