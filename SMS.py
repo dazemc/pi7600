@@ -20,8 +20,7 @@ class SMS(Settings):
         :param message_type: str
         :return: str
         """
-        self.send_at('AT+CMGF=1', 'OK', TIMEOUT)  # Set to text mode
-        self.send_at('AT+CPMS=\"SM\",\"SM\",\"SM\"', 'OK', TIMEOUT)  # Store messages on SIM, "ME"/"MT" is flash
+        self.set_data_mode(1)
         answer = self.send_at(f'AT+CMGL="{message_type}"', 'OK', TIMEOUT)
         if answer:
             if message_type != "ALL" and message_type in answer:
@@ -59,7 +58,6 @@ class SMS(Settings):
                     self.ser.close()
 
     def send_message(self, phone_number: str, text_message: str) -> bool:
-        self.send_at("AT+CMGF=1", "OK", 1)  # 1: SMS text mode, 0: SMS PDU mode (compression)
         answer = self.send_at("AT+CMGS=\"" + phone_number + "\"", ">", TIMEOUT)
         if answer:
             self.ser.write(text_message.encode())

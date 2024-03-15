@@ -103,3 +103,23 @@ class Settings(AT):
         print("Failed to set USB mode.")
         return False
 
+    def set_sms_storage(self, mode: str) -> bool:
+        """
+        Set SMS storage location
+        :param mode: str
+        :return: bool
+        """
+        buffer = self.send_at(f'AT+CPMS=\"{mode}\",\"{mode}\",\"{mode}\"', 'OK', TIMEOUT)  # Store messages on SIM(SM), "ME"/"MT" is flash
+        if buffer:
+            return True
+        else:
+            return False
+
+    def set_data_mode(self, mode: int):
+        if mode == 1:
+            # there is a bug that causes the modem to not set CMGF correctly. Switching back and forth sems to workaround
+            self.send_at('AT+CMGF=0', 'OK', TIMEOUT)  # Set to text mode
+            self.send_at('AT+CMGF=1', 'OK', TIMEOUT)  # Set to text mode
+        if mode == 0:
+            self.send_at('AT+CMGF=1', 'OK', TIMEOUT)  # Set to text mode
+            self.send_at('AT+CMGF=0', 'OK', TIMEOUT)  # Set to text mode

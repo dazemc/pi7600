@@ -8,6 +8,7 @@ from Globals import *
 # SETTINGS
 # settings = Settings()
 # settings.enable_verbose_logging()  # Only needs to be enabled once
+# settings.set_sms_storage("SM")
 
 # GPS
 # gps = GPS()
