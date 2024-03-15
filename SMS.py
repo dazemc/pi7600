@@ -20,6 +20,8 @@ class SMS(Settings):
         :param message_type: str
         :return: str
         """
+        self.send_at('AT+CMGF=1', 'OK', TIMEOUT)  # Set to text mode
+        self.send_at('AT+CPMS=\"SM\",\"SM\",\"SM\"', 'OK', TIMEOUT)  # Store messages on SIM, "ME"/"MT" is flash
         answer = self.send_at(f'AT+CMGL="{message_type}"', 'OK', TIMEOUT)
         if answer:
             if message_type != "ALL" and message_type in answer:
