@@ -1,4 +1,4 @@
-Python library for accessing [7600G-H from Waveshare.](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B))
+Python library for accessing [7600G-H from Waveshare.](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B)) This should be compatiable with all SIM7600's using either windows or linux. The only requirement is Python 3.10 or greater.
 \
 \
 \
