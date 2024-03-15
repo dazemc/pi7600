@@ -4,6 +4,7 @@ This provides SMS functionality
 """
 from Globals import *
 from Settings import Settings
+from Parser import Parser
 
 
 class SMS(Settings):
@@ -13,19 +14,22 @@ class SMS(Settings):
 
     def __init__(self):
         super().__init__()
+        self.parser = Parser()
 
-    def receive_message(self, message_type: str) -> str:
+    def receive_message(self, message_type: str) -> list:
         """
         Sends SMS command to AT
         :param message_type: str
-        :return: str
+        :return: list<dict>
         """
         self.set_data_mode(1)
         answer = self.send_at(f'AT+CMGL="{message_type}"', 'OK', TIMEOUT)
         if answer:
             if message_type != "ALL" and message_type in answer:
+                answer = self.parser.parse_sms(answer)
                 return answer
             elif message_type == "ALL":
+                answer = self.parser.parse_sms(answer)
                 return answer
             else:
                 print(f"AT command failed, returned the following:\n{answer}")

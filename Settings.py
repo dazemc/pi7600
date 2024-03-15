@@ -109,7 +109,8 @@ class Settings(AT):
         :param mode: str
         :return: bool
         """
-        buffer = self.send_at(f'AT+CPMS=\"{mode}\",\"{mode}\",\"{mode}\"', 'OK', TIMEOUT)  # Store messages on SIM(SM), "ME"/"MT" is flash
+        buffer = self.send_at(f'AT+CPMS=\"{mode}\",\"{mode}\",\"{mode}\"', 'OK',
+                              TIMEOUT)  # Store messages on SIM(SM), "ME"/"MT" is flash
         if buffer:
             return True
         else:
