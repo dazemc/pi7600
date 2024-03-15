@@ -1,3 +1,4 @@
+import os
 from SMS import SMS
 from GPS import GPS
 from Phone import Phone
@@ -14,19 +15,22 @@ from Globals import *
 # print(gps_cor)
 
 # SMS
-contact_number = "******"  # Number you sending to
-# message = "Hello, world!"
-# messaging = SMS()
+# contact_number = "******"  # Number you sending to
+message = "Hello, world!"
+messaging = SMS()
 
 # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
-# buffer = messaging.read_message(message_type="ALL")
-# print(buffer)
+buffer = messaging.read_message(message_type="ALL")
+# DEBUGGING
+with open("messages.log", "w") as messages:
+    messages.write(buffer)
+
 
 # Send message, returns True on success
 # messaging.send_message(contact_number, message)
 
 # PHONE
-phone = Phone()
-phone.call(contact_number, 0)
-phone.close_serial()
+# phone = Phone()
+# phone.call(contact_number, 0)
+# phone.close_serial()
 
