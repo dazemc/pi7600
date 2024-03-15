@@ -23,9 +23,9 @@ messaging = SMS()
 # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
 buffer = messaging.read_message(message_type="ALL")
 # DEBUGGING
-with open("messages.log", "w") as messages:
-    messages.write(buffer)
-
+# with open("messages.log", "w") as messages:
+#     messages.write(buffer)
+print(buffer)
 
 # Send message, returns True on success
 # messaging.send_message(contact_number, message)

@@ -116,11 +116,13 @@ class Settings(AT):
         else:
             return False
 
-    def set_data_mode(self, mode: int):
+    def set_data_mode(self, mode: int) -> None:
+        """
+        HEX is automatically used if there is data issues, such as low signal quality.
+        :param mode: int
+        :return: None
+        """
         if mode == 1:
-            # there is a bug that causes the modem to not set CMGF correctly. Switching back and forth sems to workaround
-            self.send_at('AT+CMGF=0', 'OK', TIMEOUT)  # Set to text mode
             self.send_at('AT+CMGF=1', 'OK', TIMEOUT)  # Set to text mode
         if mode == 0:
-            self.send_at('AT+CMGF=1', 'OK', TIMEOUT)  # Set to text mode
             self.send_at('AT+CMGF=0', 'OK', TIMEOUT)  # Set to text mode

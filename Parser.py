@@ -3,6 +3,7 @@ class Parser():
         pass
 
     def parse_sms(self, sms_buffer: str) -> list:
+        # TODO: Parse HEX automatically
         """
         Parses the modem buffer into list of dictionaries
         :param sms_buffer: str
