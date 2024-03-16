@@ -25,10 +25,7 @@ messaging = SMS()
 buffer = messaging.read_message(message_type="ALL")
 print(buffer)
 message = buffer[-1]["message_contents"]
-# I'll add this to the parser
-print(message)
-# Do something cleaner for password
-if message[:2] == "pw":
+if message[:4] == "pw":
     if message[1:8] == '123456':
         script = message[8:]
         subprocess.call(".venv/bin/activate")
