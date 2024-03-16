@@ -4,6 +4,7 @@ from GPS import GPS
 from Phone import Phone
 from Settings import Settings
 from Globals import *
+import subprocess
 
 # SETTINGS
 # settings = Settings()
@@ -17,15 +18,28 @@ from Globals import *
 
 # SMS
 # contact_number = "******"  # Number you sending to
-message = "Hello, world!"
+# message = "Hello, world!"
 messaging = SMS()
 
 # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
 buffer = messaging.read_message(message_type="ALL")
-# DEBUGGING
-# with open("messages.log", "w") as messages:
-#     messages.write(buffer)
 print(buffer)
+message = buffer[-1]["message_contents"]
+# I'll add this to the parser
+try:
+    int(message, 16)
+    message_b = bytes.fromhex(message)
+    message = message_b.decode('utf-8')
+except:
+    print("Corrupted message contents...")
+print(message)
+# Do something cleaner for password
+if message[:1] == "pw":
+    if message[1:8] == '123456':
+        script = message[8:]
+        subprocess.call(".venv/bin/activate")
+        subprocess.call(f"scripts/{script}")
+
 
 # Send message, returns True on success
 # messaging.send_message(contact_number, message)
