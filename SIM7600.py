@@ -1,10 +1,13 @@
 import os
+import subprocess
 from SMS import SMS
 from GPS import GPS
 from Phone import Phone
 from Settings import Settings
 from Globals import *
-import subprocess
+
+
+cwd = os.getcwd()
 
 # SETTINGS
 # settings = Settings()
@@ -23,14 +26,13 @@ messaging = SMS()
 
 # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
 buffer = messaging.read_message(message_type="ALL")
-print(buffer)
-message = buffer[-1]["message_contents"]
-if message[:4] == "pw":
-    if message[1:8] == '123456':
-        script = message[8:]
-        subprocess.call(".venv/bin/activate")
-        subprocess.call(f"scripts/{script}")
 
+# Execute script from most recent text, can iterate through all and look for header('pw')
+message = buffer[-1]["message_contents"]
+if message[:2] == "pw":
+    if message[2:8] == '123456':  # can be encrypted just keep 559 char limit
+        script = message[8:]  # TODO: add method to execute based off file type
+        subprocess.call(f"{cwd}/scripts/{script}")  # don't forget to chmod +x
 
 # Send message, returns True on success
 # messaging.send_message(contact_number, message)
