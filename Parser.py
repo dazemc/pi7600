@@ -17,7 +17,7 @@ class Parser():
         message_text = [message for i, message in enumerate(read_messages) if i % 2 == 0 and i != 0]
         for i, message in enumerate(message_data):
             message_list.append({
-                "message_index": message[0][-1],  # TODO: rfind : for index
+                "message_index": message[message[0][::-1].rfind(' '):],
                 "message_type": message[1],
                 "message_originating_address": message[2],
                 "message_destination_address": message[3],
