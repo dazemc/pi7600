@@ -4,9 +4,9 @@ def get_message_type(message: str) -> str:
         print("Converting message from HEX, data may be corrupted!")
         message_b = bytes.fromhex(message)
         message = message_b.decode('utf-8')
-        return message.rstrip().replace("^@", "")
+        return message.rstrip().replace("\x00", "")
     except:
-        return message.rstrip().replace("^@", "")
+        return message.rstrip().replace("\x00", "")
 
 
 class Parser:
