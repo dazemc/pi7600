@@ -1,3 +1,14 @@
+def get_message_type(message: str) -> str:
+    try:
+        int(message, 16)
+        print("Converting message from HEX, data may be corrupted!")
+        message_b = bytes.fromhex(message)
+        message = message_b.decode('utf-8')
+        return message
+    except:
+        return message
+
+
 class Parser():
     def __init__(self):
         pass
@@ -23,7 +34,7 @@ class Parser():
                 "message_destination_address": message[3],
                 "message_date": message[4][1:],
                 "message_time": message[5][:-1],
-                "message_contents": message_text[i]
+                "message_contents": get_message_type(message_text[i]),
             })
         message_final = message_list[:-1]
         return message_final

@@ -34,11 +34,11 @@ class SMS(Settings):
             else:
                 print(f"AT command failed, returned the following:\n{answer}")
 
-    def read_message(self, message_type: str) -> str:
+    def read_message(self, message_type: str) -> list:
         """
         Reads message from specified message type.
         :param message_type: str
-        :return: str
+        :return: list<dict>
         """
         try:
             buffer = self.receive_message(message_type)
