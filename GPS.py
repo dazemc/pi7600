@@ -34,7 +34,7 @@ class GPS(Settings):
             else:
                 return False
 
-    def get_gps_position(self, retries) -> str | bool:
+    def get_gps_position(self, retries: int = GPS_RETRY) -> str | bool:
         if self.gps_session(True):
             for _ in range(retries):
                 answer = self.send_at('AT+CGPSINFO', '+CGPSINFO: ', GPS_TIMEOUT)

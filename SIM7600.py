@@ -6,7 +6,6 @@ from Phone import Phone
 from Settings import Settings
 from Globals import *
 
-
 cwd = os.getcwd()
 
 # SETTINGS
@@ -16,7 +15,7 @@ cwd = os.getcwd()
 
 # GPS
 # gps = GPS()
-# gps_cor = gps.get_gps_position(GPS_RETRY)
+# gps_cor = gps.get_gps_position()
 # print(gps_cor)
 
 # SMS
@@ -39,6 +38,5 @@ if message[:2] == "pw":
 
 # PHONE
 # phone = Phone()
-# phone.call(contact_number, 0)
+# phone.call(contact_number)
 # phone.close_serial()
-

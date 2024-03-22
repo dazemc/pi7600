@@ -45,7 +45,7 @@ class Phone(Settings):
             print("Error checking active calls")
             return False
 
-    def call(self, contact_number: str, retry: int) -> bool:
+    def call(self, contact_number: str, retry: int = 0) -> bool:
         """
         Start outgoing call.
         :param contact_number: str

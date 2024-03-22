@@ -47,7 +47,7 @@ class SMS(Settings):
             if self.ser is not None:
                 self.ser.close()
 
-    def loop_for_messages(self, message_type: str) -> str:
+    def loop_for_messages(self, message_type: str) -> list:
         """
                 Starts a loop that reads message(s) from specified message type.
                 :param message_type: str
