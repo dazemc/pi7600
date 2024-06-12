@@ -30,8 +30,8 @@ class Parser:
             message_list.append({
                 "message_index": message[message[0][::-1].rfind(' '):],
                 "message_type": message[1],
-                "message_originating_address": message[2],
-                "message_destination_address": message[3],
+                "message_originating_address": get_message_type(message[2]),
+                "message_destination_address": get_message_type(message[3]),
                 "message_date": message[4][1:],
                 "message_time": message[5][:-1],
                 "message_contents": get_message_type(message_text[i])
