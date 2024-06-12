@@ -9,9 +9,10 @@ from Globals import *
 cwd = os.getcwd()
 
 # SETTINGS
-# settings = Settings()
+settings = Settings()
 # settings.enable_verbose_logging()  # Only needs to be enabled once
 # settings.set_sms_storage("SM")
+settings.set_data_mode(1)
 
 # GPS
 # gps = GPS()
@@ -19,13 +20,14 @@ cwd = os.getcwd()
 # print(gps_cor)
 
 # SMS
-# contact_number = "******"  # Number you sending to
-# message = "Hello, world!"
+contact_number = "+11234567890"  # Number you are sending to, +CC (Country Code)
+message = "Hey"
 messaging = SMS()
 
 # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
 buffer = messaging.read_message(message_type="ALL")
-print(buffer)
+for i in buffer:
+    print(i)
 # Execute script from most recent text, can iterate through all and look for header('pw')
 # message = buffer[-1]["message_contents"]
 # if message[:2] == "pw":

@@ -1,7 +1,6 @@
 def get_message_type(message: str) -> str:
     try:
         int(message, 16)
-        print("Converting message from HEX, data may be corrupted!")
         message_b = bytes.fromhex(message)
         message = message_b.decode('utf-8')
         return message.rstrip().replace("\x00", "")
@@ -28,10 +27,12 @@ class Parser:
         message_text = [message for i, message in enumerate(read_messages) if i % 2 == 0 and i != 0]
         for i, message in enumerate(message_data):
             message_list.append({
-                "message_index": message[message[0][::-1].rfind(' '):],
-                "message_type": message[1],
-                "message_originating_address": get_message_type(message[2]),
-                "message_destination_address": get_message_type(message[3]),
+                #"message_index": message[message[0][::-1].rfind(' '):],
+                # idx 0 is oldest message
+                "message_index": i,
+                "message_type": get_message_type(message[1].replace('"', '')),
+                "message_originating_address": get_message_type(message[2].replace('"', '')),
+                "message_destination_address": get_message_type(message[3].replace('"', '')),
                 "message_date": message[4][1:],
                 "message_time": message[5][:-1],
                 "message_contents": get_message_type(message_text[i])

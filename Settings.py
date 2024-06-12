@@ -125,4 +125,19 @@ class Settings(AT):
         if mode == 1:
             self.send_at('AT+CMGF=1', 'OK', TIMEOUT)  # Set to text mode
         if mode == 0:
-            self.send_at('AT+CMGF=0', 'OK', TIMEOUT)  # Set to text mode
+            self.send_at('AT+CMGF=0', 'OK', TIMEOUT)  # Set to hex mode
+
+
+    def set_encoding_mode(self, mode: int) -> None:
+        """
+        Set encoding mode. 0=IRA, 1=GSM, 2=UCS2
+        :param mode: int
+        :return: None
+        """
+        if mode == 2:
+            self.send_at('AT+CSCS="UCS2"', 'OK', TIMEOUT)
+        if mode == 1:
+            self.send_at('AT+CSCS="GSM"', 'OK', TIMEOUT)
+        if mode == 0:
+            self.send_at('AT+CSCS="IRA"', 'OK', TIMEOUT)
+        
