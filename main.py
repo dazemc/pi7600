@@ -24,12 +24,12 @@ print(settings.get_config)
 # SMS
 # contact_number = "+11234567890"  # Number you are sending to, +CC (Country Code)
 # message = "Hey"
-# messaging = SMS()
+messaging = SMS()
 
 # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
-# buffer = messaging.read_message(message_type="ALL")
-# for i in buffer:
-#     print(i)
+buffer = messaging.read_message(message_type="ALL")
+for i in buffer:
+    print(i)
 # Execute script from most recent text, can iterate through all and look for header('pw')
 # message = buffer[-1]["message_contents"]
 # if message[:2] == "pw":
