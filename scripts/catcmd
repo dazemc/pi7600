@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+# send one line commands with sys arg
+import serial
+import sys
+import time
+
+def get_serial_connection() -> serial.Serial:
+    try:
+        ser = serial.Serial('/dev/ttyUSB3', 115200, timeout=1)
+        return ser
+    except serial.SerialException as e:
+        print(f"Error opening serial port: {e}")
+        sys.exit(1)
+
+def encoded_arg() -> bytes:
+    if len(sys.argv) == 2:
+        command = f"""{sys.argv[1]}"""
+        # print(f"RAW: '{command}'")
+        encoded_command = (command + '\r').encode('utf-8')
+        # print(f"ENCODED: '{encoded_command}'")
+        return encoded_command
+    else:
+        print('Invalid operation... Usage: python script.py "AT COMMAND"')
+        sys.exit(1)
+
+def get_resp(ser: serial.Serial, timeout: int = 10) -> str:
+    ser.write(encoded_arg())
+    response = ''
+    start_time = time.time()
+
+    while True:
+        if ser.in_waiting > 0:
+            chunk = ser.read(ser.in_waiting)
+            response += chunk.decode('utf-8')
+        
+        # Check for end of response
+        if '\r\n' in response:
+            if 'OK' in response or 'ERROR' in response:
+                break
+        
+        # Check for timeout
+        if time.time() - start_time > timeout:
+            print("Timeout waiting for response")
+            break
+
+        time.sleep(0.1)  # Short delay to prevent busy-waiting
+
+    return response
+
+def main() -> None:
+    ser = get_serial_connection()
+    try:
+        # print("Sending command...")
+        response = get_resp(ser)
+        if not ('OK' in response or 'ERROR' in response):
+            print("Response did not contain 'OK' or 'ERROR'. Full response:")
+            print(response)
+        else:
+            print(response)
+    except serial.SerialException as e:
+        print(f"Serial error occurred: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        ser.close()
+
+if __name__ == "__main__":
+    main()
