@@ -50,10 +50,16 @@ cwd = os.getcwd()
 
 # API 
 
-@app.get("/")
+@app.get("/info")
 async def root():
-    return {"message": "py zero sim api"}
-
+    hostname = subprocess.run(["hostname"], capture_output=True, text=True).stdout.strip()
+    uname = subprocess.run(["uname", "-r"], capture_output=True, text=True).stdout.strip()
+    date = subprocess.run(["date"], capture_output=True, text=True).stdout.strip()
+    return {
+        "hostname": hostname,
+        "uname": uname,
+        "date": date,
+    }
 
 @app.get("/sms")
 async def sms():

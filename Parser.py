@@ -28,7 +28,7 @@ class Parser:
         for i, message in enumerate(message_data):
             message_list.append({
                 # idx 0 is oldest message, this is relative to at+cmgd/cmgr
-                "message_index": message[0][message[0].rfind(' '):],
+                "message_index": message[0][message[0].rfind(' ') + 1:],
                 "message_type": get_message_type(message[1].replace('"', '')),
                 "message_originating_address": get_message_type(message[2].replace('"', '')),
                 "message_destination_address": get_message_type(message[3].replace('"', '')),
