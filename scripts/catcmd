@@ -22,7 +22,7 @@ def encoded_arg() -> bytes:
         # print(f"ENCODED: '{encoded_command}'")
         return encoded_command
     else:
-        print('Invalid operation... Usage: python script.py "AT COMMAND"')
+        print("""Invalid operation... Usage: catcmd AT+COMMAND or 'AT+COMMAND="ARG"'""")
         sys.exit(1)
 
 
