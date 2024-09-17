@@ -37,5 +37,4 @@ class Parser:
                 "message_time": message[5][:-1],
                 "message_contents": get_message_type(message_text[i])
             })
-        message_final = message_list[:-1]
-        return message_final
+        return message_list
