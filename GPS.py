@@ -1,6 +1,7 @@
 """
 This provides GPS functionality
 """
+
 from Globals import *
 from Settings import Settings
 import time
@@ -21,15 +22,17 @@ class GPS(Settings):
         :return: bool
         """
         if start:
-            print('Starting GPS session...')
-            if self.send_at('AT+CGPS=0,1', 'OK', GPS_TIMEOUT) and self.send_at('AT+CGPS=1,1', 'OK', GPS_TIMEOUT):
+            print("Starting GPS session...")
+            if self.send_at("AT+CGPS=0,1", "OK", GPS_TIMEOUT) and self.send_at(
+                "AT+CGPS=1,1", "OK", GPS_TIMEOUT
+            ):
                 print("Started successfully")
                 time.sleep(2)
                 return True
         if not start:
-            print('Closing GPS session...')
-            self.rec_buff = ''
-            if self.send_at('AT+CGPS=0,1', 'OK', GPS_TIMEOUT):
+            print("Closing GPS session...")
+            self.rec_buff = ""
+            if self.send_at("AT+CGPS=0,1", "OK", GPS_TIMEOUT):
                 return True
             else:
                 return False
@@ -37,10 +40,10 @@ class GPS(Settings):
     def get_gps_position(self, retries: int = GPS_RETRY) -> str | bool:
         if self.gps_session(True):
             for _ in range(retries):
-                answer = self.send_at('AT+CGPSINFO', '+CGPSINFO: ', GPS_TIMEOUT)
-                if answer and ',,,,,,' not in answer:
+                answer = self.send_at("AT+CGPSINFO", "+CGPSINFO: ", GPS_TIMEOUT)
+                if answer and ",,,,,," not in answer:
                     return answer
-                elif ',,,,,,' in answer:
+                elif ",,,,,," in answer:
                     print("GPS signal not found...")
                 else:
                     print("Error accessing GPS, attempting to close session")

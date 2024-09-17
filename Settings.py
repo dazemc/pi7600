@@ -14,13 +14,17 @@ def py_version_check() -> bool:
     :return: bool
     """
     try:
-        if float(sys.version[:sys.version[2:].find('.') + 2]) < 3.10:
-            print("Python version must be 3.10 or greater, buildpy.sh will build latest stable release from source. "
-                  "Alternatively, you can use the included venv with ./venv/Scripts/activate")
+        if float(sys.version[: sys.version[2:].find(".") + 2]) < 3.10:
+            print(
+                "Python version must be 3.10 or greater, buildpy.sh will build latest stable release from source. "
+                "Alternatively, you can use the included venv with ./venv/Scripts/activate"
+            )
             print("\nExiting...")
             return False
     except:
-        user_input = input("Python version check failed. Depends on 3.10 or greater, continue anyways(y/N?").lower()
+        user_input = input(
+            "Python version check failed. Depends on 3.10 or greater, continue anyways(y/N?"
+        ).lower()
         if user_input in ["", "n"]:
             print("\nExiting...")
             return False
@@ -47,11 +51,13 @@ class Settings(AT):
         """
         checks = {
             "Python version requirements not met": lambda: py_version_check(),
-            "SIM device not ready": lambda: self.sim_ready_check()
+            "SIM device not ready": lambda: self.sim_ready_check(),
         }
         check_failed = False
         for check, result_function in checks.items():
-            result = result_function()  # Call the lambda function to execute the actual check
+            result = (
+                result_function()
+            )  # Call the lambda function to execute the actual check
             if result is False:
                 check_failed = True
                 print(check)
@@ -61,7 +67,7 @@ class Settings(AT):
             self.first_run = False
 
     def enable_verbose_logging(self) -> bool:
-        self.rec_buff = self.send_at('AT+CMEE=2', 'OK', TIMEOUT)
+        self.rec_buff = self.send_at("AT+CMEE=2", "OK", TIMEOUT)
         if self.rec_buff:
             return True
         else:
@@ -75,7 +81,7 @@ class Settings(AT):
             return False
 
     def get_config(self) -> str | bool:
-        self.rec_buff = self.send_at('AT&V', 'OK', TIMEOUT)
+        self.rec_buff = self.send_at("AT&V", "OK", TIMEOUT)
         if self.rec_buff:
             return self.rec_buff
         else:
@@ -88,14 +94,14 @@ class Settings(AT):
         :return: bool
         """
         if os == "WIN":
-            self.send_at('AT+CUSBPIDSWITCH=9001,1,1', 'OK', TIMEOUT)
+            self.send_at("AT+CUSBPIDSWITCH=9001,1,1", "OK", TIMEOUT)
         elif os == "UNIX":
-            self.send_at('AT+CUSBPIDSWITCH=9011,1,1', 'OK', TIMEOUT)
+            self.send_at("AT+CUSBPIDSWITCH=9011,1,1", "OK", TIMEOUT)
         for _ in range(6):  # Wait up to 3 mins for reboot
             time.sleep(30)
             try:
                 self.init_serial(BAUDRATE, COM)
-                if self.send_at('AT', 'OK', TIMEOUT):
+                if self.send_at("AT", "OK", TIMEOUT):
                     print(f"Set usb for {os}")
                     return True
             except:
@@ -109,8 +115,9 @@ class Settings(AT):
         :param mode: str
         :return: bool
         """
-        buffer = self.send_at(f'AT+CPMS=\"{mode}\",\"{mode}\",\"{mode}\"', 'OK',
-                              TIMEOUT)  # Store messages on SIM(SM), "ME"/"MT" is flash
+        buffer = self.send_at(
+            f'AT+CPMS="{mode}","{mode}","{mode}"', "OK", TIMEOUT
+        )  # Store messages on SIM(SM), "ME"/"MT" is flash
         if buffer:
             return True
         else:
@@ -123,10 +130,9 @@ class Settings(AT):
         :return: None
         """
         if mode == 1:
-            self.send_at('AT+CMGF=1', 'OK', TIMEOUT)  # Set to text mode
+            self.send_at("AT+CMGF=1", "OK", TIMEOUT)  # Set to text mode
         if mode == 0:
-            self.send_at('AT+CMGF=0', 'OK', TIMEOUT)  # Set to hex mode
-
+            self.send_at("AT+CMGF=0", "OK", TIMEOUT)  # Set to hex mode
 
     def set_encoding_mode(self, mode: int) -> None:
         """
@@ -135,9 +141,8 @@ class Settings(AT):
         :return: None
         """
         if mode == 2:
-            self.send_at('AT+CSCS="UCS2"', 'OK', TIMEOUT)
+            self.send_at('AT+CSCS="UCS2"', "OK", TIMEOUT)
         if mode == 1:
-            self.send_at('AT+CSCS="GSM"', 'OK', TIMEOUT)
+            self.send_at('AT+CSCS="GSM"', "OK", TIMEOUT)
         if mode == 0:
-            self.send_at('AT+CSCS="IRA"', 'OK', TIMEOUT)
-        
+            self.send_at('AT+CSCS="IRA"', "OK", TIMEOUT)

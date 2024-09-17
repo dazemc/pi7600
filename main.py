@@ -48,18 +48,26 @@ cwd = os.getcwd()
 # phone.close_serial()
 
 
-# API 
+# API
+
 
 @app.get("/info")
 async def root():
-    hostname = subprocess.run(["hostname"], capture_output=True, text=True).stdout.strip()
-    uname = subprocess.run(["uname", "-r"], capture_output=True, text=True).stdout.strip()
-    date = subprocess.run(["date"], capture_output=True, text=True).stdout.strip()
+    hostname = subprocess.run(
+        ["hostname"], capture_output=True, text=True, check=False
+    ).stdout.strip()
+    uname = subprocess.run(
+        ["uname", "-r"], capture_output=True, text=True, check=False
+    ).stdout.strip()
+    date = subprocess.run(
+        ["date"], capture_output=True, text=True, check=False
+    ).stdout.strip()
     return {
         "hostname": hostname,
         "uname": uname,
         "date": date,
     }
+
 
 @app.get("/sms")
 async def sms():

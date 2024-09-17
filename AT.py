@@ -7,7 +7,7 @@ class AT:
     def __init__(self, com: str, baudrate: int) -> None:
         super().__init__()
         self.ser = self.init_serial(baudrate, com)
-        self.rec_buff = ''
+        self.rec_buff = ""
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
         """
@@ -18,14 +18,14 @@ class AT:
         :return: bool | str
         """
         if len(command) < BUFFER_CHAR_LIMIT:
-            self.ser.write((command + '\r\n').encode())
+            self.ser.write((command + "\r\n").encode())
             time.sleep(timeout)
             if self.ser.in_waiting:
                 time.sleep(BUFFER_WAIT_TIME)
                 self.rec_buff = self.ser.read(self.ser.in_waiting)
             if back not in self.rec_buff.decode():
-                print(command + ' ERROR')
-                print(command + ' back:\t' + self.rec_buff.decode())
+                print(command + " ERROR")
+                print(command + " back:\t" + self.rec_buff.decode())
                 return False
             else:
                 return self.rec_buff.decode()
@@ -34,7 +34,7 @@ class AT:
             return False
 
     def retry_last_command(self) -> bool:
-        if self.send_at('A/', 'OK', TIMEOUT):
+        if self.send_at("A/", "OK", TIMEOUT):
             return True
         else:
             print("Retry failed")
@@ -50,7 +50,7 @@ class AT:
     def clear_buffer(self) -> None:
         if self.ser.in_waiting:
             self.ser.flush()
-            self.rec_buff = ''
+            self.rec_buff = ""
 
     def init_serial(self, baud, com):
         ser = serial.Serial(com, baud)

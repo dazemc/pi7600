@@ -1,6 +1,7 @@
 """
 This provides global constants
 """
+
 BUFFER_CHAR_LIMIT = 559  # "AT" prefix does not count
 EXIT_SUCCESS_CODE = 0
 EXIT_FAILURE_CODE = 1
