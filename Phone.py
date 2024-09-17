@@ -2,7 +2,6 @@
 Provides Phone-call functionality
 """
 
-import time
 from Globals import *
 from Settings import Settings
 

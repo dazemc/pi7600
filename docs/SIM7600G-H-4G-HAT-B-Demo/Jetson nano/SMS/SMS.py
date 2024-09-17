@@ -28,14 +28,13 @@ def send_at(command, back, timeout):
 
 
 def SendShortMessage(phone_number, text_message):
-
     print("Setting SMS mode...")
     send_at("AT+CMGF=1", "OK", 1)
     print("Sending Short Message")
     answer = send_at('AT+CMGS="' + phone_number + '"', ">", 2)
     if 1 == answer:
         ser.write(text_message.encode())
-        ser.write(b"\x1A")
+        ser.write(b"\x1a")
         answer = send_at("", "OK", 20)
         if 1 == answer:
             print("send successfully")

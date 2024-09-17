@@ -2,6 +2,7 @@
 """
 This provides SMS functionality
 """
+
 from Globals import *
 from Settings import Settings
 from Parser import Parser
@@ -66,7 +67,7 @@ class SMS(Settings):
         answer = self.send_at('AT+CMGS="' + phone_number + '"', ">", TIMEOUT)
         if answer:
             self.ser.write(text_message.encode())
-            self.ser.write(b"\x1A")
+            self.ser.write(b"\x1a")
             # 'OK' here means the message sent?
             answer = self.send_at("", "OK", SMS_SEND_TIMEOUT)
             if answer:

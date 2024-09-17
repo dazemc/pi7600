@@ -1,12 +1,13 @@
 import os
 import subprocess
-from SMS import SMS
+
+from fastapi import FastAPI
+
+from Globals import *
 from GPS import GPS
 from Phone import Phone
 from Settings import Settings
-from Globals import *
-from fastapi import FastAPI
-
+from SMS import SMS
 
 app = FastAPI()
 cwd = os.getcwd()
