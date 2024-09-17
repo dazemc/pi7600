@@ -11,6 +11,7 @@ from fastapi import FastAPI
 app = FastAPI()
 cwd = os.getcwd()
 
+
 # SETTINGS
 # settings = Settings()
 # settings.set_data_mode(1)
@@ -27,7 +28,9 @@ cwd = os.getcwd()
 # SMS
 # contact_number = "+11234567890"  # Number you are sending to, +CC (Country Code)
 # message = "Hey"
-messaging = SMS()
+# buffer = messaging.read_message(message_type="ALL")
+# print("Sending messages...")
+# print(buffer)
 
 # Execute script from most recent text, can iterate through all and look for header('pw')
 # TODO: TOTP
@@ -54,6 +57,7 @@ async def root():
 
 @app.get("/sms")
 async def sms():
+    messaging = SMS()
     # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
     buffer = messaging.read_message(message_type="ALL")
     messaging.close_serial()

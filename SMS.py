@@ -43,7 +43,8 @@ class SMS(Settings):
         try:
             buffer = self.receive_message(message_type)
             return buffer
-        except:
+        except Exception as e:
+            print("Error:", e)
             if self.ser is not None:
                 self.ser.close()
 

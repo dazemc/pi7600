@@ -42,7 +42,7 @@ class AT:
 
     def close_serial(self) -> None:
         try:
-            self.clear_buffer()
+            # self.clear_buffer()
             self.ser.close()
         except:
             print("Failed to close serial: Already closed or inaccessible")
@@ -54,5 +54,5 @@ class AT:
 
     def init_serial(self, baud, com):
         ser = serial.Serial(com, baud)
-        ser.flush()
+        # ser.flush()
         return ser
