@@ -18,6 +18,7 @@ class Parser:
             if i % 2 == 0:
                 message = v.split(",")
                 print(message)
+                print(v)
                 message_list.append(
                     {
                         "message_index": message[0][message[0].rfind(" ") + 1 :],
@@ -37,4 +38,4 @@ class Parser:
                         ,
                     }
                 )
-                return message_list
+        return message_list
