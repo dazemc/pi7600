@@ -96,7 +96,7 @@ async def send_msg(msg: str, number: str):
     return resp
 
 
-@app.get("/at", status_code=status.HTTP_202_ACCEPTED)
+@app.post("/at", status_code=status.HTTP_202_ACCEPTED)
 async def catcmd(cmd: str = "AT"):
     resp = subprocess.run(
         ["./scripts/catcmd", cmd], capture_output=True, text=True, check=False
