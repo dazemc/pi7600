@@ -66,7 +66,9 @@ async def root():
     date = subprocess.run(
         ["date"], capture_output=True, text=True, check=False
     ).stdout.strip()
-    arch = subprocess.run(["arch"], capture_output=True, check=False).stdout.strip()
+    arch = subprocess.run(
+        ["arch"], capture_output=True, text=True, check=False
+    ).stdout.strip()
     return {
         "hostname": hostname,
         "uname": uname,
@@ -87,7 +89,16 @@ async def delete_msg(msg_idx: int):
     resp = sms.delete_message(msg_idx)
     return resp
 
+
 @app.post("/sms", status_code=status.HTTP_201_CREATED)
 async def send_msg(msg: str, number: str):
     resp = sms.send_message(phone_number=number, text_message=msg)
     return resp
+
+
+@app.post("/at", status_code=status.HTTP_202_ACCEPTED)
+async def catcmd(cmd: str = "AT"):
+    resp = subprocess.run(
+        ["catcmd", f"'{cmd}'"], capture_output=True, text=True, check=False
+    ).stdout.strip()
+    return {"response": resp}
