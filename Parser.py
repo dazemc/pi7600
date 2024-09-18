@@ -31,7 +31,7 @@ class Parser:
             if len(read_messages[i]) > 1:
                 message = read_messages[i].split(",")
                 if len(message) >= 6:  # Ensure we have enough fields
-                    print(message[0])
+                    print(message)
                     message_list.append(
                         {
                             "message_index": message[0][message[0].rfind(" ") + 1 :],
