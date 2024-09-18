@@ -21,9 +21,29 @@ com_watch = AT(
 
 
 # API
-@app.get("/info", status_code=status.HTTP_200_OK)
+@app.get("/", status_code=status.HTTP_200_OK)
 async def root() -> dict:
-    """Device Information
+    """Modem information and status
+
+    Returns:
+        dict: Various network and device checks
+    """
+    # TODO: Placeholders
+    return {
+        "AT": "OK",
+        "CSQ?": "OK",
+        "CSPIN?": "OK",
+        "CREG?": "OK",
+        "COPS?": "OK",
+        "GPS": "OK",
+        "DATA": "OK",
+        "DNS": "OK",
+    }
+
+
+@app.get("/info", status_code=status.HTTP_200_OK)
+async def info() -> dict:
+    """Host device information
 
     Returns:
         dict: hostname, uname, date, arch
