@@ -2,6 +2,8 @@ import os
 import subprocess
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from starlette import status
 
 from Globals import *
 from GPS import GPS
@@ -53,7 +55,7 @@ sms = SMS()
 # API
 
 
-@app.get("/info")
+@app.get("/info", status_code=status.HTTP_200_OK)
 async def root():
     hostname = subprocess.run(
         ["hostname"], capture_output=True, text=True, check=False
@@ -73,19 +75,19 @@ async def root():
     }
 
 
-@app.get("/sms")
+@app.get("/sms", status_code=status.HTTP_200_OK)
 async def sms_root():
     # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
     resp = sms.read_message(message_type="ALL")
     return resp
 
 
-@app.get("/sms/delete/{msg_idx}")
+@app.get("/sms/delete/{msg_idx}", status_code=status.HTTP_202_ACCEPTED)
 async def delete_msg(msg_idx: int):
     resp = sms.delete_message(msg_idx)
     return resp
 
-@app.post("/sms")
+@app.post("/sms", status_code=status.HTTP_201_CREATED)
 async def send_msg(msg: str, number: str):
     resp = sms.send_message(phone_number=number, text_message=msg)
     return resp
