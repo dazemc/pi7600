@@ -19,20 +19,20 @@ class Parser:
                 message_list.append(
                     {
                         "message_index": message[0][message[0].rfind(" ") + 1 :],
-                        "message_type": get_message_type(
+                        "message_type":
                             message[1].replace('"', "")
-                        ),
-                        "message_originating_address": get_message_type(
+                        ,
+                        "message_originating_address":
                             message[2].replace('"', "")
-                        ),
-                        "message_destination_address": get_message_type(
+                        ,
+                        "message_destination_address":
                             message[3].replace('"', "")
-                        ),
-                        "message_date": message[4][1:],  # Remove starting quote
-                        "message_time": message[5][:-1],  # Remove trailing quote
-                        "message_contents": get_message_type(
+                        ,
+                        "message_date": message[4][1:],
+                        "message_time": message[5][:-1],
+                        "message_contents":
                             read_messages[i - 1]
-                        ),  # Even index for message text
+                        ,
                     }
                 )
         return message_list
