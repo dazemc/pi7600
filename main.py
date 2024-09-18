@@ -100,5 +100,5 @@ async def send_msg(msg: str, number: str):
 async def catcmd(cmd: str = "AT"):
     resp = subprocess.run(
         ["./scripts/catcmd", cmd], capture_output=True, text=True, check=False
-    ).stdout.strip()
+    ).stdout
     return resp
