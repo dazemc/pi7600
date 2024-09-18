@@ -26,10 +26,12 @@ class Parser:
         read_messages = sms_buffer.split("\r\n")
         message_list = []
 
+
         for i in range(1, len(read_messages), 2):
             if len(read_messages[i]) > 1:
                 message = read_messages[i].split(",")
                 if len(message) >= 6:  # Ensure we have enough fields
+                    print(message[0])
                     message_list.append(
                         {
                             "message_index": message[0][message[0].rfind(" ") + 1 :],
