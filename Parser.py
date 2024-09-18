@@ -35,4 +35,4 @@ class Parser:
                     ,
                 }
             )
-    return message_list
+            return message_list
