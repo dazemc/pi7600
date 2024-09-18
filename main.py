@@ -114,7 +114,7 @@ async def send_msg(msg: str, number: str) -> dict:
 
 @app.post("/at", status_code=status.HTTP_202_ACCEPTED)
 async def catcmd(cmd: str = "AT") -> str:
-    """Sends raw AT commands to modem, will not work with commands that require input, return response
+    r"""Sends raw AT commands to modem, will not work with commands that require input, return response
 
     Args:
         cmd (str, optional): Defaults to "AT".
