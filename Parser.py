@@ -24,11 +24,10 @@ class Parser:
         :return: list<dict>
         """
         read_messages = sms_buffer.split("\r\n")
-        print(read_messages)
         message_list = []
 
 
-        for i in range(1, len(read_messages), 2):
+        for i in range(read_messages):
             if len(read_messages[i]) > 1:
                 message = read_messages[i].split(",")
                 if len(message) >= 6:  # Ensure we have enough fields
