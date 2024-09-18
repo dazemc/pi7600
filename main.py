@@ -84,3 +84,8 @@ async def sms_root():
 async def delete_msg(msg_idx: int):
     resp = sms.delete_message(msg_idx)
     return resp
+
+@app.post("/sms")
+async def send_msg(msg: str, number: str):
+    resp = sms.send_message(phone_number=number, text_message=msg)
+    return resp

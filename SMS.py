@@ -87,9 +87,20 @@ class SMS(Settings):
                 )
                 return False
         else:
-            print("error%d" % answer)
+            print(f"error: {answer}")
             return False
 
-    def delete_message(self, msg_idx: int) -> bool | str:
+    def delete_message(self, msg_idx: int) -> dict:
+        """delete message by index
+
+        Args:
+            msg_idx (int): message to delete
+
+        Returns:
+            dict: {"response": "Success" | False}
+        """
         resp = self.send_at(f"AT+CMGD={msg_idx}", "OK", TIMEOUT)
-        return {"response": resp}
+        if resp is True:
+            return {"response": "Success"}
+        else:
+            return {"response": False}
