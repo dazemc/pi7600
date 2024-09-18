@@ -101,4 +101,4 @@ async def catcmd(cmd: str = "AT"):
     resp = subprocess.run(
         ["./scripts/catcmd", cmd], capture_output=True, text=True, check=False
     ).stdout.strip()
-    return {"response": resp}
+    return resp
