@@ -11,6 +11,7 @@ from SMS import SMS
 
 app = FastAPI()
 cwd = os.getcwd()
+sms = SMS()
 
 
 # SETTINGS
@@ -63,17 +64,23 @@ async def root():
     date = subprocess.run(
         ["date"], capture_output=True, text=True, check=False
     ).stdout.strip()
+    arch = subprocess.run(["arch"], capture_output=True, check=False).stdout.strip()
     return {
         "hostname": hostname,
         "uname": uname,
         "date": date,
+        "arch": arch,
     }
 
 
 @app.get("/sms")
-async def sms():
-    messaging = SMS()
+async def sms_root():
     # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
-    buffer = messaging.read_message(message_type="ALL")
-    messaging.close_serial()
-    return {"response": buffer}
+    resp = sms.read_message(message_type="ALL")
+    return resp
+
+
+@app.get("/sms/delete/{msg_idx}")
+async def delete_msg(msg_idx: int):
+    resp = sms.delete_message(msg_idx)
+    return resp

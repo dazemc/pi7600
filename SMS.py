@@ -23,7 +23,7 @@ class SMS(Settings):
         :param message_type: str
         :return: list<dict>
         """
-        self.set_data_mode(1)
+        # self.set_data_mode(1)
         answer = self.send_at(f'AT+CMGL="{message_type}"', "OK", TIMEOUT)
         if answer:
             if message_type != "ALL" and message_type in answer:
@@ -43,7 +43,7 @@ class SMS(Settings):
         """
         try:
             buffer = self.receive_message(message_type)
-            return buffer
+            return {"response": buffer}
         except Exception as e:
             print("Error:", e)
             if self.ser is not None:
@@ -59,7 +59,8 @@ class SMS(Settings):
             try:
                 buffer = self.receive_message(message_type)
                 return buffer
-            except:
+            except Exception as e:
+                print(f"Unhandled error: {e}")
                 if self.ser is not None:
                     self.ser.close()
 
@@ -88,3 +89,7 @@ class SMS(Settings):
         else:
             print("error%d" % answer)
             return False
+
+    def delete_message(self, msg_idx: int) -> bool | str:
+        resp = self.send_at(f"AT+CMGD={msg_idx}", "OK", TIMEOUT)
+        return {"response": resp}
