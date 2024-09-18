@@ -56,3 +56,11 @@ class AT:
         ser = serial.Serial(com, baud)
         # ser.flush()
         return ser
+    
+    def read_loop(self):
+        read = True
+        logging = True
+        while read:
+            if logging:
+                with open("./logs/current.log,", "w", encoding="utf-8") as logfile:
+                    logfile.write(self.rec_buff.decode())
