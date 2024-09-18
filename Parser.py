@@ -13,8 +13,8 @@ class Parser:
         message_list = []
 
 
-        for i in read_messages:
-            message = i.split(",")
+        for i, v in enumerate(read_messages):
+            message = v.split(",")
             print(message)
             message_list.append(
                 {
@@ -31,7 +31,7 @@ class Parser:
                     "message_date": message[4][1:],
                     "message_time": message[5][:-1],
                     "message_contents":
-                        read_messages[i - 1]
+                        read_messages[i + 1]
                     ,
                 }
             )
