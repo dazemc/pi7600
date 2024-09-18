@@ -24,6 +24,7 @@ class Parser:
         :return: list<dict>
         """
         read_messages = sms_buffer.split("\r\n")
+        print(read_messages)
         message_list = []
 
 
