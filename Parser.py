@@ -9,33 +9,27 @@ class Parser:
         :return: list<dict>
         """
         read_messages = sms_buffer.split("\r\n")
-        read_messages = read_messages[1:-3]
-        print(read_messages)
+        read_messages = read_messages[
+            1:-3
+        ]  # first and last few values are just cmd and resp code
         message_list = []
 
-
         for i, v in enumerate(read_messages):
-            if i % 2 == 0:
+            if (
+                i % 2 == 0
+            ):  # Even idx has msg info, odd is msg content for preceding idx
                 message = v.split(",")
-                print(message)
-                print(v)
                 message_list.append(
                     {
                         "message_index": message[0][message[0].rfind(" ") + 1 :],
-                        "message_type":
-                            message[1].replace('"', "")
-                        ,
-                        "message_originating_address":
-                            message[2].replace('"', "")
-                        ,
-                        "message_destination_address":
-                            message[3].replace('"', "")
-                        ,
+                        "message_type": message[1].replace('"', ""),
+                        "message_originating_address": message[2].replace('"', ""),
+                        "message_destination_address": message[3].replace('"', ""),
                         "message_date": message[4][1:],
                         "message_time": message[5][:-1],
-                        "message_contents":
-                            read_messages[i + 1]
-                        ,
+                        "message_contents": read_messages[
+                            i + 1
+                        ],  # idx + 1 is always message content
                     }
                 )
         return message_list
