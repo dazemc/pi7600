@@ -6,6 +6,7 @@ from Globals import *
 class AT:
     def __init__(self, com: str, baudrate: int) -> None:
         super().__init__()
+        self.com = com
         self.ser = self.init_serial(baudrate, com)
         self.rec_buff = ""
 
@@ -56,11 +57,12 @@ class AT:
         ser = serial.Serial(com, baud)
         # ser.flush()
         return ser
-    
-    def read_loop(self):
+
+    def read_loop(self, logging = True):
         read = True
-        logging = True
         while read:
             if logging:
-                with open("./logs/current.log,", "w", encoding="utf-8") as logfile:
+                with open(
+                    "./logs/current_watcher.log,", "w", encoding="utf-8"
+                ) as logfile:
                     logfile.write(self.rec_buff.decode())

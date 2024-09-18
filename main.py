@@ -17,6 +17,7 @@ cwd = os.getcwd()
 sms = SMS()
 com_watch = AT(com=WATCHER_COM, baudrate=BAUDRATE)  # Might separate this into systemd, just polls serial and reacts.
 
+
 # SETTINGS for persistent modem configs
 # settings = Settings()
 # settings.set_data_mode(1)
