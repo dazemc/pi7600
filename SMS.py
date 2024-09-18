@@ -100,7 +100,7 @@ class SMS(Settings):
             dict: {"response": "Success" | False}
         """
         resp = self.send_at(f"AT+CMGD={msg_idx}", "OK", TIMEOUT)
-        if resp is True:
+        if resp:
             return {"response": "Success"}
         else:
             return {"response": False}

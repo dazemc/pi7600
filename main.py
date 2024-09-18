@@ -76,9 +76,9 @@ async def root():
 
 
 @app.get("/sms", status_code=status.HTTP_200_OK)
-async def sms_root():
+async def sms_root(msg_query: str = "ALL"):
     # Read message lists, by message type ("ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT")
-    resp = sms.read_message(message_type="ALL")
+    resp = sms.read_message(message_type=msg_query)
     return resp
 
 
