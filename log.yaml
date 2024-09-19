@@ -25,17 +25,17 @@ loggers:
   uvicorn:
     handlers: [console]
     level: INFO
-    propagate: False
+    propagate: True
 
   uvicorn.error:
     handlers: [console]
     level: INFO
-    propagate: False
+    propagate: True
 
   uvicorn.access:
     handlers: [console]
     level: INFO
-    propagate: False
+    propagate: True
 
   # Configure root logger for other logs
   root:
