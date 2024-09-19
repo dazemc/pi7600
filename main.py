@@ -15,7 +15,7 @@ from Settings import Settings
 from SMS import SMS
 
 # Integrate into uvicorn logger
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("uvicorn.pi7600")
 logger.info("Initializing sim modules")
 
 app = FastAPI()
