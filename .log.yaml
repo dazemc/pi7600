@@ -19,7 +19,7 @@ handlers:
   file:
     class: logging.FileHandler
     formatter: standard
-    filename: app.log
+    filename: ./logs/current.log
 
 loggers:
   uvicorn:
