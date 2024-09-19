@@ -1,20 +1,18 @@
 """FastAPI for SIMCOM 7600G-H"""
 
+import logging
 import os
 import subprocess
 from typing import List, Optional
-import logging
-import uvicorn
 
 from fastapi import FastAPI, status
 from pydantic import BaseModel, ValidationError
 
 from AT import AT
 from Globals import *
-from SMS import SMS
 from GPS import GPS
 from Settings import Settings
-
+from SMS import SMS
 
 # Integrate into uvicorn logger
 logger = logging.getLogger("uvicorn")
@@ -28,6 +26,8 @@ settings = Settings()
 com_watch = AT(
     com=WATCHER_COM, baudrate=BAUDRATE
 )  # Might separate this into systemd, just polls serial and reacts.
+
+logger.info("Ready")
 
 
 class Messages(BaseModel):

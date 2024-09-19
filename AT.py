@@ -58,7 +58,7 @@ class AT:
         # ser.flush()
         return ser
 
-    def read_loop(self, logging = True):
+    def read_loop(self, logging=True):
         read = True
         while read:
             if logging:

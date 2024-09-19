@@ -16,13 +16,10 @@ class GPS(Settings):
         super().__init__()
         self.loc = ""
         self.is_running = self.session_check()
-        
-    
+
     def session_check(self):
         check = self.send_at("AT+CGPS?", "+CGPS", TIMEOUT)
         return True if "+CGPS: 1,1" in check else False
-            
-        
 
     def gps_session(self, start: bool) -> bool:
         """

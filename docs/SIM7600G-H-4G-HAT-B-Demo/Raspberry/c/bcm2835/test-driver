@@ -33,9 +33,9 @@ set -u
 
 usage_error ()
 {
-  echo "$0: $*" >&2
-  print_usage >&2
-  exit 2
+    echo "$0: $*" >&2
+    print_usage >&2
+    exit 2
 }
 
 print_usage ()
@@ -58,31 +58,31 @@ expect_failure=no
 color_tests=no
 enable_hard_errors=yes
 while test $# -gt 0; do
-  case $1 in
-  --help) print_usage; exit $?;;
-  --version) echo "test-driver $scriptversion"; exit $?;;
-  --test-name) test_name=$2; shift;;
-  --log-file) log_file=$2; shift;;
-  --trs-file) trs_file=$2; shift;;
-  --color-tests) color_tests=$2; shift;;
-  --expect-failure) expect_failure=$2; shift;;
-  --enable-hard-errors) enable_hard_errors=$2; shift;;
-  --) shift; break;;
-  -*) usage_error "invalid option: '$1'";;
-  esac
-  shift
+    case $1 in
+        --help) print_usage; exit $?;;
+        --version) echo "test-driver $scriptversion"; exit $?;;
+        --test-name) test_name=$2; shift;;
+        --log-file) log_file=$2; shift;;
+        --trs-file) trs_file=$2; shift;;
+        --color-tests) color_tests=$2; shift;;
+        --expect-failure) expect_failure=$2; shift;;
+        --enable-hard-errors) enable_hard_errors=$2; shift;;
+        --) shift; break;;
+        -*) usage_error "invalid option: '$1'";;
+    esac
+    shift
 done
 
 if test $color_tests = yes; then
-  # Keep this in sync with 'lib/am/check.am:$(am__tty_colors)'.
-  red='[0;31m' # Red.
-  grn='[0;32m' # Green.
-  lgn='[1;32m' # Light green.
-  blu='[1;34m' # Blue.
-  mgn='[0;35m' # Magenta.
-  std='[m'     # No color.
+    # Keep this in sync with 'lib/am/check.am:$(am__tty_colors)'.
+    red='[0;31m' # Red.
+    grn='[0;32m' # Green.
+    lgn='[1;32m' # Light green.
+    blu='[1;34m' # Blue.
+    mgn='[0;35m' # Magenta.
+    std='[m'     # No color.
 else
-  red= grn= lgn= blu= mgn= std=
+    red= grn= lgn= blu= mgn= std=
 fi
 
 do_exit='rm -f $log_file $trs_file; (exit $st); exit $st'
@@ -95,16 +95,16 @@ trap "st=143; $do_exit" 15
 "$@" >$log_file 2>&1
 estatus=$?
 if test $enable_hard_errors = no && test $estatus -eq 99; then
-  estatus=1
+    estatus=1
 fi
 
 case $estatus:$expect_failure in
-  0:yes) col=$red res=XPASS recheck=yes gcopy=yes;;
-  0:*)   col=$grn res=PASS  recheck=no  gcopy=no;;
-  77:*)  col=$blu res=SKIP  recheck=no  gcopy=yes;;
-  99:*)  col=$mgn res=ERROR recheck=yes gcopy=yes;;
-  *:yes) col=$lgn res=XFAIL recheck=no  gcopy=yes;;
-  *:*)   col=$red res=FAIL  recheck=yes gcopy=yes;;
+    0:yes) col=$red res=XPASS recheck=yes gcopy=yes;;
+    0:*)   col=$grn res=PASS  recheck=no  gcopy=no;;
+    77:*)  col=$blu res=SKIP  recheck=no  gcopy=yes;;
+    99:*)  col=$mgn res=ERROR recheck=yes gcopy=yes;;
+    *:yes) col=$lgn res=XFAIL recheck=no  gcopy=yes;;
+    *:*)   col=$red res=FAIL  recheck=yes gcopy=yes;;
 esac
 
 # Report outcome to console.
