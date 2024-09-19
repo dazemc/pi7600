@@ -20,7 +20,7 @@ from LoggerConfig import LOGGING_CONFIG
 # Integrate into uvicorn logger
 logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger("uvicorn")
-logger.inf("Initializing Sim Modules")
+logger.info("Initializing Sim Modules")
 
 app = FastAPI()
 cwd = os.getcwd()
