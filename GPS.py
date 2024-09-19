@@ -15,7 +15,14 @@ class GPS(Settings):
     def __init__(self):
         super().__init__()
         self.loc = ""
-        self.is_running = False
+        self.is_running = self.session_check()
+        
+    
+    def session_check(self):
+        check = self.send_at("AT+CGPS?", "+CGPS", TIMEOUT)
+        return True if "+CGPS: 1,1" in check else False
+            
+        
 
     def gps_session(self, start: bool) -> bool:
         """
@@ -23,6 +30,7 @@ class GPS(Settings):
         :param start: bool
         :return: bool
         """
+        self.session_check()
         if start:
             print("Starting GPS session...")
             if self.send_at("AT+CGPS=0,1", "OK", GPS_TIMEOUT) and self.send_at(
@@ -42,6 +50,7 @@ class GPS(Settings):
                 return False
 
     def get_gps_position(self, retries: int = GPS_RETRY) -> str | bool:
+        self.session_check()
         if self.is_running:
             for _ in range(retries):
                 answer = self.send_at("AT+CGPSINFO", "+CGPSINFO: ", GPS_TIMEOUT)
