@@ -26,7 +26,7 @@ class AT:
                 self.rec_buff = self.ser.read(self.ser.in_waiting)
             if back not in self.rec_buff.decode():
                 print(command + " ERROR")
-                print(command + " back:\t" + self.rec_buff)
+                print(command + " back:\t" + self.rec_buff.decode())
                 return False
             else:
                 return self.rec_buff.decode()
