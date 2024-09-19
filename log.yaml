@@ -3,7 +3,7 @@ disable_existing_loggers: False
 
 formatters:
   uvicorn:
-    "()": uvicorn.logging.DefaultFormatter # Uvicorn's custom formatter
+    "()": uvicorn.logging.DefaultFormatter
     format: "%(levelprefix)s %(message)s"
     use_colors: true
 
@@ -23,21 +23,20 @@ handlers:
 
 loggers:
   uvicorn:
-    handlers: [console]
+    handlers: [console, file]
     level: INFO
-    propagate: True
+    propagate: False
 
   uvicorn.error:
-    handlers: [console]
+    handlers: [console, file]
     level: INFO
-    propagate: True
+    propagate: False
 
   uvicorn.access:
-    handlers: [console]
+    handlers: [console, file]
     level: INFO
-    propagate: True
+    propagate: False
 
-  # Configure root logger for other logs
   root:
     handlers: [console, file]
     level: INFO
