@@ -84,8 +84,8 @@ async def root() -> StatusResponse:
     csq_check = settings.send_at("AT+CSQ", "OK", TIMEOUT)
     csq = csq_check if csq_check else "ERROR"
     # PIN check
-    cspin_check = settings.send_at("AT+CSPIN?", "OK", TIMEOUT)
-    cspin = cspin_check if cspin_check else "ERROR"
+    cpin_check = settings.send_at("AT+CPIN?", "READY", TIMEOUT)
+    cpin = cpin_check if cpin_check else "ERROR"
     # Network registration
     creg_check = settings.send_at("AT+CREG?", "OK", TIMEOUT)
     creg = creg_check if creg_check else "ERROR"
@@ -118,7 +118,7 @@ async def root() -> StatusResponse:
     return StatusResponse(
         at=at,
         csq=csq,
-        cspin=cspin,
+        cpin=cpin,
         creg=creg,
         cops=cops,
         gpsinfo=gpsinfo,
