@@ -57,7 +57,7 @@ class GPS(Settings):
                 if answer and ",,,,,," not in answer:
                     return answer
                 elif ",,,,,," in answer:
-                    print("GPS signal not found...")
+                    return "GPS is active but no signal was found"
                 else:
                     print("Error accessing GPS, attempting to close session")
                     if not self.gps_session(False):
@@ -72,3 +72,4 @@ class GPS(Settings):
                 "Attempting to get location without an open GPS session, trying to open one now..."
             )
             self.gps_session(True)
+            self.get_gps_position()
