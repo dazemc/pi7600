@@ -14,8 +14,7 @@ class GPS(Settings):
 
     def __init__(self):
         super().__init__()
-        loc = self.get_gps_position()
-        
+        loc = ""
 
     def gps_session(self, start: bool) -> bool:
         """
