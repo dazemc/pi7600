@@ -8,11 +8,7 @@ from typing import List, Optional
 from fastapi import FastAPI, status
 from pydantic import BaseModel, ValidationError
 
-from AT import AT
-from Globals import *
-from GPS import GPS
-from Settings import Settings
-from SMS import SMS
+from pi7600 import GPS, SMS, TIMEOUT, Settings
 
 # Integrate into uvicorn logger
 logger = logging.getLogger("uvicorn.pi7600")
@@ -23,20 +19,12 @@ cwd = os.getcwd()
 sms = SMS()
 gps = GPS()
 settings = Settings()
-com_watch = AT(
-    com=WATCHER_COM, baudrate=BAUDRATE
-)  # Might separate this into systemd, just polls serial and reacts.
+# TODO: Concurrently setup serial monitor on COM_WATCHER, new messages, auto csq, calls, network changes, log, etc
 
 logger.info("Sim modules ready")
 
 
 class Messages(BaseModel):
-    """Pydantic model for SMS messages
-
-    Args:
-        BaseModel (_type_): _description_
-    """
-
     message_index: str
     message_type: str
     message_originating_address: Optional[str]
