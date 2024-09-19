@@ -3,6 +3,8 @@
 import os
 import subprocess
 from typing import List, Optional
+import logging
+import uvicorn
 
 from fastapi import FastAPI, status
 from pydantic import BaseModel, ValidationError
@@ -12,6 +14,13 @@ from Globals import *
 from SMS import SMS
 from GPS import GPS
 from Settings import Settings
+from LoggerConfig import LOGGING_CONFIG
+
+
+# Integrate into uvicorn logger
+logging.config.dictConfig(LOGGING_CONFIG)r
+logger = logging.getLogger("uvicorn")
+logger.inf("Initializing Sim Modules")
 
 app = FastAPI()
 cwd = os.getcwd()
@@ -76,6 +85,7 @@ async def root() -> StatusResponse:
     Returns:
         dict: Various network and device checks
     """
+    logger.info("Compiling modem status information")
     # .send_at() returns False on error, so tern to val or err
     # COM check
     at_check = settings.send_at("AT", "OK", TIMEOUT)
@@ -143,6 +153,7 @@ async def info() -> InfoResponse:
     Returns:
         dict: hostname, uname, date, arch
     """
+    logger.info("Compiling host device information")
     hostname = "".join(
         subprocess.run(
             ["hostname"], capture_output=True, text=True, check=False
@@ -180,6 +191,7 @@ async def sms_root(msg_query: str = "ALL") -> List[Messages]:
     Returns:
         List<dict>: [{Messages}, {Messages}]
     """
+    logger.info(f"Reading {msg_query} messages")
     raw_messages = sms.read_message(message_type=msg_query)
     messages = []
     for raw_msg in raw_messages:
@@ -202,6 +214,7 @@ async def delete_msg(msg_idx: int) -> dict:
     Returns:
         dict: {"response": "Success"} | False
     """
+    logger.info(f"DELETED_SMS: {msg_idx}")
     resp = sms.delete_message(msg_idx)
     return resp
 
@@ -217,6 +230,7 @@ async def send_msg(request: SendMessageRequest) -> dict:
     Returns:
         dict: {"response": True}
     """
+    logger.info(f"Sending {request.msg} to {request.number}")
     resp = sms.send_message(phone_number=request.number, text_message=request.msg)
     return {"response": resp}
 
@@ -231,6 +245,7 @@ async def catcmd(request: AtRequest) -> str:
     Returns:
         str: raw stdout response if "OK" or "ERROR" if "\r\n" is returned
     """
+    logger.info(f"Sending AT cmd: {request.cmd}")
     cmd_sanitized = request.cmd
     resp = subprocess.run(
         ["./scripts/catcmd", cmd_sanitized], capture_output=True, text=True, check=False
@@ -239,27 +254,10 @@ async def catcmd(request: AtRequest) -> str:
 
 
 # SETTINGS for persistent modem configs
-# settings = Settings()
 # settings.set_data_mode(1)
 # print(settings.get_config)
 # settings.enable_verbose_logging()  # Only needs to be enabled once
 # settings.set_sms_storage("SM")
-
-
-# GPS
-# gps = GPS()
-# gps_cor = gps.get_gps_position()
-# print(gps_cor)
-
-# Execute script from most recent text, can iterate through all and look for header('pw')
-# TODO: TOTP
-# message = buffer[-1]["message_contents"]
-# if message[:2] == "pw":
-#     if message[2:8] == '123456':  # can be encrypted just keep 559 char limit
-#         script = message[8:]  # TODO: add method to execute based off file type
-#         subprocess.call(f"{cwd}/scripts/{script}")  # don't forget to chmod +x
-# Send message, returns True on success
-# messaging.send_message(contact_number, message)
 
 # PHONE
 # phone = Phone()
