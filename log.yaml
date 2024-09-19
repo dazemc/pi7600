@@ -1,0 +1,43 @@
+version: 1
+disable_existing_loggers: False
+
+formatters:
+  uvicorn:
+    "()": uvicorn.logging.DefaultFormatter # Uvicorn's custom formatter
+    format: "%(levelprefix)s %(message)s"
+    use_colors: true
+
+  standard:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: uvicorn
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.FileHandler
+    formatter: standard
+    filename: app.log
+
+loggers:
+  uvicorn:
+    handlers: [console]
+    level: INFO
+    propagate: False
+
+  uvicorn.error:
+    handlers: [console]
+    level: INFO
+    propagate: False
+
+  uvicorn.access:
+    handlers: [console]
+    level: INFO
+    propagate: False
+
+  # Configure root logger for other logs
+  root:
+    handlers: [console, file]
+    level: INFO

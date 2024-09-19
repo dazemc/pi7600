@@ -14,11 +14,9 @@ from Globals import *
 from SMS import SMS
 from GPS import GPS
 from Settings import Settings
-from LoggerConfig import LOGGING_CONFIG
 
 
 # Integrate into uvicorn logger
-logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger("uvicorn")
 logger.info("Initializing Sim Modules")
 
