@@ -16,7 +16,7 @@ from SMS import SMS
 
 # Integrate into uvicorn logger
 logger = logging.getLogger("uvicorn")
-logger.info("Initializing Sim Modules")
+logger.info("Initializing sim modules")
 
 app = FastAPI()
 cwd = os.getcwd()
@@ -27,7 +27,7 @@ com_watch = AT(
     com=WATCHER_COM, baudrate=BAUDRATE
 )  # Might separate this into systemd, just polls serial and reacts.
 
-logger.info("Ready")
+logger.info("Sim modules ready")
 
 
 class Messages(BaseModel):
