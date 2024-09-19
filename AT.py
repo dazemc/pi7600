@@ -24,7 +24,7 @@ class AT:
             if self.ser.in_waiting:
                 time.sleep(BUFFER_WAIT_TIME)
                 self.rec_buff = self.ser.read(self.ser.in_waiting)
-            if back not in self.rec_buff:
+            if back not in self.rec_buff.decode():
                 print(command + " ERROR")
                 print(command + " back:\t" + self.rec_buff)
                 return False
