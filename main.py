@@ -49,10 +49,10 @@ class InfoResponse(BaseModel):
 class StatusResponse(BaseModel):
     at: str
     csq: str
-    cspin: str
+    cpin: str
     creg: str
     cops: str
-    gps: str
+    gpsinfo: str
     data: str
     dns: str
     apn: str
