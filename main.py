@@ -18,7 +18,7 @@ from LoggerConfig import LOGGING_CONFIG
 
 
 # Integrate into uvicorn logger
-logging.config.dictConfig(LOGGING_CONFIG)r
+logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger("uvicorn")
 logger.inf("Initializing Sim Modules")
 
