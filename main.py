@@ -48,6 +48,7 @@ class InfoResponse(BaseModel):
 
 class StatusResponse(BaseModel):
     at: str
+    cnum: str
     csq: str
     cpin: str
     creg: str
@@ -70,7 +71,7 @@ class AtRequest(BaseModel):
 # API
 @app.get("/", response_model=StatusResponse, status_code=status.HTTP_200_OK)
 async def root() -> StatusResponse:
-    """Modem information and status
+    """Parses out modem and network information
 
     Returns:
         dict: Various network and device checks
@@ -79,6 +80,13 @@ async def root() -> StatusResponse:
     # COM check
     at_check = settings.send_at("AT", "OK", TIMEOUT)
     at = at_check.splitlines()[2] if at_check else "ERROR"
+    # Modem number
+    cnum_check = settings.send_at("AT+CNUM", "+CNUM:", TIMEOUT)
+    cnum = (
+        cnum_check.splitlines()[2].split(",")[1].replace('"', "")
+        if cnum_check
+        else "ERROR"
+    )
     # Signal quality
     csq_check = settings.send_at("AT+CSQ", "OK", TIMEOUT)
     csq = csq_check.splitlines()[2] if csq_check else "ERROR"
@@ -112,11 +120,11 @@ async def root() -> StatusResponse:
     dns = "ERROR" if "Unreachable" in dns_check else "OK"
     # APN
     apn_check = settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
-    # TODO: APN needs further parsing
-    apn = apn_check.splitlines()[2] if apn_check else "ERROR"
+    apn = ",".join(apn_check.splitlines()[2].split(",")[3:]) if apn_check else "ERROR"
 
     return StatusResponse(
         at=at,
+        cnum=cnum,
         csq=csq,
         cpin=cpin,
         creg=creg,
@@ -135,18 +143,26 @@ async def info() -> InfoResponse:
     Returns:
         dict: hostname, uname, date, arch
     """
-    hostname = ''.join(subprocess.run(
-        ["hostname"], capture_output=True, text=True, check=False
-    ).stdout.splitlines())
-    uname = ''.join(subprocess.run(
-        ["uname", "-r"], capture_output=True, text=True, check=False
-    ).stdout.splitlines())
-    date = ''.join(subprocess.run(
-        ["date"], capture_output=True, text=True, check=False
-    ).stdout.splitlines())
-    arch = ''.join(subprocess.run(
-        ["arch"], capture_output=True, text=True, check=False
-    ).stdout.splitlines())
+    hostname = "".join(
+        subprocess.run(
+            ["hostname"], capture_output=True, text=True, check=False
+        ).stdout.splitlines()
+    )
+    uname = "".join(
+        subprocess.run(
+            ["uname", "-r"], capture_output=True, text=True, check=False
+        ).stdout.splitlines()
+    )
+    date = "".join(
+        subprocess.run(
+            ["date"], capture_output=True, text=True, check=False
+        ).stdout.splitlines()
+    )
+    arch = "".join(
+        subprocess.run(
+            ["arch"], capture_output=True, text=True, check=False
+        ).stdout.splitlines()
+    )
     return InfoResponse(
         hostname=hostname,
         uname=uname,
