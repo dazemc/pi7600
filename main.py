@@ -79,19 +79,19 @@ async def root() -> StatusResponse:
     # TODO: Parse response for some
     # COM check
     at_check = settings.send_at("AT", "OK", TIMEOUT)
-    at = at_check.splitlines()[1] if at_check else "ERROR"
+    at = at_check.splitlines()[2] if at_check else "ERROR"
     # Signal quality
     csq_check = settings.send_at("AT+CSQ", "OK", TIMEOUT)
-    csq = csq_check.splitlines()[1] if csq_check else "ERROR"
+    csq = csq_check.splitlines()[2] if csq_check else "ERROR"
     # PIN check
     cpin_check = settings.send_at("AT+CPIN?", "READY", TIMEOUT)
-    cpin = cpin_check.splitlines()[1] if cpin_check else "ERROR"
+    cpin = cpin_check.splitlines()[2] if cpin_check else "ERROR"
     # Network registration
     creg_check = settings.send_at("AT+CREG?", "OK", TIMEOUT)
-    creg = creg_check.splitlines()[1] if creg_check else "ERROR"
+    creg = creg_check.splitlines()[2] if creg_check else "ERROR"
     # Provider information
     cops_check = settings.send_at("AT+COPS?", "OK", TIMEOUT)
-    cops = cops_check.splitlines()[1] if cops_check else "ERROR"
+    cops = cops_check.splitlines()[2] if cops_check else "ERROR"
     # GPS coordinates
     gps_check = gps.get_gps_position()
     gpsinfo = gps_check if gps_check else "ERROR"
