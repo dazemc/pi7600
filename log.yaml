@@ -19,7 +19,7 @@ handlers:
   file:
     class: logging.FileHandler
     formatter: standard
-    filename: /var/log/uvicorn.log
+    filename: /var/log/pi7600/uvicorn.log
 
 loggers:
   uvicorn:
