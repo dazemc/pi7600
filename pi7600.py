@@ -22,14 +22,15 @@ def py_version_check() -> bool:
     Python minimum version check (3.10)
     :return: bool
     """
-    if float(sys.version[: sys.version[2:].find(".") + 2]) < 3.10:
-        print(
-            "Python version must be 3.10 or greater, buildpy.sh will build latest stable release from source. "
-            "Alternatively, you can use the included venv with ./venv/Scripts/activate"
-        )
-        print("\nExiting...")
-        return False
-    else:
+    try:
+        if float(sys.version[: sys.version[2:].find(".") + 2]) < 3.10:
+            print(
+                "Python version must be 3.10 or greater, buildpy.sh will build latest stable release from source. "
+                "Alternatively, you can use the included venv with ./venv/Scripts/activate"
+            )
+            print("\nExiting...")
+            return False
+    except:
         user_input = input(
             "Python version check failed. Depends on 3.10 or greater, continue anyways(y/N?"
         ).lower()
