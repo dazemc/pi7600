@@ -116,7 +116,7 @@ async def root() -> StatusResponse:
     dns = "ERROR" if "Unreachable" in dns_check else "OK"
     # APN
     apn_check = settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
-    apn = ",".join(apn_check.splitlines()[2].split(",")[2:3]).replace(r"\"", "") if apn_check else "ERROR"
+    apn = ",".join(apn_check.splitlines()[2].split(",")[2:3]).replace("\\"", "") if apn_check else "ERROR"
 
     return StatusResponse(
         at=at,
