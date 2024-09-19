@@ -76,7 +76,6 @@ async def root() -> StatusResponse:
         dict: Various network and device checks
     """
     # .send_at() returns False on error, so tern to val or err
-    # TODO: Parse response for some
     # COM check
     at_check = settings.send_at("AT", "OK", TIMEOUT)
     at = at_check.splitlines()[2] if at_check else "ERROR"
@@ -113,7 +112,8 @@ async def root() -> StatusResponse:
     dns = "ERROR" if "Unreachable" in dns_check else "OK"
     # APN
     apn_check = settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
-    apn = apn_check if apn_check else "ERROR"
+    # TODO: APN needs further parsing
+    apn = apn_check.splitlines()[2] if apn_check else "ERROR"
 
     return StatusResponse(
         at=at,
