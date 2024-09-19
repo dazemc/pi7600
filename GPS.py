@@ -14,7 +14,8 @@ class GPS(Settings):
 
     def __init__(self):
         super().__init__()
-        loc = ""
+        self.loc = ""
+        self.is_running = False
 
     def gps_session(self, start: bool) -> bool:
         """
@@ -29,6 +30,7 @@ class GPS(Settings):
             ):
                 print("Started successfully")
                 time.sleep(2)
+                self.is_running = True
                 return True
         if not start:
             print("Closing GPS session...")
@@ -36,10 +38,11 @@ class GPS(Settings):
             if self.send_at("AT+CGPS=0,1", "OK", GPS_TIMEOUT):
                 return True
             else:
+                print("Error closing GPS, is it open?")
                 return False
 
     def get_gps_position(self, retries: int = GPS_RETRY) -> str | bool:
-        if self.gps_session(True):
+        if self.is_running:
             for _ in range(retries):
                 answer = self.send_at("AT+CGPSINFO", "+CGPSINFO: ", GPS_TIMEOUT)
                 if answer and ",,,,,," not in answer:
@@ -56,4 +59,7 @@ class GPS(Settings):
             print("Retry limit reached; GPS signal not found...")
             return False
         else:
-            print("Error starting GPS session")
+            print(
+                "Attempting to get location without an open GPS session, trying to open one now..."
+            )
+            self.gps_session(True)

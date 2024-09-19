@@ -79,38 +79,38 @@ async def root() -> StatusResponse:
     # TODO: Parse response for some
     # COM check
     at_check = settings.send_at("AT", "OK", TIMEOUT)
-    at = at_check if at_check else "ERROR"
+    at = at_check.splitlines()[1] if at_check else "ERROR"
     # Signal quality
     csq_check = settings.send_at("AT+CSQ", "OK", TIMEOUT)
-    csq = csq_check if csq_check else "ERROR"
+    csq = csq_check.splitlines()[1] if csq_check else "ERROR"
     # PIN check
     cpin_check = settings.send_at("AT+CPIN?", "READY", TIMEOUT)
-    cpin = cpin_check if cpin_check else "ERROR"
+    cpin = cpin_check.splitlines()[1] if cpin_check else "ERROR"
     # Network registration
     creg_check = settings.send_at("AT+CREG?", "OK", TIMEOUT)
-    creg = creg_check if creg_check else "ERROR"
+    creg = creg_check.splitlines()[1] if creg_check else "ERROR"
     # Provider information
     cops_check = settings.send_at("AT+COPS?", "OK", TIMEOUT)
-    cops = cops_check if cops_check else "ERROR"
+    cops = cops_check.splitlines()[1] if cops_check else "ERROR"
     # GPS coordinates
     gps_check = gps.get_gps_position()
     gpsinfo = gps_check if gps_check else "ERROR"
     # Data connectivity
     data_check = subprocess.run(
-        ["ping", "-I", "usb0", "-c", "1", "8.8.8.8"],
+        ["ping", "-I", "usb0", "-c", "3", "1.1.1.1"],
         capture_output=True,
         text=True,
         check=False,
-    ).stdout.strip()
-    data = data_check if data_check else "ERROR"
+    ).stdout.splitlines()
+    data = "ERROR" if "Unreachable" in data_check else "OK"
     # DNS
     dns_check = subprocess.run(
-        ["ping", "-I", "usb0", "-c", "1", "www.google.com"],
+        ["ping", "-I", "usb0", "-c", "3", "www.google.com"],
         capture_output=True,
         text=True,
         check=False,
-    ).stdout.strip()
-    dns = dns_check if dns_check else "ERROR"
+    ).stdout
+    dns = "ERROR" if "Unreachable" in dns_check else "OK"
     # APN
     apn_check = settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
     apn = apn_check if apn_check else "ERROR"
@@ -135,18 +135,18 @@ async def info() -> InfoResponse:
     Returns:
         dict: hostname, uname, date, arch
     """
-    hostname = subprocess.run(
+    hostname = ''.join(subprocess.run(
         ["hostname"], capture_output=True, text=True, check=False
-    ).stdout.strip()
-    uname = subprocess.run(
+    ).stdout.splitlines())
+    uname = ''.join(subprocess.run(
         ["uname", "-r"], capture_output=True, text=True, check=False
-    ).stdout.strip()
-    date = subprocess.run(
+    ).stdout.splitlines())
+    date = ''.join(subprocess.run(
         ["date"], capture_output=True, text=True, check=False
-    ).stdout.strip()
-    arch = subprocess.run(
+    ).stdout.splitlines())
+    arch = ''.join(subprocess.run(
         ["arch"], capture_output=True, text=True, check=False
-    ).stdout.strip()
+    ).stdout.splitlines())
     return InfoResponse(
         hostname=hostname,
         uname=uname,
@@ -207,7 +207,7 @@ async def send_msg(request: SendMessageRequest) -> dict:
 
 @app.post("/at", status_code=status.HTTP_202_ACCEPTED)
 async def catcmd(request: AtRequest) -> str:
-    r"""Sends raw AT commands to modem, will not work with commands that require input, return response
+    r"""Sends raw AT commands to modem and returns raw stdout, will not work with commands that require input, return response
 
     Args:
         cmd (str, optional): Defaults to "AT".
