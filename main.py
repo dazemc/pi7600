@@ -10,10 +10,14 @@ from pydantic import BaseModel, ValidationError
 from AT import AT
 from Globals import *
 from SMS import SMS
+from GPS import GPS
+from Settings import Settings
 
 app = FastAPI()
 cwd = os.getcwd()
 sms = SMS()
+gps = GPS()
+settings = Settings()
 com_watch = AT(
     com=WATCHER_COM, baudrate=BAUDRATE
 )  # Might separate this into systemd, just polls serial and reacts.
@@ -71,17 +75,56 @@ async def root() -> StatusResponse:
     Returns:
         dict: Various network and device checks
     """
-    # TODO: Placeholders
+    # .send_at() returns False on error, so tern to val or err
+    # TODO: Parse response for some
+    # COM check
+    at_check = settings.send_at("AT", "OK", TIMEOUT)
+    at = at_check if at_check else "ERROR"
+    # Signal quality
+    csq_check = settings.send_at("AT+CSQ", "OK", TIMEOUT)
+    csq = csq_check if csq_check else "ERROR"
+    # PIN check
+    cspin_check = settings.send_at("AT+CSPIN?", "OK", TIMEOUT)
+    cspin = cspin_check if cspin_check else "ERROR"
+    # Network registration
+    creg_check = settings.send_at("AT+CREG?", "OK", TIMEOUT)
+    creg = creg_check if creg_check else "ERROR"
+    # Provider information
+    cops_check = settings.send_at("AT+COPS?", "OK", TIMEOUT)
+    cops = cops_check if cops_check else "ERROR"
+    # GPS coordinates
+    gps_check = gps.get_gps_position()
+    gpsinfo = gps_check if gps_check else "ERROR"
+    # Data connectivity
+    data_check = subprocess.run(
+        ["ping", "-I", "usb0", "-c", "1", "8.8.8.8"],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
+    data = data_check if data_check else "ERROR"
+    # DNS
+    dns_check = subprocess.run(
+        ["ping", "-I", "usb0", "-c", "1", "www.google.com"],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
+    dns = dns_check if dns_check else "ERROR"
+    # APN
+    apn_check = settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
+    apn = apn_check if apn_check else "ERROR"
+
     return StatusResponse(
-        at="OK",
-        csq="OK",
-        cspin="OK",
-        creg="OK",
-        cops="OK",
-        gps="OK",
-        data="OK",
-        dns="OK",
-        apn="OK",
+        at=at,
+        csq=csq,
+        cspin=cspin,
+        creg=creg,
+        cops=cops,
+        gpsinfo=gpsinfo,
+        data=data,
+        dns=dns,
+        apn=apn,
     )
 
 
