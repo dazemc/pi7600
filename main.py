@@ -26,7 +26,7 @@ class Messages(BaseModel):
         BaseModel (_type_): _description_
     """
 
-    message_index: int
+    message_index: str
     message_type: str
     message_originating_address: Optional[str]
     message_destination_address: Optional[str]
