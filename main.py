@@ -1,16 +1,15 @@
+"""FastAPI for SIMCOM 7600G-H"""
+
 import os
 import subprocess
+from typing import List, Optional
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from starlette import status
+from fastapi import FastAPI, status
+from pydantic import BaseModel, ValidationError
 
-from Globals import *
-from GPS import GPS
-from Phone import Phone
-from Settings import Settings
-from SMS import SMS
 from AT import AT
+from Globals import *
+from SMS import SMS
 
 app = FastAPI()
 cwd = os.getcwd()
@@ -20,29 +19,74 @@ com_watch = AT(
 )  # Might separate this into systemd, just polls serial and reacts.
 
 
+class Messages(BaseModel):
+    """Pydantic model for SMS messages
+
+    Args:
+        BaseModel (_type_): _description_
+    """
+
+    message_index: int
+    message_type: str
+    message_originating_address: Optional[str]
+    message_destination_address: Optional[str]
+    message_date: str
+    message_time: str
+    message_contents: str
+
+
+class InfoResponse(BaseModel):
+    hostname: str
+    uname: str
+    date: str
+    arch: str
+
+
+class StatusResponse(BaseModel):
+    at: str
+    csq: str
+    cspin: str
+    creg: str
+    cops: str
+    gps: str
+    data: str
+    dns: str
+    apn: str
+
+
+class SendMessageRequest(BaseModel):
+    number: str
+    msg: str
+
+
+class AtRequest(BaseModel):
+    cmd: str = "AT"
+
+
 # API
-@app.get("/", status_code=status.HTTP_200_OK)
-async def root() -> dict:
+@app.get("/", response_model=StatusResponse, status_code=status.HTTP_200_OK)
+async def root() -> StatusResponse:
     """Modem information and status
 
     Returns:
         dict: Various network and device checks
     """
     # TODO: Placeholders
-    return {
-        "AT": "OK",
-        "CSQ?": "OK",
-        "CSPIN?": "OK",
-        "CREG?": "OK",
-        "COPS?": "OK",
-        "GPS": "OK",
-        "DATA": "OK",
-        "DNS": "OK",
-    }
+    return StatusResponse(
+        at="OK",
+        csq="OK",
+        cspin="OK",
+        creg="OK",
+        cops="OK",
+        gps="OK",
+        data="OK",
+        dns="OK",
+        apn="OK",
+    )
 
 
-@app.get("/info", status_code=status.HTTP_200_OK)
-async def info() -> dict:
+@app.get("/info", response_model=InfoResponse, status_code=status.HTTP_200_OK)
+async def info() -> InfoResponse:
     """Host device information
 
     Returns:
@@ -60,30 +104,36 @@ async def info() -> dict:
     arch = subprocess.run(
         ["arch"], capture_output=True, text=True, check=False
     ).stdout.strip()
-    return {
-        "hostname": hostname,
-        "uname": uname,
-        "date": date,
-        "arch": arch,
-    }
+    return InfoResponse(
+        hostname=hostname,
+        uname=uname,
+        date=date,
+        arch=arch,
+    )
 
 
-@app.get("/sms", status_code=status.HTTP_200_OK)
-async def sms_root(msg_query: str = "ALL") -> dict | None:
+@app.get("/sms", response_model=List[Messages], status_code=status.HTTP_200_OK)
+async def sms_root(msg_query: str = "ALL") -> List[Messages]:
     """Read messages from modem
-
-
     Args:
         msg_query (str, optional): ["ALL", "REC READ", "REC UNREAD", "STO UNSENT", "STO SENT"]. Defaults to "ALL".
 
     Returns:
-        dict: {"response": Messages} | {"response": "null"}
+        List<dict>: [{Messages}, {Messages}]
     """
-    resp = sms.read_message(message_type=msg_query)
-    return resp
+    raw_messages = sms.read_message(message_type=msg_query)
+    messages = []
+    for raw_msg in raw_messages:
+        try:
+            message = Messages(**raw_msg)
+            messages.append(message)
+        except ValidationError as e:
+            print(f"Validation error: {e}")
+            continue
+    return messages
 
 
-@app.get("/sms/delete/{msg_idx}", status_code=status.HTTP_202_ACCEPTED)
+@app.delete("/sms/delete/{msg_idx}", status_code=status.HTTP_202_ACCEPTED)
 async def delete_msg(msg_idx: int) -> dict:
     """Delete sms message by MODEM index
 
@@ -98,7 +148,7 @@ async def delete_msg(msg_idx: int) -> dict:
 
 
 @app.post("/sms", status_code=status.HTTP_201_CREATED)
-async def send_msg(msg: str, number: str) -> dict:
+async def send_msg(request: SendMessageRequest) -> dict:
     """POST SMS Message to destination number
 
     Args:
@@ -108,12 +158,12 @@ async def send_msg(msg: str, number: str) -> dict:
     Returns:
         dict: {"response": True}
     """
-    resp = sms.send_message(phone_number=number, text_message=msg)
+    resp = sms.send_message(phone_number=request.number, text_message=request.msg)
     return {"response": resp}
 
 
 @app.post("/at", status_code=status.HTTP_202_ACCEPTED)
-async def catcmd(cmd: str = "AT") -> str:
+async def catcmd(request: AtRequest) -> str:
     r"""Sends raw AT commands to modem, will not work with commands that require input, return response
 
     Args:
@@ -122,8 +172,9 @@ async def catcmd(cmd: str = "AT") -> str:
     Returns:
         str: raw stdout response if "OK" or "ERROR" if "\r\n" is returned
     """
+    cmd_sanitized = request.cmd
     resp = subprocess.run(
-        ["./scripts/catcmd", cmd], capture_output=True, text=True, check=False
+        ["./scripts/catcmd", cmd_sanitized], capture_output=True, text=True, check=False
     ).stdout
     return resp
 
