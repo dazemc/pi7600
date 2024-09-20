@@ -257,9 +257,9 @@ class GPS:
     """
 
     def __init__(self):
+        self.settings = Settings()
         self.loc = ""
         self.is_running = self.session_check()
-        self.settings = Settings()
 
     def __getattr__(self, name):
         try:
