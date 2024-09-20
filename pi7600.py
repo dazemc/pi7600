@@ -65,6 +65,7 @@ class AT(metaclass=SingletonMeta):
         self.com = com
         self.ser = self.init_serial(baudrate, com)
         self.rec_buff = ""
+        print(f"AT instance created with ID: {id(self)}")
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
         """
@@ -135,6 +136,7 @@ class Settings(AT, metaclass=SingletonMeta):
         self.first_run = True
         if self.first_run:
             self.perform_initial_checks()
+        print(f"Settings instance created with ID: {id(self)}")
 
     def perform_initial_checks(self) -> None:
         """
