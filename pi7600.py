@@ -62,7 +62,6 @@ class SingletonMeta(type):
 
 class AT:
     def __init__(self, com: str, baudrate: int) -> None:
-        super().__init__()
         self.com = com
         self.ser = self.init_serial(baudrate, com)
         self.rec_buff = ""
@@ -133,7 +132,6 @@ class Settings(metaclass=SingletonMeta):
         :param port: str
         :param baudrate: int
         """
-        super().__init__()
         self.at = AT(com=COM, baudrate=BAUDRATE)
         self.first_run = True
         if self.first_run:
@@ -259,7 +257,6 @@ class GPS:
     """
 
     def __init__(self):
-        super().__init__()
         self.loc = ""
         self.is_running = self.session_check()
         self.settings = Settings()
@@ -364,7 +361,6 @@ class Phone:
     """
 
     def __init__(self):
-        super().__init__()
         self.settings = Settings()
 
     def __getattr__(self, name):
@@ -449,7 +445,6 @@ class SMS:
     """
 
     def __init__(self):
-        super().__init__()
         self.settings = Settings()
 
     def __getattr__(self, name):
