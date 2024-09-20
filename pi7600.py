@@ -40,7 +40,26 @@ def py_version_check() -> bool:
     return True
 
 
-class AT:
+class SingletonMeta(type):
+    """
+    This metaclass ensures that only one instance of any class using it exists.
+    """
+    _instances = {}  # Dictionary to hold single instances
+
+    def __call__(cls, *args, **kwargs):
+        """
+        If an instance of cls doesn't exist, create one and store it in _instances.
+        Otherwise, return the existing instance.
+        """
+        if cls not in cls._instances:
+            print(f"Creating new instance of {cls.__name__}")
+            cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
+        else:
+            print(f"Using existing instance of {cls.__name__}")
+        return cls._instances[cls]
+
+
+class AT(metaclass=SingletonMeta):
     def __init__(self, com: str, baudrate: int) -> None:
         super().__init__()
         self.com = com
@@ -105,7 +124,7 @@ class AT:
                     logfile.write(self.rec_buff.decode())
 
 
-class Settings(AT):
+class Settings(AT, metaclass=SingletonMeta):
     def __init__(self) -> None:
         super().__init__(com=COM, baudrate=BAUDRATE)
         """
