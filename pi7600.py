@@ -53,10 +53,11 @@ class SingletonMeta(type):
         Otherwise, return the existing instance.
         """
         if cls not in cls._instances:
-            print(f"Creating new instance of {cls.__name__}")
+            # print(f"Creating new instance of {cls.__name__}")
             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
         else:
-            print(f"Using existing instance of {cls.__name__}")
+            # print(f"Using existing instance of {cls.__name__}")
+            pass
         return cls._instances[cls]
 
 
@@ -65,7 +66,7 @@ class AT:
         self.com = com
         self.ser = self.init_serial(baudrate, com)
         self.rec_buff = ""
-        print(f"AT instance created with ID: {id(self)}")
+        # print(f"AT instance created with ID: {id(self)}")
 
     def send_at(self, command: str, back: str, timeout: int) -> bool | str:
         """
@@ -136,7 +137,7 @@ class Settings(metaclass=SingletonMeta):
         self.first_run = True
         if self.first_run:
             self.perform_initial_checks()
-        print(f"Settings instance created with ID: {id(self)}")
+        # print(f"Settings instance created with ID: {id(self)}")
 
     def __getattr__(self, name):
         try:
