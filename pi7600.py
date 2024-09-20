@@ -44,6 +44,7 @@ class SingletonMeta(type):
     """
     This metaclass ensures that only one instance of any class using it exists.
     """
+
     _instances = {}  # Dictionary to hold single instances
 
     def __call__(cls, *args, **kwargs):
@@ -59,7 +60,7 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-class AT(metaclass=SingletonMeta):
+class AT:
     def __init__(self, com: str, baudrate: int) -> None:
         super().__init__()
         self.com = com
@@ -125,18 +126,27 @@ class AT(metaclass=SingletonMeta):
                     logfile.write(self.rec_buff.decode())
 
 
-class Settings(AT, metaclass=SingletonMeta):
+class Settings(metaclass=SingletonMeta):
     def __init__(self) -> None:
-        super().__init__(com=COM, baudrate=BAUDRATE)
         """
         Initializes Settings class
         :param port: str
         :param baudrate: int
         """
+        super().__init__()
+        self.at = AT(com=COM, baudrate=BAUDRATE)
         self.first_run = True
         if self.first_run:
             self.perform_initial_checks()
         print(f"Settings instance created with ID: {id(self)}")
+
+    def __getattr__(self, name):
+        try:
+            return getattr(self.at, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
 
     def perform_initial_checks(self) -> None:
         """
@@ -243,7 +253,7 @@ class Settings(AT, metaclass=SingletonMeta):
             self.send_at('AT+CSCS="IRA"', "OK", TIMEOUT)
 
 
-class GPS(Settings):
+class GPS:
     """
     Initialize the GPS class.
     """
@@ -252,6 +262,15 @@ class GPS(Settings):
         super().__init__()
         self.loc = ""
         self.is_running = self.session_check()
+        self.settings = Settings()
+
+    def __getattr__(self, name):
+        try:
+            return getattr(self.settings, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
 
     def session_check(self):
         check = self.send_at("AT+CGPS?", "+CGPS", TIMEOUT)
@@ -339,13 +358,22 @@ def parse_sms(sms_buffer: str) -> list:
     return message_list
 
 
-class Phone(Settings):
+class Phone:
     """
     Initialize the Phone class.
     """
 
     def __init__(self):
         super().__init__()
+        self.settings = Settings()
+
+    def __getattr__(self, name):
+        try:
+            return getattr(self.settings, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
 
     def init_checks(self):
         pass
@@ -415,13 +443,22 @@ class Phone(Settings):
         pass
 
 
-class SMS(Settings):
+class SMS:
     """
     Initialize the SMS class.
     """
 
     def __init__(self):
         super().__init__()
+        self.settings = Settings()
+
+    def __getattr__(self, name):
+        try:
+            return getattr(self.settings, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
 
     def receive_message(self, message_type: str) -> list:
         """
