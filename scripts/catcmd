@@ -58,9 +58,7 @@ def main() -> None:
         response = get_resp(ser)
         if not ("OK" in response or "ERROR" in response):
             print("Response did not contain 'OK' or 'ERROR'. Full response:")
-            print(response)
-        else:
-            print(response)
+        print(response)
     except serial.SerialException as e:
         print(f"Serial error occurred: {e}")
     except Exception as e:

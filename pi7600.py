@@ -127,13 +127,13 @@ class AT:
 
 
 class Settings(metaclass=SingletonMeta):
-    def __init__(self) -> None:
+    def __init__(self, com=COM, baudrate=BAUDRATE) -> None:
         """
         Initializes Settings class
         :param port: str
         :param baudrate: int
         """
-        self.at = AT(com=COM, baudrate=BAUDRATE)
+        self.at = AT(com=com, baudrate=baudrate)
         self.first_run = True
         if self.first_run:
             self.perform_initial_checks()
@@ -339,13 +339,13 @@ def parse_sms(sms_buffer: str) -> list:
 
     for i, v in enumerate(read_messages):
         if i % 2 == 0:  # Even idx has msg info, odd is msg content for preceding idx
-            message = v.split(",")
+            message = v.replace('"', "", 9).split(",")
             message_list.append(
                 {
                     "message_index": message[0][message[0].rfind(" ") + 1 :],
-                    "message_type": message[1].replace('"', ""),
-                    "message_originating_address": message[2].replace('"', ""),
-                    "message_destination_address": message[3].replace('"', ""),
+                    "message_type": message[1],
+                    "message_originating_address": message[2],
+                    "message_destination_address": message[3],
                     "message_date": message[4][1:],
                     "message_time": message[5][:-1],
                     "message_contents": read_messages[
