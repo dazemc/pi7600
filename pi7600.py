@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import time
 
@@ -15,6 +16,7 @@ PHONE_TIMEOUT = 1
 BAUDRATE = 115200
 COM = "/dev/ttyUSB2"
 WATCHER_COM = "/dev/ttyUSB3"
+POLL = 5
 
 
 def py_version_check() -> bool:
@@ -24,10 +26,7 @@ def py_version_check() -> bool:
     """
     try:
         if float(sys.version[: sys.version[2:].find(".") + 2]) < 3.10:
-            print(
-                "Python version must be 3.10 or greater, buildpy.sh will build latest stable release from source. "
-                "Alternatively, you can use the included venv with ./venv/Scripts/activate"
-            )
+            print("Python version must be 3.10 or greater")
             print("\nExiting...")
             return False
     except:
@@ -64,47 +63,68 @@ class SingletonMeta(type):
 class AT:
     def __init__(self, com: str, baudrate: int) -> None:
         self.com = com
+        self.baudrate = baudrate
         self.ser = self.init_serial(baudrate, com)
         self.rec_buff = ""
-        # print(f"AT instance created with ID: {id(self)}")
+        self.write_queue = asyncio.Queue()  # Queue for managing outgoing commands
+        self.task = None  # Task for processing the write queue
 
-    def send_at(self, command: str, back: str, timeout: int) -> bool | str:
+    def init_serial(self, baud, com):
+        ser = serial.Serial(com, baud, rtscts=True, timeout=0.5)
+        return ser
+
+    async def send_at(self, command: str, back: str, timeout: int) -> str:
         """
-        Send AT commands over serial. Returns 'False' on error or str on success.
-        :param command: str
-        :param back: str
-        :param timeout: int
-        :return: bool | str
+        Send an AT command and wait for the expected response.
+        :param command: str - AT command to be sent
+        :param back: str - Expected response to check
+        :param timeout: int - Timeout to wait for a response
+        :return: str - The response from the device, or an error message.
         """
-        if len(command) < BUFFER_CHAR_LIMIT:
-            if self.ser.cts:
-                self.ser.write((command + "\r\n").encode())
-                time.sleep(timeout)
-                if self.ser.in_waiting:
-                    time.sleep(BUFFER_WAIT_TIME)
-                    self.rec_buff = self.ser.read(self.ser.in_waiting)
-                if back not in self.rec_buff.decode():
-                    print(command + " ERROR")
-                    print(command + " back:\t" + self.rec_buff.decode())
-                    return False
-                else:
-                    return self.rec_buff.decode()
+        if self.task is None or self.task.done():
+            self.task = asyncio.create_task(self.process_write_queue())
+        self.clear_buffer()
+        self.ser.write((command + "\r\n").encode())
+        start_time = time.time()
+        while True:
+            if self.ser.in_waiting > 0:
+                self.rec_buff += self.ser.read(self.ser.in_waiting).decode(
+                    errors="ignore"
+                )
+            if back in self.rec_buff:
+                response = self.rec_buff
+                self.clear_buffer()
+                return response
+            if time.time() - start_time > timeout:
+                self.clear_buffer()
+                return f"ERROR: Timeout while waiting for response to '{command}'"
+
+            # Yield control to other tasks and wait a bit before checking again
+            await asyncio.sleep(0.1)
+
+    async def process_write_queue(self):
+        """
+        Asynchronously process the write queue and send commands.
+        """
+        while True:
+            command, back, timeout, repeat = await self.write_queue.get()
+            response = await self.send_at(command, back, timeout)
+            if "ERROR" in response:
+                print(f"Failed to execute: {command}, Error: {response}")
             else:
-                print("Device not ready to receive data")
-        else:
-            print(f"AT command exceeds buffer limit of {BUFFER_CHAR_LIMIT}")
-            return False
+                print(f"Successfully executed: {command}, Response: {response}")
 
-    def retry_last_command(self) -> bool:
-        if self.send_at("A/", "OK", TIMEOUT):
-            return True
-        else:
-            print("Retry failed")
-            return False
+            # Re-enqueue if repeat is True
+            if repeat:
+                await asyncio.sleep(POLL)
+                await self.write_queue.put((command, back, timeout, repeat))
+
+            # Mark task as done if not repeating
+            if not repeat:
+                self.write_queue.task_done()
 
     def close_serial(self) -> None:
         try:
-            # self.clear_buffer()
             self.ser.close()
         except:
             print("Failed to close serial: Already closed or inaccessible")
@@ -112,21 +132,7 @@ class AT:
     def clear_buffer(self) -> None:
         if self.ser.in_waiting:
             self.ser.flush()
-            self.rec_buff = ""
-
-    def init_serial(self, baud, com):
-        ser = serial.Serial(com, baud, rtscts=True)
-        # ser.flush()
-        return ser
-
-    def read_loop(self, logging=True):
-        read = True
-        while read:
-            if logging:
-                with open(
-                    "./logs/current_watcher.log,", "w", encoding="utf-8"
-                ) as logfile:
-                    logfile.write(self.rec_buff.decode())
+        self.rec_buff = ""
 
 
 class Settings(metaclass=SingletonMeta):
@@ -173,42 +179,36 @@ class Settings(metaclass=SingletonMeta):
         else:
             self.first_run = False
 
-    def enable_verbose_logging(self) -> bool:
-        self.rec_buff = self.send_at("AT+CMEE=2", "OK", TIMEOUT)
-        if self.rec_buff:
+    async def enable_verbose_logging(self) -> bool:
+        if await self.send_at("AT+CMEE=2", "OK", TIMEOUT):
             return True
-        else:
-            return False
+        return False
 
-    def sim_ready_check(self) -> bool:
-        buffer = self.send_at("AT+CPIN?", "READY", TIMEOUT)
-        if buffer:
+    async def sim_ready_check(self) -> bool:
+        if await self.send_at("AT+CPIN?", "READY", TIMEOUT):
             return True
-        else:
-            return False
+        return False
 
-    def get_config(self) -> str | bool:
-        self.rec_buff = self.send_at("AT&V", "OK", TIMEOUT)
-        if self.rec_buff:
-            return self.rec_buff
-        else:
-            return False
+    async def get_config(self) -> str | bool:
+        if await self.send_at("AT&V", "OK", TIMEOUT):
+            return True
+        return False
 
-    def set_usb_os(self, os: str) -> bool:
+    async def set_usb_os(self, os: str) -> bool:
         """
         USB setting for RNDIS, OS specific. "WIN" or "UNIX".
         :param os: str
         :return: bool
         """
         if os == "WIN":
-            self.send_at("AT+CUSBPIDSWITCH=9001,1,1", "OK", TIMEOUT)
+            await self.send_at("AT+CUSBPIDSWITCH=9001,1,1", "OK", TIMEOUT)
         elif os == "UNIX":
-            self.send_at("AT+CUSBPIDSWITCH=9011,1,1", "OK", TIMEOUT)
+            await self.send_at("AT+CUSBPIDSWITCH=9011,1,1", "OK", TIMEOUT)
         for _ in range(6):  # Wait up to 3 mins for reboot
             time.sleep(30)
             try:
                 self.init_serial(BAUDRATE, COM)
-                if self.send_at("AT", "OK", TIMEOUT):
+                if await self.send_at("AT", "OK", TIMEOUT):
                     print(f"Set usb for {os}")
                     return True
             except:
@@ -216,43 +216,41 @@ class Settings(metaclass=SingletonMeta):
         print("Failed to set USB mode.")
         return False
 
-    def set_sms_storage(self, mode: str) -> bool:
+    async def set_sms_storage(self, mode: str) -> bool:
         """
         Set SMS storage location
         :param mode: str
         :return: bool
         """
-        buffer = self.send_at(
+        if await self.send_at(
             f'AT+CPMS="{mode}","{mode}","{mode}"', "OK", TIMEOUT
-        )  # Store messages on SIM(SM), "ME"/"MT" is flash
-        if buffer:
+        ):  # Store messages on SIM(SM), "ME"/"MT" is flash
             return True
-        else:
-            return False
+        return False
 
-    def set_data_mode(self, mode: int) -> None:
+    async def set_data_mode(self, mode: int) -> None:
         """
         HEX is automatically used if there is data issues, such as low signal quality.
         :param mode: int
         :return: None
         """
         if mode == 1:
-            self.send_at("AT+CMGF=1", "OK", TIMEOUT)  # Set to text mode
+            await self.send_at("AT+CMGF=1", "OK", TIMEOUT)  # Set to text mode
         if mode == 0:
-            self.send_at("AT+CMGF=0", "OK", TIMEOUT)  # Set to hex mode
+            await self.send_at("AT+CMGF=0", "OK", TIMEOUT)  # Set to hex mode
 
-    def set_encoding_mode(self, mode: int) -> None:
+    async def set_encoding_mode(self, mode: int) -> None:
         """
         Set encoding mode. 0=IRA, 1=GSM, 2=UCS2
         :param mode: int
         :return: None
         """
         if mode == 2:
-            self.send_at('AT+CSCS="UCS2"', "OK", TIMEOUT)
+            await self.send_at('AT+CSCS="UCS2"', "OK", TIMEOUT)
         if mode == 1:
-            self.send_at('AT+CSCS="GSM"', "OK", TIMEOUT)
+            await self.send_at('AT+CSCS="GSM"', "OK", TIMEOUT)
         if mode == 0:
-            self.send_at('AT+CSCS="IRA"', "OK", TIMEOUT)
+            await self.send_at('AT+CSCS="IRA"', "OK", TIMEOUT)
 
 
 class GPS:
@@ -273,11 +271,11 @@ class GPS:
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
 
-    def session_check(self):
-        check = self.send_at("AT+CGPS?", "+CGPS", TIMEOUT)
+    async def session_check(self):
+        check = await self.send_at("AT+CGPS?", "+CGPS", TIMEOUT)
         return True if "+CGPS: 1,1" in check else False
 
-    def gps_session(self, start: bool) -> bool:
+    async def gps_session(self, start: bool) -> bool:
         """
         True to start session. False to close session.
         :param start: bool
@@ -286,9 +284,9 @@ class GPS:
         self.session_check()
         if start:
             print("Starting GPS session...")
-            if self.send_at("AT+CGPS=0,1", "OK", GPS_TIMEOUT) and self.send_at(
-                "AT+CGPS=1,1", "OK", GPS_TIMEOUT
-            ):
+            if await self.send_at(
+                "AT+CGPS=0,1", "OK", GPS_TIMEOUT
+            ) and await self.send_at("AT+CGPS=1,1", "OK", GPS_TIMEOUT):
                 print("Started successfully")
                 time.sleep(2)
                 self.is_running = True
@@ -296,17 +294,17 @@ class GPS:
         if not start:
             print("Closing GPS session...")
             self.rec_buff = ""
-            if self.send_at("AT+CGPS=0,1", "OK", GPS_TIMEOUT):
+            if await self.send_at("AT+CGPS=0,1", "OK", GPS_TIMEOUT):
                 return True
             else:
                 print("Error closing GPS, is it open?")
                 return False
 
-    def get_gps_position(self, retries: int = GPS_RETRY) -> str | bool:
+    async def get_gps_position(self, retries: int = GPS_RETRY) -> str | bool:
         self.session_check()
         if self.is_running:
             for _ in range(retries):
-                answer = self.send_at("AT+CGPSINFO", "+CGPSINFO: ", GPS_TIMEOUT)
+                answer = await self.send_at("AT+CGPSINFO", "+CGPSINFO: ", GPS_TIMEOUT)
                 if answer and ",,,,,," not in answer:
                     return answer
                 elif ",,,,,," in answer:
@@ -375,38 +373,26 @@ class Phone:
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
 
-    def init_checks(self):
-        pass
-        # self.send_at('AT+CSQ', 'OK', PHONE_TIMEOUT)  # Check network quality
-        # self.send_at('AT+CREG?', 'OK', PHONE_TIMEOUT)  # Check network registration
-        # self.send_at('AT+CPSI?', 'OK',PHONE_TIMEOUT)  # Pretty much returns the previous two commands... Unnecessarily redundant?
-
-    def hangup_call(self) -> bool:
-        self.rec_buff = self.send_at("AT+CHUP", "OK", PHONE_TIMEOUT)
-        if self.rec_buff:
+    async def hangup_call(self) -> bool:
+        if await self.send_at("AT+CHUP", "OK", PHONE_TIMEOUT):
             return True
-        else:
-            print("Unknown error ending call. Is serial open?")
-            return False
+        return False
 
     def call_incoming(self):
         # call_incoming(): Check for incoming calls
         # I will come back to this after I determine concurrency/interrupts/chaining AT commands
         pass
 
-    def active_calls(self) -> str | bool:
+    async def active_calls(self) -> str | bool:
         """
         Returns information on any active calls
         :return: str || bool
         """
-        self.rec_buff = self.send_at("AT+CLCC?", "OK", PHONE_TIMEOUT)
-        if self.rec_buff:
-            return self.rec_buff
-        else:
-            print("Error checking active calls")
-            return False
+        if await self.send_at("AT+CLCC?", "OK", PHONE_TIMEOUT):
+            return True
+        return False
 
-    def call(self, contact_number: str, retry: int = 0) -> bool:
+    async def call(self, contact_number: str, retry: int = 0) -> bool:
         """
         Start outgoing call.
         :param contact_number: str
@@ -421,7 +407,7 @@ class Phone:
                     f"Attempting to call {contact_number}; Attempt: {attempt}; Retry: {retry}"
                 )
                 # IF ATD returns an error then determine source of error.
-                if self.send_at("ATD" + contact_number + ";", "OK", PHONE_TIMEOUT):
+                if await self.send_at("ATD" + contact_number + ";", "OK", PHONE_TIMEOUT):
                     input("Call connected!\nPress enter to end call")
                     # self.ser.write('AT+CHUP\r\n'.encode())  # Hangup code, why is serial used vs send_at()?
                     self.hangup_call()
@@ -459,14 +445,14 @@ class SMS:
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
 
-    def receive_message(self, message_type: str) -> list:
+    async def receive_message(self, message_type: str) -> list:
         """
         Sends SMS command to AT
         :param message_type: str
         :return: list<dict>
         """
         # self.set_data_mode(1)
-        answer = self.send_at(f'AT+CMGL="{message_type}"', "OK", TIMEOUT)
+        answer = await self.send_at(f'AT+CMGL="{message_type}"', "OK", TIMEOUT)
         if answer:
             if message_type != "ALL" and message_type in answer:
                 answer = parse_sms(answer)
@@ -506,13 +492,13 @@ class SMS:
                 if self.ser is not None:
                     self.ser.close()
 
-    def send_message(self, phone_number: str, text_message: str) -> bool:
-        answer = self.send_at('AT+CMGS="' + phone_number + '"', ">", TIMEOUT)
+    async def send_message(self, phone_number: str, text_message: str) -> bool:
+        answer = await self.send_at('AT+CMGS="' + phone_number + '"', ">", TIMEOUT)
         if answer:
             self.ser.write(text_message.encode())
             self.ser.write(b"\x1a")
             # 'OK' here means the message sent?
-            answer = self.send_at("", "OK", SMS_SEND_TIMEOUT)
+            answer = await self.send_at("", "OK", SMS_SEND_TIMEOUT)
             if answer:
                 print(
                     f"Number: {phone_number}\n"
@@ -532,7 +518,7 @@ class SMS:
             print(f"error: {answer}")
             return False
 
-    def delete_message(self, msg_idx: int) -> dict:
+    async def delete_message(self, msg_idx: int) -> dict:
         """delete message by index
 
         Args:
@@ -541,7 +527,7 @@ class SMS:
         Returns:
             dict: {"response": "Success" | False}
         """
-        resp = self.send_at(f"AT+CMGD={msg_idx}", "OK", TIMEOUT)
+        resp = await self.send_at(f"AT+CMGD={msg_idx}", "OK", TIMEOUT)
         if resp:
             return {"response": "Success"}
         else:

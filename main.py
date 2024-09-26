@@ -74,26 +74,26 @@ async def root() -> StatusResponse:
     logger.info("Compiling modem status information")
     # .send_at() returns False on error, so tern to val or err
     # COM check
-    at_check = settings.send_at("AT", "OK", TIMEOUT)
+    at_check = await settings.send_at("AT", "OK", TIMEOUT)
     at = at_check.splitlines()[2] if at_check else "ERROR"
     # Modem number
-    cnum_check = settings.send_at("AT+CNUM", "+CNUM:", TIMEOUT)
+    cnum_check = await settings.send_at("AT+CNUM", "+CNUM:", TIMEOUT)
     cnum = (
         cnum_check.splitlines()[2].split(",")[1].replace('"', "")
         if cnum_check
         else "ERROR"
     )
     # Signal quality
-    csq_check = settings.send_at("AT+CSQ", "OK", TIMEOUT)
+    csq_check = await settings.send_at("AT+CSQ", "OK", TIMEOUT)
     csq = csq_check.splitlines()[2] if csq_check else "ERROR"
     # PIN check
-    cpin_check = settings.send_at("AT+CPIN?", "READY", TIMEOUT)
+    cpin_check = await settings.send_at("AT+CPIN?", "READY", TIMEOUT)
     cpin = cpin_check.splitlines()[2] if cpin_check else "ERROR"
     # Network registration
-    creg_check = settings.send_at("AT+CREG?", "OK", TIMEOUT)
+    creg_check = await settings.send_at("AT+CREG?", "OK", TIMEOUT)
     creg = creg_check.splitlines()[2] if creg_check else "ERROR"
     # Provider information
-    cops_check = settings.send_at("AT+COPS?", "OK", TIMEOUT)
+    cops_check = await settings.send_at("AT+COPS?", "OK", TIMEOUT)
     cops = cops_check.splitlines()[2] if cops_check else "ERROR"
     # GPS coordinates
     gps_check = gps.get_gps_position()
@@ -115,7 +115,7 @@ async def root() -> StatusResponse:
     ).stdout
     dns = "ERROR" if "Unreachable" in dns_check else "OK"
     # APN
-    apn_check = settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
+    apn_check = await settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
     apn = ",".join(apn_check.splitlines()[2].split(",")[2:3])[1:-1] if apn_check else "ERROR"
 
     return StatusResponse(
