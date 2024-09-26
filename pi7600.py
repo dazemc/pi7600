@@ -145,6 +145,14 @@ class Settings(metaclass=SingletonMeta):
         self.at = AT(com=com, baudrate=baudrate)
         self.first_run = True
 
+    def __getattr__(self, name):
+        try:
+            return getattr(self.at, name)
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
+
     async def perform_initial_checks(self) -> None:
         """
         Initial environment checks asynchronously.
@@ -163,12 +171,6 @@ class Settings(metaclass=SingletonMeta):
             sys.exit(EXIT_FAILURE_CODE)
         else:
             self.first_run = False
-
-# Use async initialization in the main function or other async context
-async def initialize_settings():
-    settings = Settings()
-    await settings.perform_initial_checks()
-    return settings
 
 
 class GPS:
