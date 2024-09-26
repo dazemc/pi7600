@@ -77,17 +77,20 @@ class AT:
         :return: bool | str
         """
         if len(command) < BUFFER_CHAR_LIMIT:
-            self.ser.write((command + "\r\n").encode())
-            time.sleep(timeout)
-            if self.ser.in_waiting:
-                time.sleep(BUFFER_WAIT_TIME)
-                self.rec_buff = self.ser.read(self.ser.in_waiting)
-            if back not in self.rec_buff.decode():
-                print(command + " ERROR")
-                print(command + " back:\t" + self.rec_buff.decode())
-                return False
+            if self.ser.cts:
+                self.ser.write((command + "\r\n").encode())
+                time.sleep(timeout)
+                if self.ser.in_waiting:
+                    time.sleep(BUFFER_WAIT_TIME)
+                    self.rec_buff = self.ser.read(self.ser.in_waiting)
+                if back not in self.rec_buff.decode():
+                    print(command + " ERROR")
+                    print(command + " back:\t" + self.rec_buff.decode())
+                    return False
+                else:
+                    return self.rec_buff.decode()
             else:
-                return self.rec_buff.decode()
+                print("Device not ready to receive data")
         else:
             print(f"AT command exceeds buffer limit of {BUFFER_CHAR_LIMIT}")
             return False
@@ -112,7 +115,7 @@ class AT:
             self.rec_buff = ""
 
     def init_serial(self, baud, com):
-        ser = serial.Serial(com, baud)
+        ser = serial.Serial(com, baud, rtscts=True)
         # ser.flush()
         return ser
 
