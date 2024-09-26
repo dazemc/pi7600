@@ -1,3 +1,4 @@
+# TODO: ! sqlcipher, totp, api key, websocket !
 """FastAPI for SIMCOM 7600G-H"""
 
 import logging
@@ -20,7 +21,6 @@ cwd = os.getcwd()
 sms = SMS()
 gps = GPS()
 settings = Settings()
-# TODO: Concurrently setup serial monitor on COM_WATCHER, new messages, auto csq, calls, network changes, log, etc
 
 logger.info("Sim modules ready")
 
@@ -102,14 +102,22 @@ async def root() -> StatusResponse:
     gpsinfo = gps_check if gps_check else "ERROR"
 
     # Asynchronously run subprocess commands using asyncio.create_subprocess_exec
-    data_check = await run_async_subprocess(["ping", "-I", "usb0", "-c", "1", "1.1.1.1"])
+    data_check = await run_async_subprocess(
+        ["ping", "-I", "usb0", "-c", "1", "1.1.1.1"]
+    )
     data = "ERROR" if "Unreachable" in data_check else "OK"
 
-    dns_check = await run_async_subprocess(["ping", "-I", "usb0", "-c", "1", "www.google.com"])
+    dns_check = await run_async_subprocess(
+        ["ping", "-I", "usb0", "-c", "1", "www.google.com"]
+    )
     dns = "ERROR" if "Unreachable" in dns_check else "OK"
 
     apn_check = await settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
-    apn = ",".join(apn_check.splitlines()[2].split(",")[2:3])[1:-1] if apn_check else "ERROR"
+    apn = (
+        ",".join(apn_check.splitlines()[2].split(",")[2:3])[1:-1]
+        if apn_check
+        else "ERROR"
+    )
 
     return StatusResponse(
         at=at,
@@ -128,9 +136,7 @@ async def root() -> StatusResponse:
 async def run_async_subprocess(cmd: List[str]) -> str:
     """Runs a subprocess command asynchronously and captures its output."""
     proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     stdout, stderr = await proc.communicate()
     return stdout.decode() if stdout else stderr.decode()
@@ -210,7 +216,9 @@ async def send_msg(request: SendMessageRequest) -> dict:
         dict: {"response": True}
     """
     logger.info(f"Sending {request.msg} to {request.number}")
-    resp = await sms.send_message(phone_number=request.number, text_message=request.msg)  # Await the async send_message call
+    resp = await sms.send_message(
+        phone_number=request.number, text_message=request.msg
+    )  # Await the async send_message call
     return {"response": resp}
 
 
