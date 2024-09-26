@@ -14,15 +14,15 @@
 - Executing raw AT commands
 - Accessing GPS data
 
-This tool integrates modules like `GPS`, `Phone`, `SMS`, and `AT` to offer comprehensive modem control.
+This tool integrates modules like `GPS`, `Phone`, `SMS`, and `AT` to offer comprehensive modem control, all with asynchronous support for improved performance.
 
 ## Features
 
-- **Modem Information and Status**: Check the network and modem status.
+- **Modem Information and Status**: Check the network and modem status asynchronously.
 - **Host Device Information**: Retrieve system details (hostname, kernel version, date, and architecture).
-- **SMS Management**: Send, read, and delete SMS messages.
-- **AT Command Interface**: Execute raw AT commands and receive modem responses.
-- **GPS Integration**: Access GPS data from the SIM7600 module.
+- **SMS Management**: Send, read, and delete SMS messages using non-blocking asynchronous operations.
+- **AT Command Interface**: Execute raw AT commands and receive modem responses asynchronously.
+- **GPS Integration**: Access GPS data from the SIM7600 module asynchronously.
 
 ## Table of Contents
 
@@ -34,7 +34,7 @@ This tool integrates modules like `GPS`, `Phone`, `SMS`, and `AT` to offer compr
   - [SMS Management `/sms`](#sms-management-sms)
     - [Read Messages `GET /sms`](#read-messages-get-sms)
     - [Send Message `POST /sms`](#send-message-post-sms)
-    - [Delete Message `GET /sms/delete/{msg_idx}`](#delete-message-get-smsdelete-msg_idx)
+    - [Delete Message `DELETE /sms/delete/{msg_idx}`](#delete-message-delete-smsdelete-msg_idx)
   - [AT Command Interface `/at`](#at-command-interface-at)
   - [API Documentation `/docs` and `/redoc`](#api-documentation-docs-and-redoc)
 - [Resources and Notes](#resources-and-notes)
@@ -54,7 +54,7 @@ This tool integrates modules like `GPS`, `Phone`, `SMS`, and `AT` to offer compr
 ### Root `/`
 
 - **Method**: `GET`
-- **Description**: Returns modem information and status.
+- **Description**: Returns modem information and status, including AT command checks, signal quality, network registration, and more.
 
 **Example Request**:
 
@@ -65,14 +65,16 @@ curl -X GET http://localhost:8000/
 **Response**:
 ```json
 {
-  "AT": "OK",
-  "CSQ?": "OK",
-  "CSPIN?": "OK",
-  "CREG?": "OK",
-  "COPS?": "OK",
-  "GPS": "OK",
-  "DATA": "OK",
-  "DNS": "OK"
+  "at": "OK",
+  "cnum": "11234567890",
+  "csq": "+CSQ: 15,99",
+  "cpin": "+CPIN: READY",
+  "creg": "+CREG: 0,1",
+  "cops": "+COPS: 0,0,\"Home\",7",
+  "gpsinfo": "GPS is active but no signal was found",
+  "data": "OK",
+  "dns": "OK",
+  "apn": "fast.t-mobile.com"
 }
 ```
 
@@ -102,7 +104,7 @@ curl -X GET http://localhost:8000/info
 #### Read Messages `GET /sms`
 
 - **Method**: `GET`
-- **Description**: Reads messages from the modem.
+- **Description**: Reads messages from the modem asynchronously.
 
 **Example Request**:
 
@@ -112,29 +114,30 @@ curl -X GET "http://localhost:8000/sms?msg_query=ALL"
 
 **Response**:
 ```json
-{
-  "response": [
-    {
-      "message_index": "1",
-      "message_type": "REC READ",
-      "message_originating_address": "+1234567890",
-      "message_date": "2024-09-17",
-      "message_time": "22:48:47",
-      "message_contents": "Hello World"
-    }
-  ]
-}
+[
+  {
+    "message_index": "1",
+    "message_type": "REC READ",
+    "message_originating_address": "+1234567890",
+    "message_destination_address": null,
+    "message_date": "2024-09-17",
+    "message_time": "22:48:47",
+    "message_contents": "Hello World"
+  }
+]
 ```
 
 #### Send Message `POST /sms`
 
 - **Method**: `POST`
-- **Description**: Sends an SMS to a specified phone number.
+- **Description**: Sends an SMS to a specified phone number asynchronously.
 
 **Example Request**:
 
 ```bash
-curl -X POST "http://localhost:8000/sms?msg=Hello%20World&number=+1234567890"
+curl -X POST -H "Content-Type: application/json" \
+-d '{"number":"+1234567890","msg":"Hello World"}' \
+"http://localhost:8000/sms"
 ```
 
 **Response**:
@@ -144,15 +147,15 @@ curl -X POST "http://localhost:8000/sms?msg=Hello%20World&number=+1234567890"
 }
 ```
 
-#### Delete Message `GET /sms/delete/{msg_idx}`
+#### Delete Message `DELETE /sms/delete/{msg_idx}`
 
-- **Method**: `GET`
-- **Description**: Deletes an SMS message by its index.
+- **Method**: `DELETE`
+- **Description**: Deletes an SMS message by its index asynchronously.
 
 **Example Request**:
 
 ```bash
-curl -X GET http://localhost:8000/sms/delete/1
+curl -X DELETE http://localhost:8000/sms/delete/1
 ```
 
 **Response**:
@@ -165,12 +168,14 @@ curl -X GET http://localhost:8000/sms/delete/1
 ### AT Command Interface `/at`
 
 - **Method**: `POST`
-- **Description**: Sends raw AT commands to the modem.
+- **Description**: Sends raw AT commands to the modem and returns the response.
 
 **Example Request**:
 
 ```bash
-curl -X POST "http://localhost:8000/at?cmd=AT+CSQ"
+curl -X POST -H "Content-Type: application/json" \
+-d '{"cmd":"AT+CSQ"}' \
+"http://localhost:8000/at"
 ```
 
 **Response**:
@@ -204,3 +209,12 @@ Contributions are welcome! Please open an issue or submit a pull request for any
 ---
 
 *Note: This project is under active development, and features may change frequently. The documentation will be updated accordingly.*
+```
+
+### **Key Updates:**
+1. **Asynchronous Support:** Updated descriptions to reflect asynchronous handling for all relevant endpoints.
+2. **Endpoint Improvements:** Refined the example requests and responses for accuracy based on the modified FastAPI endpoints.
+3. **Subprocess Handling:** Included async handling in descriptions where applicable.
+4. **Corrected Endpoint Descriptions:** Refined endpoint descriptions to more accurately represent the current functionality of the API.
+
+Please review and adjust as needed based on your specific implementation details. Let me know if further modifications are required!
