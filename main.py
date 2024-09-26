@@ -2,6 +2,7 @@
 
 import logging
 import os
+import asyncio
 import subprocess
 from typing import List, Optional
 
@@ -72,49 +73,41 @@ async def root() -> StatusResponse:
         dict: Various network and device checks
     """
     logger.info("Compiling modem status information")
-    # .send_at() returns False on error, so tern to val or err
-    # COM check
+
+    # Ensure to await all asynchronous calls
     at_check = await settings.send_at("AT", "OK", TIMEOUT)
     at = at_check.splitlines()[2] if at_check else "ERROR"
-    # Modem number
+
     cnum_check = await settings.send_at("AT+CNUM", "+CNUM:", TIMEOUT)
     cnum = (
         cnum_check.splitlines()[2].split(",")[1].replace('"', "")
         if cnum_check
         else "ERROR"
     )
-    # Signal quality
+
     csq_check = await settings.send_at("AT+CSQ", "OK", TIMEOUT)
     csq = csq_check.splitlines()[2] if csq_check else "ERROR"
-    # PIN check
+
     cpin_check = await settings.send_at("AT+CPIN?", "READY", TIMEOUT)
     cpin = cpin_check.splitlines()[2] if cpin_check else "ERROR"
-    # Network registration
+
     creg_check = await settings.send_at("AT+CREG?", "OK", TIMEOUT)
     creg = creg_check.splitlines()[2] if creg_check else "ERROR"
-    # Provider information
+
     cops_check = await settings.send_at("AT+COPS?", "OK", TIMEOUT)
     cops = cops_check.splitlines()[2] if cops_check else "ERROR"
-    # GPS coordinates
-    gps_check = gps.get_gps_position()
+
+    # Await the GPS position asynchronously
+    gps_check = await gps.get_gps_position()  # Await the GPS position
     gpsinfo = gps_check if gps_check else "ERROR"
-    # Data connectivity
-    data_check = subprocess.run(
-        ["ping", "-I", "usb0", "-c", "3", "1.1.1.1"],
-        capture_output=True,
-        text=True,
-        check=False,
-    ).stdout.splitlines()
+
+    # Asynchronously run subprocess commands using asyncio.create_subprocess_exec
+    data_check = await run_async_subprocess(["ping", "-I", "usb0", "-c", "3", "1.1.1.1"])
     data = "ERROR" if "Unreachable" in data_check else "OK"
-    # DNS
-    dns_check = subprocess.run(
-        ["ping", "-I", "usb0", "-c", "3", "www.google.com"],
-        capture_output=True,
-        text=True,
-        check=False,
-    ).stdout
+
+    dns_check = await run_async_subprocess(["ping", "-I", "usb0", "-c", "3", "www.google.com"])
     dns = "ERROR" if "Unreachable" in dns_check else "OK"
-    # APN
+
     apn_check = await settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
     apn = ",".join(apn_check.splitlines()[2].split(",")[2:3])[1:-1] if apn_check else "ERROR"
 
@@ -132,6 +125,17 @@ async def root() -> StatusResponse:
     )
 
 
+async def run_async_subprocess(cmd: List[str]) -> str:
+    """Runs a subprocess command asynchronously and captures its output."""
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+    return stdout.decode() if stdout else stderr.decode()
+
+
 @app.get("/info", response_model=InfoResponse, status_code=status.HTTP_200_OK)
 async def info() -> InfoResponse:
     """Host device information
@@ -140,31 +144,17 @@ async def info() -> InfoResponse:
         dict: hostname, uname, date, arch
     """
     logger.info("Compiling host device information")
-    hostname = "".join(
-        subprocess.run(
-            ["hostname"], capture_output=True, text=True, check=False
-        ).stdout.splitlines()
-    )
-    uname = "".join(
-        subprocess.run(
-            ["uname", "-r"], capture_output=True, text=True, check=False
-        ).stdout.splitlines()
-    )
-    date = "".join(
-        subprocess.run(
-            ["date"], capture_output=True, text=True, check=False
-        ).stdout.splitlines()
-    )
-    arch = "".join(
-        subprocess.run(
-            ["arch"], capture_output=True, text=True, check=False
-        ).stdout.splitlines()
-    )
+
+    hostname = await run_async_subprocess(["hostname"])
+    uname = await run_async_subprocess(["uname", "-r"])
+    date = await run_async_subprocess(["date"])
+    arch = await run_async_subprocess(["arch"])
+
     return InfoResponse(
-        hostname=hostname,
-        uname=uname,
-        date=date,
-        arch=arch,
+        hostname=hostname.strip(),
+        uname=uname.strip(),
+        date=date.strip(),
+        arch=arch.strip(),
     )
 
 
@@ -178,7 +168,10 @@ async def sms_root(msg_query: str = "ALL") -> List[Messages]:
         List<dict>: [{Messages}, {Messages}]
     """
     logger.info(f"Reading {msg_query} messages")
-    raw_messages = sms.read_message(message_type=msg_query)
+
+    # Await the receive_message function to ensure async execution
+    raw_messages = await sms.receive_message(message_type=msg_query)
+
     messages = []
     for raw_msg in raw_messages:
         try:
@@ -201,7 +194,7 @@ async def delete_msg(msg_idx: int) -> dict:
         dict: {"response": "Success"} | False
     """
     logger.info(f"DELETED_SMS: {msg_idx}")
-    resp = sms.delete_message(msg_idx)
+    resp = await sms.delete_message(msg_idx)  # Await the async delete_message call
     return resp
 
 
@@ -217,7 +210,7 @@ async def send_msg(request: SendMessageRequest) -> dict:
         dict: {"response": True}
     """
     logger.info(f"Sending {request.msg} to {request.number}")
-    resp = sms.send_message(phone_number=request.number, text_message=request.msg)
+    resp = await sms.send_message(phone_number=request.number, text_message=request.msg)  # Await the async send_message call
     return {"response": resp}
 
 
@@ -232,20 +225,8 @@ async def catcmd(request: AtRequest) -> str:
         str: raw stdout response if "OK" or "ERROR" if "\r\n" is returned
     """
     logger.info(f"Sending AT cmd: {request.cmd}")
-    cmd_sanitized = request.cmd
+    # Run command asynchronously if possible, otherwise handle it synchronously
     resp = subprocess.run(
-        ["./scripts/catcmd", cmd_sanitized], capture_output=True, text=True, check=False
+        ["./scripts/catcmd", request.cmd], capture_output=True, text=True, check=False
     ).stdout
     return resp
-
-
-# SETTINGS for persistent modem configs
-# settings.set_data_mode(1)
-# print(settings.get_config)
-# settings.enable_verbose_logging()  # Only needs to be enabled once
-# settings.set_sms_storage("SM")
-
-# PHONE
-# phone = Phone()
-# phone.call(contact_number)
-# phone.close_serial()

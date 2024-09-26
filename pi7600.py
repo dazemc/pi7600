@@ -144,33 +144,18 @@ class Settings(metaclass=SingletonMeta):
         """
         self.at = AT(com=com, baudrate=baudrate)
         self.first_run = True
-        if self.first_run:
-            self.perform_initial_checks()
-        # print(f"Settings instance created with ID: {id(self)}")
 
-    def __getattr__(self, name):
-        try:
-            return getattr(self.at, name)
-        except AttributeError:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute '{name}'"
-            )
-
-    def perform_initial_checks(self) -> None:
+    async def perform_initial_checks(self) -> None:
         """
-        Initial environment checks
-        :param self:
-        :return: None
+        Initial environment checks asynchronously.
         """
         checks = {
             "Python version requirements not met": lambda: py_version_check(),
-            "SIM device not ready": lambda: self.sim_ready_check(),
+            "SIM device not ready": self.sim_ready_check,  # Call async function directly
         }
         check_failed = False
         for check, result_function in checks.items():
-            result = (
-                result_function()
-            )  # Call the lambda function to execute the actual check
+            result = await result_function()  # Await the result from the function
             if result is False:
                 check_failed = True
                 print(check)
@@ -179,78 +164,11 @@ class Settings(metaclass=SingletonMeta):
         else:
             self.first_run = False
 
-    async def enable_verbose_logging(self) -> bool:
-        if await self.send_at("AT+CMEE=2", "OK", TIMEOUT):
-            return True
-        return False
-
-    async def sim_ready_check(self) -> bool:
-        if await self.send_at("AT+CPIN?", "READY", TIMEOUT):
-            return True
-        return False
-
-    async def get_config(self) -> str | bool:
-        if await self.send_at("AT&V", "OK", TIMEOUT):
-            return True
-        return False
-
-    async def set_usb_os(self, os: str) -> bool:
-        """
-        USB setting for RNDIS, OS specific. "WIN" or "UNIX".
-        :param os: str
-        :return: bool
-        """
-        if os == "WIN":
-            await self.send_at("AT+CUSBPIDSWITCH=9001,1,1", "OK", TIMEOUT)
-        elif os == "UNIX":
-            await self.send_at("AT+CUSBPIDSWITCH=9011,1,1", "OK", TIMEOUT)
-        for _ in range(6):  # Wait up to 3 mins for reboot
-            time.sleep(30)
-            try:
-                self.init_serial(BAUDRATE, COM)
-                if await self.send_at("AT", "OK", TIMEOUT):
-                    print(f"Set usb for {os}")
-                    return True
-            except:
-                print("Waiting for device to reboot...")
-        print("Failed to set USB mode.")
-        return False
-
-    async def set_sms_storage(self, mode: str) -> bool:
-        """
-        Set SMS storage location
-        :param mode: str
-        :return: bool
-        """
-        if await self.send_at(
-            f'AT+CPMS="{mode}","{mode}","{mode}"', "OK", TIMEOUT
-        ):  # Store messages on SIM(SM), "ME"/"MT" is flash
-            return True
-        return False
-
-    async def set_data_mode(self, mode: int) -> None:
-        """
-        HEX is automatically used if there is data issues, such as low signal quality.
-        :param mode: int
-        :return: None
-        """
-        if mode == 1:
-            await self.send_at("AT+CMGF=1", "OK", TIMEOUT)  # Set to text mode
-        if mode == 0:
-            await self.send_at("AT+CMGF=0", "OK", TIMEOUT)  # Set to hex mode
-
-    async def set_encoding_mode(self, mode: int) -> None:
-        """
-        Set encoding mode. 0=IRA, 1=GSM, 2=UCS2
-        :param mode: int
-        :return: None
-        """
-        if mode == 2:
-            await self.send_at('AT+CSCS="UCS2"', "OK", TIMEOUT)
-        if mode == 1:
-            await self.send_at('AT+CSCS="GSM"', "OK", TIMEOUT)
-        if mode == 0:
-            await self.send_at('AT+CSCS="IRA"', "OK", TIMEOUT)
+# Use async initialization in the main function or other async context
+async def initialize_settings():
+    settings = Settings()
+    await settings.perform_initial_checks()
+    return settings
 
 
 class GPS:
@@ -261,7 +179,7 @@ class GPS:
     def __init__(self):
         self.settings = Settings()
         self.loc = ""
-        self.is_running = self.session_check()
+        self.is_running = False  # Initialized to False; actual status will be checked asynchronously later
 
     def __getattr__(self, name):
         try:
@@ -273,7 +191,8 @@ class GPS:
 
     async def session_check(self):
         check = await self.send_at("AT+CGPS?", "+CGPS", TIMEOUT)
-        return True if "+CGPS: 1,1" in check else False
+        self.is_running = True if "+CGPS: 1,1" in check else False
+        return self.is_running
 
     async def gps_session(self, start: bool) -> bool:
         """
@@ -281,27 +200,28 @@ class GPS:
         :param start: bool
         :return: bool
         """
-        self.session_check()
+        await self.session_check()
         if start:
             print("Starting GPS session...")
             if await self.send_at(
                 "AT+CGPS=0,1", "OK", GPS_TIMEOUT
             ) and await self.send_at("AT+CGPS=1,1", "OK", GPS_TIMEOUT):
                 print("Started successfully")
-                time.sleep(2)
+                await asyncio.sleep(2)
                 self.is_running = True
                 return True
-        if not start:
+        else:
             print("Closing GPS session...")
             self.rec_buff = ""
             if await self.send_at("AT+CGPS=0,1", "OK", GPS_TIMEOUT):
+                self.is_running = False
                 return True
             else:
                 print("Error closing GPS, is it open?")
                 return False
 
     async def get_gps_position(self, retries: int = GPS_RETRY) -> str | bool:
-        self.session_check()
+        await self.session_check()  # Ensure session status is checked asynchronously
         if self.is_running:
             for _ in range(retries):
                 answer = await self.send_at("AT+CGPSINFO", "+CGPSINFO: ", GPS_TIMEOUT)
@@ -311,7 +231,7 @@ class GPS:
                     return "GPS is active but no signal was found"
                 else:
                     print("Error accessing GPS, attempting to close session")
-                    if not self.gps_session(False):
+                    if not await self.gps_session(False):  # Await the async method
                         print("GPS was not found or did not close correctly")
                     else:
                         print("Done")
@@ -322,8 +242,8 @@ class GPS:
             print(
                 "Attempting to get location without an open GPS session, trying to open one now..."
             )
-            self.gps_session(True)
-            self.get_gps_position()
+            await self.gps_session(True)  # Await the async method
+            return await self.get_gps_position()  # Await the async recursive call
 
 
 def parse_sms(sms_buffer: str) -> list:
@@ -407,7 +327,9 @@ class Phone:
                     f"Attempting to call {contact_number}; Attempt: {attempt}; Retry: {retry}"
                 )
                 # IF ATD returns an error then determine source of error.
-                if await self.send_at("ATD" + contact_number + ";", "OK", PHONE_TIMEOUT):
+                if await self.send_at(
+                    "ATD" + contact_number + ";", "OK", PHONE_TIMEOUT
+                ):
                     input("Call connected!\nPress enter to end call")
                     # self.ser.write('AT+CHUP\r\n'.encode())  # Hangup code, why is serial used vs send_at()?
                     self.hangup_call()
