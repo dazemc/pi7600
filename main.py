@@ -102,10 +102,10 @@ async def root() -> StatusResponse:
     gpsinfo = gps_check if gps_check else "ERROR"
 
     # Asynchronously run subprocess commands using asyncio.create_subprocess_exec
-    data_check = await run_async_subprocess(["ping", "-I", "usb0", "-c", "3", "1.1.1.1"])
+    data_check = await run_async_subprocess(["ping", "-I", "usb0", "-c", "1", "1.1.1.1"])
     data = "ERROR" if "Unreachable" in data_check else "OK"
 
-    dns_check = await run_async_subprocess(["ping", "-I", "usb0", "-c", "3", "www.google.com"])
+    dns_check = await run_async_subprocess(["ping", "-I", "usb0", "-c", "1", "www.google.com"])
     dns = "ERROR" if "Unreachable" in dns_check else "OK"
 
     apn_check = await settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
