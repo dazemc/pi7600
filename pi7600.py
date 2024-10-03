@@ -334,7 +334,7 @@ def parse_sms(sms_buffer: str) -> list:
     message_list = []
 
     for i, v in enumerate(read_messages):
-        if i % 2 == 0:  # Even idx has msg info, odd is msg content for preceding idx
+        if not i & 1:  # Even idx has msg info, odd is msg content for preceding idx
             message = v.replace('"', "", 9).split(",")
             message_list.append(
                 {

@@ -1,10 +1,10 @@
-# Pi7600: Python Library and REST API for SIM7600G-H 4G HAT
+# Pi7600: Python Library and REST API for SIM7600 (Simcom says the AT commands are compatible with the 8200 and 8260 5g models as well)
 
 [GitHub Repository](https://github.com/dazemc/pi7600)
 
 ## Overview
 
-**Pi7600** is a Python library and FastAPI-based REST API for managing the [SIM7600G-H 4G HAT from Waveshare](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B)) on systems like the Raspberry Pi. The project enables various operations for modem control, including:
+**Pi7600** is a Python library and FastAPI-based REST API for managing the [SIM7600 4G HAT from Waveshare](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B)) on systems like the Raspberry Pi. The project enables various operations for modem control, including:
 
 - Checking modem information and status
 - Retrieving host system details
@@ -74,7 +74,7 @@ curl -X GET http://localhost:8000/
   "csq": "+CSQ: 15,99",
   "cpin": "+CPIN: READY",
   "creg": "+CREG: 0,1",
-  "cops": "+COPS: 0,0,\"Carrier\",7",
+  "cops": "+COPS: 0,0,\"Home\",7",
   "gpsinfo": "GPS is active but no signal was found",
   "data": "OK",
   "dns": "OK",
@@ -123,6 +123,7 @@ curl -X GET "http://localhost:8000/sms?msg_query=ALL"
     "message_index": "1",
     "message_type": "REC READ",
     "message_originating_address": "+1234567890",
+    "message_destination_address": null,
     "message_date": "2024-09-17",
     "message_time": "22:48:47",
     "message_contents": "Hello World"
