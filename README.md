@@ -1,60 +1,64 @@
-# Py_RPI_SIM: Python Library and REST API for SIM7600G-H 4G HAT
+# Pi7600: Python Library and REST API for SIM7600G-H 4G HAT
 
-*Disclaimer: This README has been AI-generated as a quick and easy way to provide documentation during early development. Features are subject to change as the project evolves.*
-
-[GitHub Repository](https://github.com/dazemc/py_rpi_sim)
+[GitHub Repository](https://github.com/dazemc/pi7600)
 
 ## Overview
 
-**Py_RPI_SIM** is a Python library and FastAPI-based REST API for managing the [SIM7600G-H 4G HAT from Waveshare](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B)) on a Raspberry Pi. The project enables various modem management operations, such as:
+**Pi7600** is a Python library and FastAPI-based REST API for managing the [SIM7600G-H 4G HAT from Waveshare](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B)) on systems like the Raspberry Pi. The project enables various operations for modem control, including:
 
 - Checking modem information and status
-- Retrieving host device information
+- Retrieving host system details
 - Managing SMS messages (send, read, delete)
 - Executing raw AT commands
 - Accessing GPS data
 
-This tool integrates modules like `GPS`, `Phone`, `SMS`, and `AT` to offer comprehensive modem control, all with asynchronous support for improved performance.
+This tool integrates various modules such as `GPS`, `SMS`, and `Settings` to provide comprehensive control over the modem, all while supporting asynchronous execution for improved performance.
 
 ## Features
 
-- **Modem Information and Status**: Check the network and modem status asynchronously.
-- **Host Device Information**: Retrieve system details (hostname, kernel version, date, and architecture).
-- **SMS Management**: Send, read, and delete SMS messages using non-blocking asynchronous operations.
-- **AT Command Interface**: Execute raw AT commands and receive modem responses asynchronously.
-- **GPS Integration**: Access GPS data from the SIM7600 module asynchronously.
+- **Modem Information**: Retrieve network and device status asynchronously.
+- **Host System Information**: Fetch system details like hostname, kernel version, and architecture.
+- **SMS Management**: Send, read, and delete SMS messages with asynchronous support.
+- **AT Command Interface**: Execute raw AT commands and get modem responses asynchronously.
+- **GPS Data**: Access GPS coordinates via the SIM7600 module asynchronously.
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
 - [API Endpoints](#api-endpoints)
-  - [Root `/`](#root-)
-  - [Info `/info`](#info-info)
+  - [Modem Status `/`](#modem-status-)
+  - [Host Information `/info`](#host-information-info)
   - [SMS Management `/sms`](#sms-management-sms)
-    - [Read Messages `GET /sms`](#read-messages-get-sms)
-    - [Send Message `POST /sms`](#send-message-post-sms)
-    - [Delete Message `DELETE /sms/delete/{msg_idx}`](#delete-message-delete-smsdelete-msg_idx)
+    - [Read SMS `GET /sms`](#read-sms-get-sms)
+    - [Send SMS `POST /sms`](#send-sms-post-sms)
+    - [Delete SMS `DELETE /sms/delete/{msg_idx}`](#delete-sms-delete-smsdelete-msg_idx)
   - [AT Command Interface `/at`](#at-command-interface-at)
   - [API Documentation `/docs` and `/redoc`](#api-documentation-docs-and-redoc)
-- [Resources and Notes](#resources-and-notes)
+- [Resources](#resources)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Installation
 
-*Installation instructions will be added once the project reaches a stable state.*
+*Detailed installation instructions will be provided in the future once the project reaches a stable release.*
 
 ## Usage
 
-*Usage instructions will be updated as the project develops.*
+To run the API, use the FastAPI server powered by `uvicorn`:
+
+```bash
+uvicorn main:app --reload
+```
+
+This starts the API server at `http://localhost:8000`.
 
 ## API Endpoints
 
-### Root `/`
+### Modem Status `/`
 
 - **Method**: `GET`
-- **Description**: Returns modem information and status, including AT command checks, signal quality, network registration, and more.
+- **Description**: Returns modem information, including AT command checks, signal quality, SIM status, network registration, and GPS info.
 
 **Example Request**:
 
@@ -66,11 +70,11 @@ curl -X GET http://localhost:8000/
 ```json
 {
   "at": "OK",
-  "cnum": "11234567890",
+  "cnum": "+11234567890",
   "csq": "+CSQ: 15,99",
   "cpin": "+CPIN: READY",
   "creg": "+CREG: 0,1",
-  "cops": "+COPS: 0,0,\"Home\",7",
+  "cops": "+COPS: 0,0,\"Carrier\",7",
   "gpsinfo": "GPS is active but no signal was found",
   "data": "OK",
   "dns": "OK",
@@ -78,10 +82,10 @@ curl -X GET http://localhost:8000/
 }
 ```
 
-### Info `/info`
+### Host Information `/info`
 
 - **Method**: `GET`
-- **Description**: Retrieves host device information like hostname, kernel version, and architecture.
+- **Description**: Fetches host system details like hostname, kernel version, and architecture.
 
 **Example Request**:
 
@@ -101,10 +105,10 @@ curl -X GET http://localhost:8000/info
 
 ### SMS Management `/sms`
 
-#### Read Messages `GET /sms`
+#### Read SMS `GET /sms`
 
 - **Method**: `GET`
-- **Description**: Reads messages from the modem asynchronously.
+- **Description**: Reads SMS messages from the modem. Supports querying all messages or by specific types (e.g., "REC READ").
 
 **Example Request**:
 
@@ -119,7 +123,6 @@ curl -X GET "http://localhost:8000/sms?msg_query=ALL"
     "message_index": "1",
     "message_type": "REC READ",
     "message_originating_address": "+1234567890",
-    "message_destination_address": null,
     "message_date": "2024-09-17",
     "message_time": "22:48:47",
     "message_contents": "Hello World"
@@ -127,10 +130,10 @@ curl -X GET "http://localhost:8000/sms?msg_query=ALL"
 ]
 ```
 
-#### Send Message `POST /sms`
+#### Send SMS `POST /sms`
 
 - **Method**: `POST`
-- **Description**: Sends an SMS to a specified phone number asynchronously.
+- **Description**: Sends an SMS message to the specified phone number.
 
 **Example Request**:
 
@@ -147,10 +150,10 @@ curl -X POST -H "Content-Type: application/json" \
 }
 ```
 
-#### Delete Message `DELETE /sms/delete/{msg_idx}`
+#### Delete SMS `DELETE /sms/delete/{msg_idx}`
 
 - **Method**: `DELETE`
-- **Description**: Deletes an SMS message by its index asynchronously.
+- **Description**: Deletes an SMS by its message index.
 
 **Example Request**:
 
@@ -168,7 +171,7 @@ curl -X DELETE http://localhost:8000/sms/delete/1
 ### AT Command Interface `/at`
 
 - **Method**: `POST`
-- **Description**: Sends raw AT commands to the modem and returns the response.
+- **Description**: Sends raw AT commands to the modem and retrieves the response.
 
 **Example Request**:
 
@@ -187,32 +190,24 @@ curl -X POST -H "Content-Type: application/json" \
 
 FastAPI provides built-in interactive documentation to explore the API endpoints:
 
-- **Swagger UI** (interactive API docs): [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc** (alternative API docs): [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 These pages allow you to explore and test the API directly from the browser.
 
-## Resources and Notes
+## Resources
 
 - [SIM7600G-H 4G HAT Product Page](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B))
 - [SIM7600 AT Command Manual](https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf)
-- [SIM7X00 TCPIP Application Note](https://www.waveshare.com/w/upload/7/79/SIM7X00_Series_TCPIP_Application_Note_V1.00.pdf)
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request for any changes or suggestions.
+Contributions are welcome! Feel free to open an issue or submit a pull request if you have suggestions or improvements.
 
 ## License
 
-*License information will be added later.*
+*License information will be added soon.*
 
 ---
 
-*Note: This project is under active development, and features may change frequently. The documentation will be updated accordingly.*
-```
-
-### **Key Updates:**
-1. **Asynchronous Support:** Updated descriptions to reflect asynchronous handling for all relevant endpoints.
-2. **Endpoint Improvements:** Refined the example requests and responses for accuracy based on the modified FastAPI endpoints.
-3. **Subprocess Handling:** Included async handling in descriptions where applicable.
-4. **Corrected Endpoint Descriptions:** Refined endpoint descriptions to more accurately represent the current functionality of the API.
+*Note: This project is under active development, and documentation will be updated as features are added.*
