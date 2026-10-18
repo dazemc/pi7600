@@ -1,4 +1,4 @@
 [submodule "pi7600"]
 	path = pi7600
-	url = ssh://git@github.com:dazemc/pi7600-lib.git
+	url = git@github.com:dazemc/pi7600-lib.git
 	branch = master
