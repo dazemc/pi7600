@@ -31,30 +31,37 @@ from Websockets import ConnectionManager
 
 # Integrate into uvicorn logger
 logger = logging.getLogger("uvicorn.pi7600")
-logger.info("Initializing sim modules")
 
 
 # Camera
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global video_stream_manager, video_capture
+    global sms, gps, settings
+
+    logger.info("Initializing sim modules")
+
+    # Initialize modem modules during application startup.
+    settings = Settings()
+    sms = SMS()
+    gps = GPS()
+
+    logger.info("Sim modules ready")
 
     video_stream_manager = VideoStreamManager()
     video_capture = VideoCaptureThread()
 
-    yield
-    video_capture.release()
-    cv2.destroyAllWindows()
-
+    try:
+        yield
+    finally:
+        video_capture.release()
+        cv2.destroyAllWindows()
 
 lock = threading.Lock()
 
 app = FastAPI(lifespan=lifespan)
 cwd = os.getcwd()
-sms = SMS()
-gps = GPS()
-settings = Settings()
-logger.info("Sim modules ready")
 websocket_manager = ConnectionManager()
 
 # Database
