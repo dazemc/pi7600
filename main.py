@@ -327,6 +327,8 @@ async def sms_root(
 
     # Await the receive_message function to ensure async execution
     messages = await sms.receive_messages()
+    if messages is None:
+        messages = []
     for msg in messages:
         try:
             # this should set true for any message read from the sim
