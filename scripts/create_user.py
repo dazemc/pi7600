@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from Models import Base, UserDB
 from Utils import hash_password
 
-DATABASE_URL = "sqlite:///./cmgl.db"
+DATABASE_URL = "sqlite:///../cmgl.db"
 
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(engine)
