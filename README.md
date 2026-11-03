@@ -305,6 +305,99 @@ The response reports success and the raw response for every command. `save`
 runs `AT&W`. Use `/at` for arbitrary AT actions or commands outside the setting
 syntax. Settings are admin-only and audited.
 
+### AT command reference
+
+`GET /modem` returns raw responses for every command below. `PATCH /modem`
+writes settings by sending the command base with a value, for example
+`{"AT+CMGF": "0"}` sends `AT+CMGF=0`. A trailing `?` means "read the current
+value"; the write form drops the `?` and appends `=value`.
+
+#### Identity and SIM
+
+| Command | What it does | Example use |
+| --- | --- | --- |
+| `AT` | Checks that the AT command channel responds. | Liveness check; `/modem` reports `at: "OK"`. |
+| `ATI` | Returns product identification: manufacturer, model, and revision. | Quick inventory or support snapshot. |
+| `AT+CGMI` | Returns the manufacturer name. | Confirm you are talking to a SimTech/SIMCom modem. |
+| `AT+CGMM` | Returns the modem model. | Detect `SIMCOM_SIM7600G-H` in an asset registry. |
+| `AT+CGMR` | Returns the firmware revision. | Compare against a known-good firmware build. |
+| `AT+CGSN` | Returns the IMEI. | Register the radio in an inventory without reading the label. |
+| `AT+CIMI` | Returns the IMSI from the SIM. | Verify the inserted SIM is the expected subscription. Treat as personal data. |
+| `AT+CCID` | Returns the SIM ICCID. | Match the physical SIM card to the account record. |
+| `AT+CNUM` | Returns the subscriber number stored on the SIM. | Show the modem's phone number; some SIMs leave it blank. |
+| `AT+CPIN?` | Reports SIM PIN state, normally `+CPIN: READY`. | Readiness check before SMS, calls, or data. |
+| `AT+CPINR?` | Reports remaining PIN/PUK retry counts where supported. | Warn before a SIM becomes permanently locked. |
+| `AT+CPAS` | Reports modem activity: ready, unavailable, ringing, call in progress, or asleep. | Detect whether a call is active without parsing call state. |
+| `AT+CFUN?` | Reports radio functionality mode. | Confirm the radio is in full mode (`1`) rather than airplane/minimum mode. Write `AT+CFUN=1` to restore full mode; `AT+CFUN=4` disables the radio. |
+| `AT+CPBS?` | Reports the selected phonebook storage. | Audit whether contacts are stored on the SIM or modem. Write `AT+CPBS="SM"` to select SIM storage. |
+| `AT+CPMS?` | Reports SMS storage used/total for read, write, and receive. | Check SIM inbox capacity before bulk SMS work. Write `AT+CPMS="SM","SM","SM"` to use SIM storage. |
+
+#### Network and packet data
+
+| Command | What it does | Example use |
+| --- | --- | --- |
+| `AT+CSQ` | Returns RSSI (0-31, or 99 unknown) and bit-error rate. | Dashboard signal strength; `99,99` means no usable signal. |
+| `AT+CESQ` | Returns extended signal quality (RSRP, RSRQ, SINR where supported). | Diagnose LTE quality beyond RSSI. |
+| `AT+CREG?` | Reports circuit-switched network registration and location. | Distinguish home (`0,1`), searching (`0,2`), denied (`0,3`), and roaming (`0,5`). |
+| `AT+CGREG?` | Reports GPRS/packet-switched registration. | Verify the modem is registered for data. |
+| `AT+CEREG?` | Reports LTE/EPS registration. | Check LTE attach state separately from legacy registration. |
+| `AT+COPS?` | Reports the selected operator and access technology. | Confirm `Tello`/T-Mobile LTE instead of an unintended carrier. Write `AT+COPS=0` for automatic selection, or `AT+COPS=1,2,"310260",7` to force a numeric operator and LTE. |
+| `AT+CGATT?` | Reports whether the modem is attached to a packet domain. | Data-session health check; `1` means attached. |
+| `AT+CPSI?` | Returns SIM7600 system information such as mode, band, cell, and channel. | RF/cell-site diagnostics when signal quality is poor. |
+| `AT+CGACT?` | Reports which PDP contexts are active. | See whether the data bearer is actually up. Write `AT+CGACT=1,1` to activate context 1 or `AT+CGACT=0,1` to deactivate it. |
+| `AT+CGPADDR` | Returns the IP address assigned to each PDP context. | Confirm the modem obtained an IPv4/IPv6 address. |
+| `AT+CGCONTRDP` | Returns dynamic context parameters: APN, addresses, DNS servers, MTU, and more. | Verify DNS and MTU after a data session comes up. |
+| `AT+CGDCONT?` | Lists configured PDP contexts and APNs. | Audit which APN the modem will use. Write `AT+CGDCONT=1,"IPV4V6","wholesale"` to set the primary APN. |
+
+#### SMS and audio
+
+| Command | What it does | Example use |
+| --- | --- | --- |
+| `AT+CMGF?` | Reports SMS mode: `0` PDU, `1` text. | Keep the service in PDU mode (`0`) unless you deliberately need text commands. Write `AT+CMGF=0` or `AT+CMGF=1`. |
+| `AT+CNMI?` | Reports how new SMS indications are routed to the terminal. | Tune unsolicited `+CMTI` notifications. Write `AT+CNMI=2,1,0,0,0` to notify and store incoming messages. |
+| `AT+CSMP?` | Reports text-mode SMS parameters: validity period, protocol ID, and data coding. | Debug text-mode SMS encoding. Write `AT+CSMP=17,167,0,0` for a common GSM 7-bit setup. |
+| `AT+CSCA?` | Reports the SMS service-center address. | Verify SMSC before troubleshooting SMS delivery. Write `AT+CSCA="+15551234567",145`. |
+| `AT+CSDH?` | Controls whether text-mode `+CMGL`/`+CMGR` include detailed headers. | Enable (`AT+CSDH=1`) when debugging text-mode SMS metadata. |
+| `AT+CSMS?` | Reports supported SMS service types and stored-message support. | Capability check before selecting an SMS workflow. Write `AT+CSMS=0` for GSM 03.40. |
+| `AT+CSCS?` | Reports the terminal character set (`IRA`, `GSM`, `UCS2`, etc.). | Fix garbled non-ASCII SMS text. Write `AT+CSCS="GSM"` or `AT+CSCS="UCS2"`. |
+| `AT+CMUT?` | Reports microphone mute state during a call. | Privacy control for voice calls. Write `AT+CMUT=1` to mute and `AT+CMUT=0` to unmute. |
+| `AT+CLVL?` | Reports the audio volume level. | Adjust speaker/headset loudness. Write `AT+CLVL=3` (range depends on firmware). |
+| `AT+CSDVC?` | Reports the selected audio device/path. | Route call audio to handset, headset, or speaker. Write `AT+CSDVC=1` after checking the model's device mapping. |
+
+#### Settings, time, and call presentation
+
+| Command | What it does | Example use |
+| --- | --- | --- |
+| `AT&V` | Dumps the active modem profile and all current S-register/command settings. | Configuration snapshot before and after a change; compare profiles. |
+| `AT+CMEE?` | Reports error-reporting mode: disabled, numeric, or verbose. | Turn on `+CME ERROR` details. Write `AT+CMEE=2` for verbose errors. |
+| `AT+CRC?` | Reports whether incoming calls use extended `+CRING` indications. | Distinguish voice/data/fax call types. Write `AT+CRC=1` to enable. |
+| `AT+CLIP?` | Reports calling-line identification presentation. | Show the caller's number on incoming calls. Write `AT+CLIP=1` to enable. |
+| `AT+CLIR?` | Reports outgoing caller-ID restriction. | Hide or present the modem's number. Write `AT+CLIR=1` to restrict, `AT+CLIR=0` to present, subject to network support. |
+| `AT+COLP?` | Reports connected-line identification presentation. | Show the number that actually answered. Write `AT+COLP=1` to enable. |
+| `AT+CCWA?` | Reports call-waiting state. | Enable a second-call notification. Write `AT+CCWA=1` to enable and `AT+CCWA=0` to disable. |
+| `AT+CUSD?` | Reports USSD support/result-code configuration. | Run carrier USSD codes such as balance checks. Write `AT+CUSD=1` to enable result codes. |
+| `AT+CTZU?` | Reports automatic timezone updating from the network. | Keep the modem clock aligned after travel. Write `AT+CTZU=1` to enable. |
+| `AT+CTZR?` | Reports timezone-change event reporting. | Receive unsolicited timezone updates. Write `AT+CTZR=1` to enable. |
+| `AT+CLTS?` | Reports network time synchronization. | Get time from the carrier instead of the host. Write `AT+CLTS=1` to enable. |
+| `AT+CCLK?` | Reads the modem real-time clock. | Display modem time or set it with `AT+CCLK="26/11/03,12:34:56-32"` (quarter-hour offset). |
+
+#### Power, GPS, and calls
+
+| Command | What it does | Example use |
+| --- | --- | --- |
+| `AT+CBC` | Reports battery charge state, percent, and voltage where supported. | Battery/UPS monitoring on a portable build. |
+| `AT+CPMUTEMP?` | Reports the modem temperature on SIM7600 firmware that supports it. | Thermal monitoring in an enclosure. |
+| `AT+CGPS?` | Reports GPS session state and mode. | Check whether GPS is powered/running. Write `AT+CGPS=1` to start or `AT+CGPS=0` to stop. |
+| `AT+CGPSINFO` | Returns the current GPS fix. | Feed `/gps` and the Google Maps link. |
+| `AT+CGPSSTATUS?` | Reports GPS fix status. | Troubleshoot "GPS active but no signal" by distinguishing searching from fixed. |
+| `AT+CGPSAUTO?` | Reports whether GPS starts automatically. | Configure a tracker to acquire GPS after boot. Write `AT+CGPSAUTO=1` to enable. |
+| `AT+CLCC` | Lists active calls with direction, state, mode, and number. | Build call-control UIs or verify that a dial reached alerting/active state. |
+
+The write examples above are accepted by `PATCH /modem`. `save: true` adds
+`AT&W` to persist the active profile. Commands outside this settings pattern,
+or actions such as dialing and sending SMS, still belong on the admin-only
+`/at` endpoint.
+
 ### Interactive API explorer
 
 `GET /docs` serves a server-rendered Jaspr page that lists every HTTP and
