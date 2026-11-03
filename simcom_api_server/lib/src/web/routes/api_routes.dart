@@ -40,6 +40,22 @@ Response _tooManyAttempts(Duration retryAfter) {
   );
 }
 
+Response? _throttleCheck(AppServices services, String key) {
+  final retryAfter = services.loginLimiter.retryAfter(key);
+  return retryAfter == null ? null : _tooManyAttempts(retryAfter);
+}
+
+Response _recordThrottledFailure(
+  AppServices services,
+  String key,
+  String detail, {
+  int status = 403,
+}) {
+  final block = services.loginLimiter.recordFailure(key);
+  if (block != null) return _tooManyAttempts(block);
+  return errorResponse(status, detail);
+}
+
 /// `POST /token`
 class TokenRoute extends Route {
   TokenRoute(this.services) : super(methods: {Method.post});
@@ -70,9 +86,7 @@ class TokenRoute extends Route {
       return _tooManyAttempts(blockedFor);
     }
 
-    final auth = services.authService(session);
-    final user = await auth.authenticatePassword(username, password);
-    if (user == null) {
+    Response recordFailure(String detail) {
       final userBlock = limiter.recordFailure(userKey);
       final addressBlock = limiter.recordFailure(addressKey);
       final block = userBlock ?? addressBlock;
@@ -81,11 +95,27 @@ class TokenRoute extends Route {
         name: 'pi7600.auth',
       );
       if (block != null) return _tooManyAttempts(block);
-      return errorResponse(
-        401,
-        'Incorrect username or password',
-        authenticate: true,
-      );
+      return errorResponse(401, detail, authenticate: true);
+    }
+
+    final auth = services.authService(session);
+    final user = await auth.authenticatePassword(username, password);
+    if (user == null) {
+      return recordFailure('Incorrect username or password');
+    }
+
+    if (user.totpEnabled) {
+      final otp = form['otp']?.trim() ?? '';
+      if (otp.isEmpty) {
+        return errorResponse(
+          401,
+          'TOTP code required',
+          authenticate: true,
+        );
+      }
+      if (!await auth.verifySecondFactor(user, otp)) {
+        return recordFailure('Incorrect TOTP code');
+      }
     }
 
     limiter.reset(userKey);
@@ -94,6 +124,144 @@ class TokenRoute extends Route {
       'access_token': services.jwt.createToken(user.userName),
       'token_type': 'bearer',
     });
+  }
+}
+
+/// `GET /totp`
+class TotpStatusRoute extends Route {
+  TotpStatusRoute(this.services) : super(methods: {Method.get});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    return jsonResponse({'enabled': auth.user!.totpEnabled});
+  }
+}
+
+/// `POST /totp/setup`
+class TotpSetupRoute extends Route {
+  TotpSetupRoute(this.services) : super(methods: {Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    if (auth.user!.totpEnabled) {
+      return errorResponse(409, 'TOTP is already enabled');
+    }
+
+    final body = await readJsonObject(request);
+    final password = body?['password'];
+    if (password is! String || password.isEmpty) {
+      return errorResponse(422, 'password is required');
+    }
+
+    final throttleKey = 'totp-setup:${auth.user!.userName}';
+    final throttled = _throttleCheck(services, throttleKey);
+    if (throttled != null) return throttled;
+
+    final setup = await services
+        .authService(session)
+        .setupTotp(auth.user!, password);
+    if (setup == null) {
+      return _recordThrottledFailure(
+        services,
+        throttleKey,
+        'Incorrect password',
+      );
+    }
+    services.loginLimiter.reset(throttleKey);
+
+    return jsonResponse({
+      'secret': setup.secret,
+      'provisioning_uri': setup.provisioningUri,
+      'recovery_codes': setup.recoveryCodes,
+    });
+  }
+}
+
+/// `POST /totp/enable`
+class TotpEnableRoute extends Route {
+  TotpEnableRoute(this.services) : super(methods: {Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    if (auth.user!.totpEnabled) {
+      return errorResponse(409, 'TOTP is already enabled');
+    }
+
+    final body = await readJsonObject(request);
+    final code = body?['code'];
+    if (code is! String || code.trim().isEmpty) {
+      return errorResponse(422, 'code is required');
+    }
+
+    final throttleKey = 'totp-enable:${auth.user!.userName}';
+    final throttled = _throttleCheck(services, throttleKey);
+    if (throttled != null) return throttled;
+
+    final enabled = await services
+        .authService(session)
+        .enableTotp(auth.user!, code.trim());
+    if (!enabled) {
+      return _recordThrottledFailure(
+        services,
+        throttleKey,
+        'Invalid TOTP code',
+        status: 422,
+      );
+    }
+    services.loginLimiter.reset(throttleKey);
+    return jsonResponse({'enabled': true});
+  }
+}
+
+/// `POST /totp/disable`
+class TotpDisableRoute extends Route {
+  TotpDisableRoute(this.services) : super(methods: {Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+
+    final body = await readJsonObject(request);
+    final password = body?['password'];
+    final code = body?['code'];
+    if (password is! String || password.isEmpty) {
+      return errorResponse(422, 'password is required');
+    }
+    if (code is! String || code.trim().isEmpty) {
+      return errorResponse(422, 'code is required');
+    }
+
+    final throttleKey = 'totp-disable:${auth.user!.userName}';
+    final throttled = _throttleCheck(services, throttleKey);
+    if (throttled != null) return throttled;
+
+    final disabled = await services
+        .authService(session)
+        .disableTotp(auth.user!, password, code.trim());
+    if (!disabled) {
+      return _recordThrottledFailure(
+        services,
+        throttleKey,
+        'Incorrect password or code',
+      );
+    }
+    services.loginLimiter.reset(throttleKey);
+    return jsonResponse({'enabled': false});
   }
 }
 

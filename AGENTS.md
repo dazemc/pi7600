@@ -122,7 +122,10 @@ cd simcom_api_server && serverpod create-migration
   `dart_jsonwebtoken`. HTTP routes validate the bearer token and load the user
   from PostgreSQL. `/at` additionally requires `is_admin`. WebSockets accept a
   first JSON message `{"type": "auth", "token": "<jwt>"}` within
-  `PI7600_WEBSOCKET_AUTH_TIMEOUT` and close with `1008` on failure.
+  `PI7600_WEBSOCKET_AUTH_TIMEOUT` and close with `1008` on failure. Failed
+  logins are throttled per username and client address. Users can enable TOTP
+  through `/totp/setup` and `/totp/enable`; `/token` then requires `otp`, and
+  recovery codes are single-use.
 - **Modem library:** the standalone `simcom_modem` Dart package lives in the
   `simcom_modem` submodule and is consumed through a path dependency. It owns
   `At`, `SerialTransport`/`LibSerialPortTransport`, `ModemSettings`,
@@ -204,8 +207,9 @@ cd simcom_api_server && dart test
 cd simcom_modem && dart test
 ```
 
-The service suite is hardware-free and covers JWT/bcrypt auth, SMS
-persistence/deletion, status parsing, and the `/docs` catalog/page. The docs
+The service suite is hardware-free and covers JWT/bcrypt auth, login
+throttling, TOTP, SMS persistence/deletion, status parsing, and the `/docs`
+catalog/page. The docs
 test also runs `dart compile js` on the Jaspr client entrypoint, so a client
 build failure fails the suite.
 

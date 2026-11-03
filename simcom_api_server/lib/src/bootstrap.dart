@@ -23,6 +23,10 @@ void configureServer(Serverpod pod) {
 
   web
     ..addRoute(TokenRoute(services), '/token')
+    ..addRoute(TotpStatusRoute(services), '/totp')
+    ..addRoute(TotpSetupRoute(services), '/totp/setup')
+    ..addRoute(TotpEnableRoute(services), '/totp/enable')
+    ..addRoute(TotpDisableRoute(services), '/totp/disable')
     ..addRoute(StatusRoute(services), '/')
     ..addRoute(InfoRoute(services), '/info')
     ..addRoute(GpsRoute(services), '/gps')

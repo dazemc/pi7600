@@ -24,3 +24,14 @@ fields:
     column: is_admin
     defaultModel: 'false'
     defaultPersist: 'false'
+  totpSecret:
+    type: String?
+    column: totp_secret
+  totpEnabled:
+    type: bool
+    column: totp_enabled
+    defaultModel: 'false'
+    defaultPersist: 'false'
+  totpRecoveryCodes:
+    type: String?
+    column: totp_recovery_codes

@@ -22,8 +22,12 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
     this.userEmail,
     bool? isDisabled,
     bool? isAdmin,
+    this.totpSecret,
+    bool? totpEnabled,
+    this.totpRecoveryCodes,
   }) : isDisabled = isDisabled ?? false,
-       isAdmin = isAdmin ?? false;
+       isAdmin = isAdmin ?? false,
+       totpEnabled = totpEnabled ?? false;
 
   factory User({
     int? id,
@@ -33,6 +37,9 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
     String? userEmail,
     bool? isDisabled,
     bool? isAdmin,
+    String? totpSecret,
+    bool? totpEnabled,
+    String? totpRecoveryCodes,
   }) = _UserImpl;
 
   factory User.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -48,6 +55,11 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
       isAdmin: jsonSerialization['isAdmin'] == null
           ? null
           : _is.BoolJsonExtension.fromJson(jsonSerialization['isAdmin']),
+      totpSecret: jsonSerialization['totpSecret'] as String?,
+      totpEnabled: jsonSerialization['totpEnabled'] == null
+          ? null
+          : _is.BoolJsonExtension.fromJson(jsonSerialization['totpEnabled']),
+      totpRecoveryCodes: jsonSerialization['totpRecoveryCodes'] as String?,
     );
   }
 
@@ -70,6 +82,12 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
 
   bool isAdmin;
 
+  String? totpSecret;
+
+  bool totpEnabled;
+
+  String? totpRecoveryCodes;
+
   @override
   _is.Table<int?> get table => t;
 
@@ -84,6 +102,9 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
     String? userEmail,
     bool? isDisabled,
     bool? isAdmin,
+    String? totpSecret,
+    bool? totpEnabled,
+    String? totpRecoveryCodes,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -96,6 +117,9 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
       if (userEmail != null) 'userEmail': userEmail,
       'isDisabled': isDisabled,
       'isAdmin': isAdmin,
+      if (totpSecret != null) 'totpSecret': totpSecret,
+      'totpEnabled': totpEnabled,
+      if (totpRecoveryCodes != null) 'totpRecoveryCodes': totpRecoveryCodes,
     };
   }
 
@@ -110,6 +134,9 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
       if (userEmail != null) 'userEmail': userEmail,
       'isDisabled': isDisabled,
       'isAdmin': isAdmin,
+      if (totpSecret != null) 'totpSecret': totpSecret,
+      'totpEnabled': totpEnabled,
+      if (totpRecoveryCodes != null) 'totpRecoveryCodes': totpRecoveryCodes,
     };
   }
 
@@ -152,6 +179,9 @@ class _UserImpl extends User {
     String? userEmail,
     bool? isDisabled,
     bool? isAdmin,
+    String? totpSecret,
+    bool? totpEnabled,
+    String? totpRecoveryCodes,
   }) : super._(
          id: id,
          userName: userName,
@@ -160,6 +190,9 @@ class _UserImpl extends User {
          userEmail: userEmail,
          isDisabled: isDisabled,
          isAdmin: isAdmin,
+         totpSecret: totpSecret,
+         totpEnabled: totpEnabled,
+         totpRecoveryCodes: totpRecoveryCodes,
        );
 
   /// Returns a shallow copy of this [User]
@@ -174,6 +207,9 @@ class _UserImpl extends User {
     Object? userEmail = _Undefined,
     bool? isDisabled,
     bool? isAdmin,
+    Object? totpSecret = _Undefined,
+    bool? totpEnabled,
+    Object? totpRecoveryCodes = _Undefined,
   }) {
     return User(
       id: id is int? ? id : this.id,
@@ -183,6 +219,11 @@ class _UserImpl extends User {
       userEmail: userEmail is String? ? userEmail : this.userEmail,
       isDisabled: isDisabled ?? this.isDisabled,
       isAdmin: isAdmin ?? this.isAdmin,
+      totpSecret: totpSecret is String? ? totpSecret : this.totpSecret,
+      totpEnabled: totpEnabled ?? this.totpEnabled,
+      totpRecoveryCodes: totpRecoveryCodes is String?
+          ? totpRecoveryCodes
+          : this.totpRecoveryCodes,
     );
   }
 }
@@ -220,6 +261,22 @@ class UserUpdateTable extends _is.UpdateTable<UserTable> {
     table.isAdmin,
     value,
   );
+
+  _is.ColumnValue<String, String> totpSecret(String? value) => _is.ColumnValue(
+    table.totpSecret,
+    value,
+  );
+
+  _is.ColumnValue<bool, bool> totpEnabled(bool value) => _is.ColumnValue(
+    table.totpEnabled,
+    value,
+  );
+
+  _is.ColumnValue<String, String> totpRecoveryCodes(String? value) =>
+      _is.ColumnValue(
+        table.totpRecoveryCodes,
+        value,
+      );
 }
 
 class UserTable extends _is.Table<int?> {
@@ -257,6 +314,22 @@ class UserTable extends _is.Table<int?> {
       hasDefault: true,
       fieldName: 'isAdmin',
     );
+    totpSecret = _is.ColumnString(
+      'totp_secret',
+      this,
+      fieldName: 'totpSecret',
+    );
+    totpEnabled = _is.ColumnBool(
+      'totp_enabled',
+      this,
+      hasDefault: true,
+      fieldName: 'totpEnabled',
+    );
+    totpRecoveryCodes = _is.ColumnString(
+      'totp_recovery_codes',
+      this,
+      fieldName: 'totpRecoveryCodes',
+    );
   }
 
   late final UserUpdateTable updateTable;
@@ -273,6 +346,12 @@ class UserTable extends _is.Table<int?> {
 
   late final _is.ColumnBool isAdmin;
 
+  late final _is.ColumnString totpSecret;
+
+  late final _is.ColumnBool totpEnabled;
+
+  late final _is.ColumnString totpRecoveryCodes;
+
   @override
   List<_is.Column> get columns => [
     id,
@@ -282,6 +361,9 @@ class UserTable extends _is.Table<int?> {
     userEmail,
     isDisabled,
     isAdmin,
+    totpSecret,
+    totpEnabled,
+    totpRecoveryCodes,
   ];
 }
 

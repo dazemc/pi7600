@@ -21,6 +21,10 @@ void main() {
         paths.keys,
         containsAll([
           '/token',
+          '/totp',
+          '/totp/setup',
+          '/totp/enable',
+          '/totp/disable',
           '/',
           '/info',
           '/gps',
@@ -110,6 +114,7 @@ void main() {
       expect(html, contains('data-query="limit"'));
       expect(html, contains('data-json'));
       expect(html, contains('data-form="username"'));
+      expect(html, contains('data-form="otp"'));
       expect(html, contains('Execute'));
 
       expect(html, contains('id="login-form"'));

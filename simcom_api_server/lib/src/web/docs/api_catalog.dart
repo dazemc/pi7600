@@ -137,12 +137,81 @@ const apiEndpoints = <ApiEndpoint>[
         example: 'correct horse battery staple',
         description: 'Plaintext password; it is verified with bcrypt.',
       ),
+      ApiFormField(
+        name: 'otp',
+        required: false,
+        description:
+            'TOTP code or single-use recovery code when TOTP is enabled.',
+      ),
     ],
     responses: {
       '200': 'A bearer token',
-      '401': 'Incorrect username or password',
+      '401': 'Incorrect credentials or missing TOTP code',
       '422': 'Missing username or password',
       '429': 'Too many failed attempts; see `Retry-After`',
+    },
+  ),
+  ApiEndpoint(
+    method: 'GET',
+    path: '/totp',
+    summary: 'TOTP status for the current user',
+    auth: ApiAuth.user,
+    responses: {
+      '200': '`{"enabled": true|false}`',
+      '401': 'Authentication required',
+    },
+  ),
+  ApiEndpoint(
+    method: 'POST',
+    path: '/totp/setup',
+    summary: 'Start TOTP enrollment',
+    description:
+        'Requires the current password. Returns a base32 secret, an '
+        '`otpauth://` provisioning URI, and one-time recovery codes. TOTP stays '
+        'disabled until `/totp/enable` accepts the first code. Calling setup '
+        'again before enabling replaces the pending secret and codes.',
+    auth: ApiAuth.user,
+    jsonBody: '{\n  "password": "correct horse battery staple"\n}',
+    responses: {
+      '200': 'Secret, provisioning URI, and recovery codes',
+      '401': 'Authentication required',
+      '403': 'Incorrect password',
+      '409': 'TOTP is already enabled',
+      '422': '`password` is required',
+      '429': 'Too many failed attempts',
+    },
+  ),
+  ApiEndpoint(
+    method: 'POST',
+    path: '/totp/enable',
+    summary: 'Enable TOTP with the first authenticator code',
+    auth: ApiAuth.user,
+    jsonBody: '{\n  "code": "123456"\n}',
+    responses: {
+      '200': '`{"enabled": true}`',
+      '401': 'Authentication required',
+      '409': 'TOTP is already enabled',
+      '422': 'Invalid TOTP code',
+      '429': 'Too many failed attempts',
+    },
+  ),
+  ApiEndpoint(
+    method: 'POST',
+    path: '/totp/disable',
+    summary: 'Disable TOTP',
+    description:
+        'Requires the password and a current TOTP code or one of the recovery '
+        'codes. Disabling clears the secret and remaining recovery codes.',
+    auth: ApiAuth.user,
+    jsonBody:
+        '{\n  "password": "correct horse battery staple",\n'
+        '  "code": "123456"\n}',
+    responses: {
+      '200': '`{"enabled": false}`',
+      '401': 'Authentication required',
+      '403': 'Incorrect password or code',
+      '422': '`password` and `code` are required',
+      '429': 'Too many failed attempts',
     },
   ),
   ApiEndpoint(

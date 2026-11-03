@@ -4,6 +4,8 @@ import 'package:serverpod/serverpod.dart';
 /// Read access to API users.
 abstract interface class UserStore {
   Future<User?> findByUsername(String username);
+
+  Future<User> update(User user);
 }
 
 /// PostgreSQL backed [UserStore] bound to a request session.
@@ -18,5 +20,10 @@ class SessionUserStore implements UserStore {
       session,
       where: (table) => table.userName.equals(username),
     );
+  }
+
+  @override
+  Future<User> update(User user) {
+    return User.db.updateRow(session, user);
   }
 }

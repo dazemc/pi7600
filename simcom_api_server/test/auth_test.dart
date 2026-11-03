@@ -5,6 +5,7 @@ import 'package:hashlib/hashlib.dart';
 import 'package:simcom_api_server/src/auth/auth_service.dart';
 import 'package:simcom_api_server/src/auth/jwt_service.dart';
 import 'package:simcom_api_server/src/auth/password.dart';
+import 'package:simcom_api_server/src/auth/totp.dart';
 import 'package:simcom_api_server/src/data/user_store.dart';
 import 'package:simcom_api_server/src/generated/user.dart';
 import 'package:test/test.dart';
@@ -137,16 +138,122 @@ void main() {
       expect(await auth.authenticatePassword('alice', 'wrong'), isNull);
       expect(await auth.authenticatePassword('bob', 'secret'), isNull);
     });
+
+    test('sets up and enables TOTP', () async {
+      final user = User(
+        id: 1,
+        userName: 'alice',
+        userPassword: bcrypt(utf8.encode('secret')),
+      );
+      final store = _FakeUserStore(user);
+      final auth = AuthService(jwt: jwt, users: store);
+
+      final setup = await auth.setupTotp(user, 'secret');
+
+      expect(setup, isNotNull);
+      expect(setup!.secret, isNotEmpty);
+      expect(setup.recoveryCodes, hasLength(10));
+      expect(setup.provisioningUri, startsWith('otpauth://totp/'));
+      expect(user.totpEnabled, isFalse);
+      expect(user.totpSecret, setup.secret);
+      expect(store.updates, 1);
+
+      expect(await auth.enableTotp(user, totpCode(setup.secret)), isTrue);
+      expect(user.totpEnabled, isTrue);
+      expect(store.updates, 2);
+    });
+
+    test('does not start TOTP setup with a wrong password', () async {
+      final user = User(
+        id: 1,
+        userName: 'alice',
+        userPassword: bcrypt(utf8.encode('secret')),
+      );
+      final store = _FakeUserStore(user);
+      final auth = AuthService(jwt: jwt, users: store);
+
+      expect(await auth.setupTotp(user, 'wrong'), isNull);
+      expect(user.totpSecret, isNull);
+      expect(store.updates, 0);
+    });
+
+    test('rejects an invalid first TOTP code', () async {
+      final user = User(
+        id: 1,
+        userName: 'alice',
+        userPassword: bcrypt(utf8.encode('secret')),
+      );
+      final auth = AuthService(
+        jwt: jwt,
+        users: _FakeUserStore(user),
+      );
+      await auth.setupTotp(user, 'secret');
+
+      expect(await auth.enableTotp(user, '000000'), isFalse);
+      expect(user.totpEnabled, isFalse);
+    });
+
+    test('accepts a recovery code once', () async {
+      final user = User(
+        id: 1,
+        userName: 'alice',
+        userPassword: bcrypt(utf8.encode('secret')),
+      );
+      final auth = AuthService(
+        jwt: jwt,
+        users: _FakeUserStore(user),
+      );
+      final setup = await auth.setupTotp(user, 'secret');
+      await auth.enableTotp(user, totpCode(setup!.secret));
+
+      final recoveryCode = setup.recoveryCodes.first;
+      expect(await auth.verifySecondFactor(user, recoveryCode), isTrue);
+      expect(await auth.verifySecondFactor(user, recoveryCode), isFalse);
+    });
+
+    test('disables TOTP with the password and a valid code', () async {
+      final user = User(
+        id: 1,
+        userName: 'alice',
+        userPassword: bcrypt(utf8.encode('secret')),
+      );
+      final auth = AuthService(
+        jwt: jwt,
+        users: _FakeUserStore(user),
+      );
+      final setup = await auth.setupTotp(user, 'secret');
+      await auth.enableTotp(user, totpCode(setup!.secret));
+
+      expect(
+        await auth.disableTotp(user, 'wrong', totpCode(setup.secret)),
+        isFalse,
+      );
+      expect(
+        await auth.disableTotp(user, 'secret', totpCode(setup.secret)),
+        isTrue,
+      );
+      expect(user.totpEnabled, isFalse);
+      expect(user.totpSecret, isNull);
+      expect(user.totpRecoveryCodes, isNull);
+    });
   });
 }
 
 class _FakeUserStore implements UserStore {
   _FakeUserStore(this.user);
 
-  final User? user;
+  User? user;
+  int updates = 0;
 
   @override
   Future<User?> findByUsername(String username) async {
     return user?.userName == username ? user : null;
+  }
+
+  @override
+  Future<User> update(User user) async {
+    updates++;
+    this.user = user;
+    return user;
   }
 }

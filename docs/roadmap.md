@@ -16,19 +16,24 @@ Encryption at rest is now handled by PostgreSQL or the host:
 
 ## TOTP two-factor authentication
 
-Goal: optional second factor for API logins.
+Implemented:
 
-Design notes:
+- `totp_secret`, `totp_enabled`, and `totp_recovery_codes` on the `users` model,
+  with a Serverpod migration.
+- `POST /totp/setup` returns a base32 secret, an `otpauth://` provisioning URI,
+  and ten recovery codes. TOTP stays disabled until `POST /totp/enable`
+  verifies the first code.
+- `/token` keeps the OAuth2 password form and accepts an optional `otp` field.
+  TOTP codes allow one adjacent 30-second window; recovery codes are
+  single-use.
+- Recovery codes are stored as SHA-256 hashes in the user row and consumed on
+  use; TOTP secrets and codes are never logged.
+- Password and code guesses on the TOTP endpoints use the login rate limiter.
 
-- Add `totp_secret` and `totp_enabled` to the `users` model and a Serverpod
-  migration.
-- Enrollment: generate a secret, show a provisioning URI/QR code once, require a
-  valid code before enabling.
-- Login: after password verification, require `otp` in the token form when the
-  user has TOTP enabled. Keep `/token` OAuth2-compatible by accepting an
-  optional `otp` form field.
-- Recovery: issue single-use recovery codes (hashed at rest) during enrollment.
-- Rate-limit failed TOTP attempts and never log secrets or codes.
+Follow-ups:
+
+- Render the provisioning URI as a QR code in the docs page.
+- Encrypt TOTP secrets at rest together with the rest of the database.
 
 ## Face recognition follow-up
 

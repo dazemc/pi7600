@@ -22,8 +22,12 @@ abstract class User
     this.userEmail,
     bool? isDisabled,
     bool? isAdmin,
+    this.totpSecret,
+    bool? totpEnabled,
+    this.totpRecoveryCodes,
   }) : isDisabled = isDisabled ?? false,
-       isAdmin = isAdmin ?? false;
+       isAdmin = isAdmin ?? false,
+       totpEnabled = totpEnabled ?? false;
 
   factory User({
     int? id,
@@ -33,6 +37,9 @@ abstract class User
     String? userEmail,
     bool? isDisabled,
     bool? isAdmin,
+    String? totpSecret,
+    bool? totpEnabled,
+    String? totpRecoveryCodes,
   }) = _UserImpl;
 
   factory User.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -48,6 +55,11 @@ abstract class User
       isAdmin: jsonSerialization['isAdmin'] == null
           ? null
           : _isc.BoolJsonExtension.fromJson(jsonSerialization['isAdmin']),
+      totpSecret: jsonSerialization['totpSecret'] as String?,
+      totpEnabled: jsonSerialization['totpEnabled'] == null
+          ? null
+          : _isc.BoolJsonExtension.fromJson(jsonSerialization['totpEnabled']),
+      totpRecoveryCodes: jsonSerialization['totpRecoveryCodes'] as String?,
     );
   }
 
@@ -68,6 +80,12 @@ abstract class User
 
   bool isAdmin;
 
+  String? totpSecret;
+
+  bool totpEnabled;
+
+  String? totpRecoveryCodes;
+
   /// Returns a shallow copy of this [User]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
@@ -79,6 +97,9 @@ abstract class User
     String? userEmail,
     bool? isDisabled,
     bool? isAdmin,
+    String? totpSecret,
+    bool? totpEnabled,
+    String? totpRecoveryCodes,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -91,6 +112,9 @@ abstract class User
       if (userEmail != null) 'userEmail': userEmail,
       'isDisabled': isDisabled,
       'isAdmin': isAdmin,
+      if (totpSecret != null) 'totpSecret': totpSecret,
+      'totpEnabled': totpEnabled,
+      if (totpRecoveryCodes != null) 'totpRecoveryCodes': totpRecoveryCodes,
     };
   }
 
@@ -105,6 +129,9 @@ abstract class User
       if (userEmail != null) 'userEmail': userEmail,
       'isDisabled': isDisabled,
       'isAdmin': isAdmin,
+      if (totpSecret != null) 'totpSecret': totpSecret,
+      'totpEnabled': totpEnabled,
+      if (totpRecoveryCodes != null) 'totpRecoveryCodes': totpRecoveryCodes,
     };
   }
 
@@ -125,6 +152,9 @@ class _UserImpl extends User {
     String? userEmail,
     bool? isDisabled,
     bool? isAdmin,
+    String? totpSecret,
+    bool? totpEnabled,
+    String? totpRecoveryCodes,
   }) : super._(
          id: id,
          userName: userName,
@@ -133,6 +163,9 @@ class _UserImpl extends User {
          userEmail: userEmail,
          isDisabled: isDisabled,
          isAdmin: isAdmin,
+         totpSecret: totpSecret,
+         totpEnabled: totpEnabled,
+         totpRecoveryCodes: totpRecoveryCodes,
        );
 
   /// Returns a shallow copy of this [User]
@@ -147,6 +180,9 @@ class _UserImpl extends User {
     Object? userEmail = _Undefined,
     bool? isDisabled,
     bool? isAdmin,
+    Object? totpSecret = _Undefined,
+    bool? totpEnabled,
+    Object? totpRecoveryCodes = _Undefined,
   }) {
     return User(
       id: id is int? ? id : this.id,
@@ -156,6 +192,11 @@ class _UserImpl extends User {
       userEmail: userEmail is String? ? userEmail : this.userEmail,
       isDisabled: isDisabled ?? this.isDisabled,
       isAdmin: isAdmin ?? this.isAdmin,
+      totpSecret: totpSecret is String? ? totpSecret : this.totpSecret,
+      totpEnabled: totpEnabled ?? this.totpEnabled,
+      totpRecoveryCodes: totpRecoveryCodes is String?
+          ? totpRecoveryCodes
+          : this.totpRecoveryCodes,
     );
   }
 }

@@ -217,6 +217,25 @@ class Protocol extends _is.DatabaseSerializationManager
           dartType: 'bool',
           columnDefault: 'false',
         ),
+        _isp.ColumnDefinition(
+          name: 'totp_secret',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'totp_enabled',
+          columnType: _isp.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'false',
+        ),
+        _isp.ColumnDefinition(
+          name: 'totp_recovery_codes',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
       ],
       foreignKeys: [],
       indexes: [

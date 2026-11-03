@@ -1,0 +1,281 @@
+{
+  "__className__": "serverpod.DatabaseDefinition",
+  "schemaVersion": 2,
+  "moduleName": "simcom_api",
+  "tables": [
+    {
+      "__className__": "serverpod.TableDefinition",
+      "name": "messages",
+      "dartName": "Message",
+      "module": "simcom_api",
+      "schema": "public",
+      "columns": [
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "id",
+          "fieldName": "id",
+          "columnType": 6,
+          "isNullable": false,
+          "columnDefault": "serial",
+          "dartType": "int?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "message_index",
+          "fieldName": "messageIndex",
+          "columnType": 0,
+          "isNullable": true,
+          "dartType": "String?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "message_type",
+          "fieldName": "messageType",
+          "columnType": 0,
+          "isNullable": false,
+          "dartType": "String"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "message_originating_address",
+          "fieldName": "messageOriginatingAddress",
+          "columnType": 0,
+          "isNullable": true,
+          "dartType": "String?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "message_destination_address",
+          "fieldName": "messageDestinationAddress",
+          "columnType": 0,
+          "isNullable": true,
+          "dartType": "String?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "message_date",
+          "fieldName": "messageDate",
+          "columnType": 0,
+          "isNullable": false,
+          "dartType": "String"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "message_time",
+          "fieldName": "messageTime",
+          "columnType": 0,
+          "isNullable": false,
+          "dartType": "String"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "message_contents",
+          "fieldName": "messageContents",
+          "columnType": 0,
+          "isNullable": false,
+          "dartType": "String"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "partial_key",
+          "fieldName": "partialKey",
+          "columnType": 0,
+          "isNullable": true,
+          "dartType": "String?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "partial_count",
+          "fieldName": "partialCount",
+          "columnType": 6,
+          "isNullable": true,
+          "dartType": "int?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "partial_index",
+          "fieldName": "partialIndex",
+          "columnType": 6,
+          "isNullable": true,
+          "dartType": "int?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "is_partial",
+          "fieldName": "isPartial",
+          "columnType": 1,
+          "isNullable": false,
+          "dartType": "bool"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "in_sim_memory",
+          "fieldName": "inSimMemory",
+          "columnType": 1,
+          "isNullable": true,
+          "dartType": "bool?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "is_sent",
+          "fieldName": "isSent",
+          "columnType": 1,
+          "isNullable": true,
+          "dartType": "bool?"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": [
+        {
+          "__className__": "serverpod.IndexDefinition",
+          "indexName": "messages_fingerprint_idx",
+          "elements": [
+            {
+              "__className__": "serverpod.IndexElementDefinition",
+              "type": 0,
+              "definition": "message_type"
+            },
+            {
+              "__className__": "serverpod.IndexElementDefinition",
+              "type": 0,
+              "definition": "message_contents"
+            },
+            {
+              "__className__": "serverpod.IndexElementDefinition",
+              "type": 0,
+              "definition": "message_date"
+            },
+            {
+              "__className__": "serverpod.IndexElementDefinition",
+              "type": 0,
+              "definition": "message_time"
+            }
+          ],
+          "type": "btree",
+          "isUnique": false,
+          "isPrimary": false
+        }
+      ],
+      "managed": true
+    },
+    {
+      "__className__": "serverpod.TableDefinition",
+      "name": "users",
+      "dartName": "User",
+      "module": "simcom_api",
+      "schema": "public",
+      "columns": [
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "id",
+          "fieldName": "id",
+          "columnType": 6,
+          "isNullable": false,
+          "columnDefault": "serial",
+          "dartType": "int?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "user_name",
+          "fieldName": "userName",
+          "columnType": 0,
+          "isNullable": false,
+          "dartType": "String"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "user_password",
+          "fieldName": "userPassword",
+          "columnType": 0,
+          "isNullable": false,
+          "dartType": "String"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "user_full_name",
+          "fieldName": "userFullName",
+          "columnType": 0,
+          "isNullable": true,
+          "dartType": "String?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "user_email",
+          "fieldName": "userEmail",
+          "columnType": 0,
+          "isNullable": true,
+          "dartType": "String?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "is_disabled",
+          "fieldName": "isDisabled",
+          "columnType": 1,
+          "isNullable": false,
+          "columnDefault": "false",
+          "dartType": "bool"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "is_admin",
+          "fieldName": "isAdmin",
+          "columnType": 1,
+          "isNullable": false,
+          "columnDefault": "false",
+          "dartType": "bool"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "totp_secret",
+          "fieldName": "totpSecret",
+          "columnType": 0,
+          "isNullable": true,
+          "dartType": "String?"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "totp_enabled",
+          "fieldName": "totpEnabled",
+          "columnType": 1,
+          "isNullable": false,
+          "columnDefault": "false",
+          "dartType": "bool"
+        },
+        {
+          "__className__": "serverpod.ColumnDefinition",
+          "name": "totp_recovery_codes",
+          "fieldName": "totpRecoveryCodes",
+          "columnType": 0,
+          "isNullable": true,
+          "dartType": "String?"
+        }
+      ],
+      "foreignKeys": [],
+      "indexes": [
+        {
+          "__className__": "serverpod.IndexDefinition",
+          "indexName": "users__user_name__unique_idx",
+          "elements": [
+            {
+              "__className__": "serverpod.IndexElementDefinition",
+              "type": 0,
+              "definition": "user_name"
+            }
+          ],
+          "type": "btree",
+          "isUnique": true,
+          "isPrimary": false
+        }
+      ],
+      "managed": true
+    }
+  ],
+  "installedModules": [
+    {
+      "__className__": "serverpod.DatabaseMigrationVersion",
+      "module": "serverpod",
+      "version": "20260824182259319"
+    }
+  ],
+  "migrationApiVersion": 1
+}

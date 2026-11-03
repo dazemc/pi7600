@@ -148,6 +148,29 @@ curl -X POST http://localhost:8082/token \
 Send the token as `Authorization: Bearer <token>` on HTTP requests. Invalid,
 expired, and disabled-user tokens return `401` with `WWW-Authenticate: Bearer`.
 
+Repeated failed logins are throttled per username and client address. After
+`PI7600_LOGIN_MAX_ATTEMPTS` failures inside `PI7600_LOGIN_WINDOW_SECONDS`, the
+endpoint returns `429` with `Retry-After` for `PI7600_LOGIN_BLOCK_SECONDS`.
+Throttle state is process-local and resets on restart.
+
+### TOTP two-factor authentication
+
+TOTP is optional per user. `POST /totp/setup` takes the current password and
+returns a base32 secret, an `otpauth://` provisioning URI, and one-time
+recovery codes. The secret is stored immediately, but TOTP stays disabled until
+`POST /totp/enable` verifies the first authenticator code. Once enabled,
+`POST /token` also requires the `otp` form field:
+
+```bash
+curl -X POST http://localhost:8082/token \
+  -d 'username=alice&password=secret&otp=123456'
+```
+
+Recovery codes work in the same `otp` field and are consumed on use.
+`GET /totp` reports the current status, and `POST /totp/disable` requires the
+password plus a current TOTP or recovery code. Secrets and codes are never
+logged.
+
 ### WebSocket authentication
 
 Browsers cannot set an `Authorization` header on a WebSocket handshake, so the
@@ -185,7 +208,11 @@ All routes except `/token`, `/healthz`, `/readyz`, `/docs`, `/docs/*`, and
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/token` | Issue a JWT |
+| `POST` | `/token` | Issue a JWT (optional `otp` when TOTP is enabled) |
+| `GET` | `/totp` | TOTP status for the current user |
+| `POST` | `/totp/setup` | Start TOTP enrollment |
+| `POST` | `/totp/enable` | Enable TOTP with the first code |
+| `POST` | `/totp/disable` | Disable TOTP |
 | `GET` | `/` | Modem/network/GPS status |
 | `GET` | `/info` | Hostname, kernel, date, architecture |
 | `GET` | `/gps` | Current GPS fix and Google Maps link |

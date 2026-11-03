@@ -232,10 +232,13 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     `Retry-After` after `PI7600_LOGIN_MAX_ATTEMPTS` failures. State is
     process-local.
 
-- [ ] **TOTP two-factor authentication.**
+- [x] **TOTP two-factor authentication.**
   - Add TOTP enrollment and verification as described in `docs/roadmap.md`.
   - Includes `totp_secret`/`totp_enabled` model fields, migration, optional
     `otp` on `/token`, enrollment endpoints, and recovery codes.
+  - Added `/totp`, `/totp/setup`, `/totp/enable`, and `/totp/disable`;
+    recovery codes are single-use SHA-256 hashes and TOTP management attempts
+    share the login limiter.
 
 - [ ] **Token revocation and refresh.**
   - Current logout only clears browser storage; add a server-side revocation
