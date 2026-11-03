@@ -32,7 +32,6 @@ void configureServer(Serverpod pod) {
     ..addRoute(TotpDisableRoute(services), '/totp/disable')
     ..addRoute(UsersRoute(services), '/users')
     ..addRoute(UserUpdateRoute(services), '/users/:id')
-    ..addRoute(StatusRoute(services), '/')
     ..addRoute(InfoRoute(services), '/info')
     ..addRoute(GpsRoute(services), '/gps')
     ..addRoute(ModemInfoRoute(services), '/modem')

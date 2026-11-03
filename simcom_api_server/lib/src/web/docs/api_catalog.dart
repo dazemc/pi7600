@@ -313,30 +313,19 @@ const apiEndpoints = <ApiEndpoint>[
   ),
   ApiEndpoint(
     method: 'GET',
-    path: '/',
-    summary: 'Modem and host status',
-    description:
-        'Returns the AT, CNUM, CSQ, CPIN, CREG, COPS, GPS, data, DNS, APN, and '
-        'timezone fields used by the original Python API.',
-    auth: ApiAuth.user,
-    responses: {
-      '200': 'Status fields',
-      '401': 'Authentication required',
-    },
-  ),
-  ApiEndpoint(
-    method: 'GET',
     path: '/modem',
     summary: 'Complete modem settings and status report',
     description:
-        'Queries a broad SIM7600 catalog covering identity, SIM, network, '
-        'packet data, SMS settings, audio, power, GPS, phone state, and the '
-        'full `AT&V` settings dump. Returns parsed core values, sectioned raw '
-        'responses, and a flat `raw` map. Unsupported commands are included '
-        'with their raw error response.',
+        'Returns the former `/` status summary fields (`at`, `cnum`, `csq`, '
+        '`cpin`, `creg`, `cops`, `gpsinfo`, `data`, `dns`, `apn`, `timezone`) '
+        'together with a broad SIM7600 catalog covering identity, SIM, '
+        'network, packet data, SMS settings, audio, power, GPS, phone state, '
+        'and the full `AT&V` settings dump. Also returns parsed core values, '
+        'sectioned raw responses, and a flat `raw` map. Unsupported commands '
+        'are included with their raw error response.',
     auth: ApiAuth.user,
     responses: {
-      '200': 'Parsed values plus raw responses for every queried command',
+      '200': 'Status summary, parsed values, and raw responses',
       '401': 'Authentication required',
     },
   ),

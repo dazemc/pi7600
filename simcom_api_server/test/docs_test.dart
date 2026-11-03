@@ -29,7 +29,6 @@ void main() {
           '/totp/disable',
           '/users',
           '/users/{id}',
-          '/',
           '/info',
           '/modem',
           '/gps',

@@ -244,8 +244,7 @@ All routes except `/token`, `/token/refresh`, `/healthz`, `/readyz`, `/docs`,
 | `POST` | `/totp/setup` | Start TOTP enrollment |
 | `POST` | `/totp/enable` | Enable TOTP with the first code |
 | `POST` | `/totp/disable` | Disable TOTP |
-| `GET` | `/` | Modem/network/GPS status |
-| `GET` | `/modem` | Full modem settings and status report |
+| `GET` | `/modem` | Modem status summary plus full settings/status report |
 | `GET` | `/info` | Hostname, kernel, date, architecture |
 | `GET` | `/gps` | Current GPS fix and Google Maps link |
 | `GET` | `/camera/snapshot` | Latest camera frame as JPEG |
@@ -271,12 +270,16 @@ protocol are unchanged.
 
 ### Complete modem report
 
-`GET /modem` queries the full modem diagnostics catalog: identity and firmware,
-SIM state, signal and registration, packet-data contexts, SMS/audio settings,
-power, GPS, active calls, and the complete `AT&V` settings dump. The response
-contains parsed core values under `parsed`, raw responses grouped under
-`sections`, and every command response under `raw`. Unsupported commands are
-reported with their error response instead of being omitted.
+`GET /modem` is the modem status and diagnostics endpoint. Top-level fields
+include the fast summary: `at`, `cnum`, `csq`, `cpin`, `creg`, `cops`,
+`gpsinfo`, `data`, `dns`, `apn`, and `timezone`. It also queries the full modem
+catalog: identity and firmware, SIM state, signal and registration, packet-data
+contexts, SMS/audio settings, power, GPS, active calls, and the complete `AT&V`
+settings dump.
+
+The response contains parsed core values under `parsed`, raw responses grouped
+under `sections`, and every command response under `raw`. Unsupported commands
+are reported with their error response instead of being omitted.
 
 ### Interactive API explorer
 
@@ -315,30 +318,6 @@ response.
 `GET /metrics` returns Prometheus text with modem, camera, recognition, video
 client, lifecycle, and process-memory gauges, plus per-method/path/status
 request counts and duration summaries. It requires a bearer token.
-
-### Modem status
-
-`GET /` returns the fast, frequently polled status summary:
-
-```bash
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/
-```
-
-```json
-{
-  "at": "OK",
-  "cnum": "+15551234567",
-  "csq": "+CSQ: 20,99",
-  "cpin": "+CPIN: READY",
-  "creg": "+CREG: 0,1",
-  "cops": "+COPS: 0,0,\"Home\",7",
-  "gpsinfo": "GPS is active but no signal was found",
-  "data": "OK",
-  "dns": "OK",
-  "apn": "internet",
-  "timezone": 0
-}
-```
 
 ### SMS
 

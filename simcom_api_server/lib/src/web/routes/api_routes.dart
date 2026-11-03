@@ -574,26 +574,6 @@ class UserUpdateRoute extends Route {
   }
 }
 
-/// `GET /`
-class StatusRoute extends Route {
-  StatusRoute(this.services) : super(methods: {Method.get});
-
-  final AppServices services;
-
-  @override
-  FutureOr<Result> handleCall(Session session, Request request) async {
-    final auth = await authenticateRequest(session, request, services);
-    if (!auth.isAuthenticated) return auth.error!;
-    await services.ready;
-    AppLog.info(
-      '/ GET: Accessed by ${auth.user!.userName}',
-      name: 'simcom_api',
-    );
-    final result = await services.status.status();
-    return jsonResponse(result.toJson());
-  }
-}
-
 /// `GET /info`
 class InfoRoute extends Route {
   InfoRoute(this.services) : super(methods: {Method.get});
@@ -628,8 +608,9 @@ class ModemInfoRoute extends Route {
       '/modem GET: Accessed by ${auth.user!.userName}',
       name: 'simcom_api',
     );
+    final status = await services.status.status();
     final info = await services.modemInfoService().read();
-    return jsonResponse(info);
+    return jsonResponse({...status.toJson(), ...info});
   }
 }
 
