@@ -6,6 +6,7 @@ import 'package:simcom_api_server/src/auth/jwt_service.dart';
 import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
 import 'package:simcom_api_server/src/generated/user.dart';
+import 'package:simcom_api_server/src/services/audit_service.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/services/user_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
@@ -81,21 +82,37 @@ class TokenRoute extends Route {
     }
 
     final limiter = services.loginLimiter;
+    final address = request.connectionInfo.remote.address.toString();
     final userKey = 'user:${username.trim().toLowerCase()}';
-    final addressKey = 'ip:${request.connectionInfo.remote.address.toString()}';
+    final addressKey = 'ip:$address';
+    final audit = services.auditService(session);
     final blockedFor =
         limiter.retryAfter(userKey) ?? limiter.retryAfter(addressKey);
     if (blockedFor != null) {
+      await audit.record(
+        eventType: 'login',
+        userName: username,
+        remoteAddress: address,
+        success: false,
+        detail: 'rate limited',
+      );
       return _tooManyAttempts(blockedFor);
     }
 
-    Response recordFailure(String detail) {
+    Future<Response> recordFailure(String detail) async {
       final userBlock = limiter.recordFailure(userKey);
       final addressBlock = limiter.recordFailure(addressKey);
       final block = userBlock ?? addressBlock;
       AppLog.warning(
         'Failed login for $username',
         name: 'pi7600.auth',
+      );
+      await audit.record(
+        eventType: 'login',
+        userName: username,
+        remoteAddress: address,
+        success: false,
+        detail: block == null ? detail : '$detail (rate limited)',
       );
       if (block != null) return _tooManyAttempts(block);
       return errorResponse(401, detail, authenticate: true);
@@ -110,6 +127,13 @@ class TokenRoute extends Route {
     if (user.totpEnabled) {
       final otp = form['otp']?.trim() ?? '';
       if (otp.isEmpty) {
+        await audit.record(
+          eventType: 'login',
+          userName: username,
+          remoteAddress: address,
+          success: false,
+          detail: 'TOTP code required',
+        );
         return errorResponse(
           401,
           'TOTP code required',
@@ -123,6 +147,12 @@ class TokenRoute extends Route {
 
     limiter.reset(userKey);
     limiter.reset(addressKey);
+    await audit.record(
+      eventType: 'login',
+      userName: user.userName,
+      remoteAddress: address,
+      detail: user.totpEnabled ? 'password+totp' : 'password',
+    );
     return _tokenResponse(services, user);
   }
 }
@@ -177,6 +207,13 @@ class LogoutRoute extends Route {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
     await services.authService(session).revokeTokens(auth.user!);
+    await services
+        .auditService(session)
+        .record(
+          eventType: 'logout',
+          userName: auth.user!.userName,
+          remoteAddress: request.connectionInfo.remote.address.toString(),
+        );
     return jsonResponse({'detail': 'Logged out'});
   }
 }
@@ -245,6 +282,14 @@ class TotpSetupRoute extends Route {
       );
     }
     services.loginLimiter.reset(throttleKey);
+    await services
+        .auditService(session)
+        .record(
+          eventType: 'totp_setup',
+          userName: auth.user!.userName,
+          remoteAddress: request.connectionInfo.remote.address.toString(),
+          detail: 'started',
+        );
 
     return jsonResponse({
       'secret': setup.secret,
@@ -290,6 +335,14 @@ class TotpEnableRoute extends Route {
       );
     }
     services.loginLimiter.reset(throttleKey);
+    await services
+        .auditService(session)
+        .record(
+          eventType: 'totp_enable',
+          userName: auth.user!.userName,
+          remoteAddress: request.connectionInfo.remote.address.toString(),
+          detail: 'enabled',
+        );
     return jsonResponse({'enabled': true});
   }
 }
@@ -330,6 +383,14 @@ class TotpDisableRoute extends Route {
       );
     }
     services.loginLimiter.reset(throttleKey);
+    await services
+        .auditService(session)
+        .record(
+          eventType: 'totp_disable',
+          userName: auth.user!.userName,
+          remoteAddress: request.connectionInfo.remote.address.toString(),
+          detail: 'disabled',
+        );
     return jsonResponse({'enabled': false});
   }
 }
@@ -397,6 +458,14 @@ class UsersRoute extends Route {
         'User ${actor.userName} created user ${user.userName} '
         'admin=${user.isAdmin}',
       );
+      await services
+          .auditService(session)
+          .record(
+            eventType: 'user_create',
+            userName: actor.userName,
+            remoteAddress: request.connectionInfo.remote.address.toString(),
+            detail: 'target=${user.userName} admin=${user.isAdmin}',
+          );
       return jsonResponse(userToJson(user), status: 201);
     } on UserNameTakenException {
       return errorResponse(409, 'Username already exists');
@@ -488,6 +557,14 @@ class UserUpdateRoute extends Route {
         'User ${auth.user!.userName} updated user ${user.userName}: '
         '${changed.join(',')}',
       );
+      await services
+          .auditService(session)
+          .record(
+            eventType: 'user_update',
+            userName: auth.user!.userName,
+            remoteAddress: request.connectionInfo.remote.address.toString(),
+            detail: 'target=${user.userName} fields=${changed.join(',')}',
+          );
       return jsonResponse(userToJson(user));
     } on UserNotFoundException {
       return errorResponse(404, 'User $id not found');
@@ -604,6 +681,63 @@ class CameraSnapshotRoute extends Route {
         headers[HttpHeaders.cacheControlHeader] = ['no-store'];
       }),
     );
+  }
+}
+
+/// `GET /audit`
+class AuditLogRoute extends Route {
+  AuditLogRoute(this.services) : super(methods: {Method.get});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateAdmin(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+
+    var limit = 100;
+    final rawLimit = request.url.queryParameters['limit'];
+    if (rawLimit != null && rawLimit.isNotEmpty) {
+      final parsed = int.tryParse(rawLimit);
+      if (parsed == null || parsed < 1 || parsed > 500) {
+        return errorResponse(422, 'limit must be between 1 and 500');
+      }
+      limit = parsed;
+    }
+
+    final events = await services.auditService(session).recent(limit: limit);
+    return jsonResponse(events.map(auditEventToJson).toList(growable: false));
+  }
+}
+
+/// `DELETE /audit/cleanup`
+class AuditCleanupRoute extends Route {
+  AuditCleanupRoute(this.services) : super(methods: {Method.delete});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateAdmin(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+
+    final deleted = await services
+        .auditService(session)
+        .cleanup(
+          retention: Duration(days: services.config.auditRetentionDays),
+        );
+    AppLog.audit(
+      'Audit cleanup by ${auth.user!.userName}: deleted=$deleted',
+    );
+    await services
+        .auditService(session)
+        .record(
+          eventType: 'audit_cleanup',
+          userName: auth.user!.userName,
+          remoteAddress: request.connectionInfo.remote.address.toString(),
+          detail: 'deleted=$deleted',
+        );
+    return jsonResponse({'deleted': deleted});
   }
 }
 
@@ -924,6 +1058,15 @@ class AtRoute extends Route {
       'AT audit: user=${auth.user!.userName} cmd=$auditCommand '
       'response=$preview',
     );
+    await services
+        .auditService(session)
+        .record(
+          eventType: 'at',
+          userName: auth.user!.userName,
+          remoteAddress: request.connectionInfo.remote.address.toString(),
+          success: !At.isError(response),
+          detail: 'cmd=$auditCommand response=$preview',
+        );
     return jsonResponse(response, status: 202);
   }
 }

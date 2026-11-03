@@ -86,9 +86,27 @@ class EchoWebSocketRoute extends Route {
         ),
         authenticateToken: services.authService(session).authenticateToken,
       );
-      if (auth.failed) return;
+      if (auth.failed) {
+        await services
+            .auditService(session)
+            .record(
+              eventType: 'websocket_auth',
+              remoteAddress: request.connectionInfo.remote.address.toString(),
+              success: false,
+              detail: 'echo',
+            );
+        return;
+      }
 
       final user = auth.user!;
+      await services
+          .auditService(session)
+          .record(
+            eventType: 'websocket_auth',
+            userName: user.userName,
+            remoteAddress: request.connectionInfo.remote.address.toString(),
+            detail: 'echo',
+          );
       AppLog.info(
         'WebSocket authenticated for ${user.userName}',
         name: 'pi7600.websocket',
@@ -130,9 +148,27 @@ class VideoWebSocketRoute extends Route {
         ),
         authenticateToken: services.authService(session).authenticateToken,
       );
-      if (auth.failed) return;
+      if (auth.failed) {
+        await services
+            .auditService(session)
+            .record(
+              eventType: 'websocket_auth',
+              remoteAddress: request.connectionInfo.remote.address.toString(),
+              success: false,
+              detail: 'video',
+            );
+        return;
+      }
 
       final user = auth.user!;
+      await services
+          .auditService(session)
+          .record(
+            eventType: 'websocket_auth',
+            userName: user.userName,
+            remoteAddress: request.connectionInfo.remote.address.toString(),
+            detail: 'video',
+          );
       await services.ready;
       final cameraReady = await services.ensureCameraStarted();
       if (!cameraReady) {

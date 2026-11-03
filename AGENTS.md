@@ -75,7 +75,7 @@ cd simcom_api_server && serverpod create-migration
 | `simcom_api_server/lib/src/app_services.dart` | Process-wide services and async startup |
 | `simcom_api_server/lib/src/config/app_config.dart` | `PI7600_*` environment configuration |
 | `simcom_api_server/lib/src/auth/` | JWT (RS256) and bcrypt helpers |
-| `simcom_api_server/lib/src/data/` | Session-bound user/message stores |
+| `simcom_api_server/lib/src/data/` | Session-bound user, message, and audit stores |
 | `simcom_api_server/lib/src/models/` | Serverpod model definitions (`*.spy.yaml`) |
 | `simcom_api_server/lib/src/generated/` | Generated Serverpod models and repositories |
 | `simcom_modem/` | Submodule: `simcom_modem` Dart library (`At`, serial transport, settings, SMS/PDU, GPS, phone) |
@@ -128,7 +128,9 @@ cd simcom_api_server && serverpod create-migration
   outstanding access and refresh tokens. Users can enable TOTP through
   `/totp/setup` and `/totp/enable`; `/token` then requires `otp`, and recovery
   codes are single-use. Administrators manage users through `/users`; those
-  responses never include password hashes or TOTP material.
+  responses never include password hashes or TOTP material. Logins, WebSocket
+  authentication, logout, `/at`, TOTP changes, and user administration are
+  persisted to `audit_events` and exposed through `/audit` (admin only).
 - **Modem library:** the standalone `simcom_modem` Dart package lives in the
   `simcom_modem` submodule and is consumed through a path dependency. It owns
   `At`, `SerialTransport`/`LibSerialPortTransport`, `ModemSettings`,

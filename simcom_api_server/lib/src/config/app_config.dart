@@ -28,6 +28,7 @@ class AppConfig {
     required this.loginMaxAttempts,
     required this.loginWindow,
     required this.loginBlockDuration,
+    required this.auditRetentionDays,
     required this.logLevel,
     required this.pingInterface,
     required this.pingTargets,
@@ -60,6 +61,9 @@ class AppConfig {
   final int loginMaxAttempts;
   final Duration loginWindow;
   final Duration loginBlockDuration;
+
+  /// How long persistent audit events are retained.
+  final int auditRetentionDays;
   final String logLevel;
   final String pingInterface;
   final List<String> pingTargets;
@@ -131,6 +135,10 @@ class AppConfig {
       loginBlockDuration: Duration(
         seconds: integer('LOGIN_BLOCK_SECONDS', 300).clamp(1, 86400).toInt(),
       ),
+      auditRetentionDays: integer(
+        'AUDIT_RETENTION_DAYS',
+        90,
+      ).clamp(1, 3650).toInt(),
       logLevel: string('LOG_LEVEL', 'INFO'),
       pingInterface: string('PING_INTERFACE', 'usb0'),
       pingTargets: targets.isEmpty ? const ['1.1.1.1'] : targets,

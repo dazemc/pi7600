@@ -13,8 +13,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/protocol.dart' as _isp;
 import 'package:serverpod/serverpod.dart' as _is;
+import 'audit_event.dart' as _irb38j2y;
 import 'message.dart' as _ify7mmka;
 import 'user.dart' as _iv73i78m;
+export 'audit_event.dart';
 export 'message.dart';
 export 'user.dart';
 
@@ -31,19 +33,90 @@ class Protocol extends _is.DatabaseSerializationManager
       _is.ProtocolDeserialization.cached(
         this,
         types: const [
+          _is.getType<_irb38j2y.AuditEvent>,
           _is.getType<_ify7mmka.Message>,
           _is.getType<_iv73i78m.User>,
+          _is.getType<_irb38j2y.AuditEvent?>,
           _is.getType<_ify7mmka.Message?>,
           _is.getType<_iv73i78m.User?>,
         ],
         modules: const [_isp.Protocol.new],
         classNames: const [
+          'AuditEvent',
           'Message',
           'User',
         ],
       );
 
   static List<_isp.TableDefinition> get targetTableDefinitions => [
+    _isp.TableDefinition(
+      name: 'audit_events',
+      dartName: 'AuditEvent',
+      schema: 'public',
+      module: 'simcom_api',
+      columns: [
+        _isp.ColumnDefinition(
+          name: 'id',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int?',
+          columnDefault: 'serial',
+        ),
+        _isp.ColumnDefinition(
+          name: 'created_at',
+          columnType: _isp.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _isp.ColumnDefinition(
+          name: 'event_type',
+          columnType: _isp.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isp.ColumnDefinition(
+          name: 'user_name',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'remote_address',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'success',
+          columnType: _isp.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+        ),
+        _isp.ColumnDefinition(
+          name: 'detail',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [
+        _isp.IndexDefinition(
+          indexName: 'audit_events_created_at_idx',
+          tableSpace: null,
+          elements: [
+            _isp.IndexElementDefinition(
+              type: _isp.IndexElementDefinitionType.column,
+              definition: 'created_at',
+            ),
+          ],
+          type: 'btree',
+          isUnique: false,
+          isPrimary: false,
+        ),
+      ],
+      managed: true,
+    ),
     _isp.TableDefinition(
       name: 'messages',
       dartName: 'Message',
@@ -289,11 +362,17 @@ class Protocol extends _is.DatabaseSerializationManager
       }
     }
 
+    if (t == _irb38j2y.AuditEvent) {
+      return _irb38j2y.AuditEvent.fromJson(data) as T;
+    }
     if (t == _ify7mmka.Message) {
       return _ify7mmka.Message.fromJson(data) as T;
     }
     if (t == _iv73i78m.User) {
       return _iv73i78m.User.fromJson(data) as T;
+    }
+    if (t == _is.getType<_irb38j2y.AuditEvent?>()) {
+      return (data != null ? _irb38j2y.AuditEvent.fromJson(data) : null) as T;
     }
     if (t == _is.getType<_ify7mmka.Message?>()) {
       return (data != null ? _ify7mmka.Message.fromJson(data) : null) as T;
@@ -316,6 +395,7 @@ class Protocol extends _is.DatabaseSerializationManager
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
+      _irb38j2y.AuditEvent => 'AuditEvent',
       _ify7mmka.Message => 'Message',
       _iv73i78m.User => 'User',
       _ => null,
@@ -332,6 +412,8 @@ class Protocol extends _is.DatabaseSerializationManager
     }
 
     switch (data) {
+      case _irb38j2y.AuditEvent():
+        return 'AuditEvent';
       case _ify7mmka.Message():
         return 'Message';
       case _iv73i78m.User():
@@ -349,6 +431,9 @@ class Protocol extends _is.DatabaseSerializationManager
     var dataClassName = data['className'];
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
+    }
+    if (dataClassName == 'AuditEvent') {
+      return deserialize<_irb38j2y.AuditEvent>(data['data']);
     }
     if (dataClassName == 'Message') {
       return deserialize<_ify7mmka.Message>(data['data']);
@@ -374,6 +459,8 @@ class Protocol extends _is.DatabaseSerializationManager
       }
     }
     switch (t) {
+      case _irb38j2y.AuditEvent:
+        return _irb38j2y.AuditEvent.t;
       case _ify7mmka.Message:
         return _ify7mmka.Message.t;
       case _iv73i78m.User:

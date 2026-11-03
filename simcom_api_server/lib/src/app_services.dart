@@ -8,8 +8,10 @@ import 'package:simcom_api_server/src/camera/camera_capture.dart';
 import 'package:simcom_api_server/src/camera/recognition.dart';
 import 'package:simcom_api_server/src/camera/video_broadcaster.dart';
 import 'package:simcom_api_server/src/config/app_config.dart';
+import 'package:simcom_api_server/src/data/audit_store.dart';
 import 'package:simcom_api_server/src/data/message_store.dart';
 import 'package:simcom_api_server/src/data/user_store.dart';
+import 'package:simcom_api_server/src/services/audit_service.dart';
 import 'package:simcom_api_server/src/services/service_status.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/services/status_service.dart';
@@ -132,6 +134,10 @@ class AppServices {
 
   UserService userService(Session session) {
     return UserService(users: SessionUserStore(session));
+  }
+
+  AuditService auditService(Session session) {
+    return AuditService(SessionAuditStore(session));
   }
 
   /// Initialize the modem, camera, and recognition backends.

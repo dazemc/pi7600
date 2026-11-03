@@ -12,8 +12,10 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'audit_event.dart' as _irb38j2y;
 import 'message.dart' as _ify7mmka;
 import 'user.dart' as _iv73i78m;
+export 'audit_event.dart';
 export 'message.dart';
 export 'user.dart';
 export 'client.dart';
@@ -31,13 +33,16 @@ class Protocol extends _isc.SerializationManager
       _isc.ProtocolDeserialization.cached(
         this,
         types: const [
+          _isc.getType<_irb38j2y.AuditEvent>,
           _isc.getType<_ify7mmka.Message>,
           _isc.getType<_iv73i78m.User>,
+          _isc.getType<_irb38j2y.AuditEvent?>,
           _isc.getType<_ify7mmka.Message?>,
           _isc.getType<_iv73i78m.User?>,
         ],
         modules: const [],
         classNames: const [
+          'AuditEvent',
           'Message',
           'User',
         ],
@@ -67,11 +72,17 @@ class Protocol extends _isc.SerializationManager
       }
     }
 
+    if (t == _irb38j2y.AuditEvent) {
+      return _irb38j2y.AuditEvent.fromJson(data) as T;
+    }
     if (t == _ify7mmka.Message) {
       return _ify7mmka.Message.fromJson(data) as T;
     }
     if (t == _iv73i78m.User) {
       return _iv73i78m.User.fromJson(data) as T;
+    }
+    if (t == _isc.getType<_irb38j2y.AuditEvent?>()) {
+      return (data != null ? _irb38j2y.AuditEvent.fromJson(data) : null) as T;
     }
     if (t == _isc.getType<_ify7mmka.Message?>()) {
       return (data != null ? _ify7mmka.Message.fromJson(data) : null) as T;
@@ -84,6 +95,7 @@ class Protocol extends _isc.SerializationManager
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
+      _irb38j2y.AuditEvent => 'AuditEvent',
       _ify7mmka.Message => 'Message',
       _iv73i78m.User => 'User',
       _ => null,
@@ -100,6 +112,8 @@ class Protocol extends _isc.SerializationManager
     }
 
     switch (data) {
+      case _irb38j2y.AuditEvent():
+        return 'AuditEvent';
       case _ify7mmka.Message():
         return 'Message';
       case _iv73i78m.User():
@@ -113,6 +127,9 @@ class Protocol extends _isc.SerializationManager
     var dataClassName = data['className'];
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
+    }
+    if (dataClassName == 'AuditEvent') {
+      return deserialize<_irb38j2y.AuditEvent>(data['data']);
     }
     if (dataClassName == 'Message') {
       return deserialize<_ify7mmka.Message>(data['data']);

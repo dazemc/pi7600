@@ -254,10 +254,13 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     Password/disabled changes revoke tokens; responses omit credentials and
     TOTP material; self-disable and self-demotion are rejected.
 
-- [ ] **Persistent audit log.**
+- [x] **Persistent audit log.**
   - Store `/at` and authentication events in PostgreSQL or a dedicated audit
     table.
   - Redact secrets and define retention.
+  - Added the `audit_events` table, `/audit` and `/audit/cleanup` admin
+    endpoints, bounded/redacted `/at` details, and a configurable retention
+    window. Cleanup is manual or can be scheduled externally.
 
 - [ ] **Rename deployment artifacts.**
   - Decide whether to rename `deploy/pi7600.service`,

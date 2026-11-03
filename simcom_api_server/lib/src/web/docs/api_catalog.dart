@@ -367,6 +367,45 @@ const apiEndpoints = <ApiEndpoint>[
   ),
   ApiEndpoint(
     method: 'GET',
+    path: '/audit',
+    summary: 'Recent audit events (admin only)',
+    description:
+        'Returns the newest persistent audit events first. Events cover '
+        'logins, WebSocket authentication, logout, `/at` commands, TOTP '
+        'changes, user administration, and audit cleanup. Passwords, TOTP '
+        'codes, and secrets are never stored. Defaults to 100 events.',
+    auth: ApiAuth.admin,
+    queryParameters: [
+      ApiQueryParameter(
+        name: 'limit',
+        type: 'integer',
+        description: 'Maximum events to return (1-500).',
+        example: '100',
+      ),
+    ],
+    responses: {
+      '200': 'Array of audit events',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+      '422': 'Invalid limit',
+    },
+  ),
+  ApiEndpoint(
+    method: 'DELETE',
+    path: '/audit/cleanup',
+    summary: 'Delete expired audit events (admin only)',
+    description:
+        'Deletes events older than `PI7600_AUDIT_RETENTION_DAYS` and records '
+        'the cleanup itself as an audit event.',
+    auth: ApiAuth.admin,
+    responses: {
+      '200': '`{"deleted": <count>}`',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+    },
+  ),
+  ApiEndpoint(
+    method: 'GET',
     path: '/metrics',
     summary: 'Prometheus service metrics',
     description:

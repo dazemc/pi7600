@@ -33,6 +33,8 @@ void main() {
           '/info',
           '/gps',
           '/camera/snapshot',
+          '/audit',
+          '/audit/cleanup',
           '/metrics',
           '/phone/call',
           '/phone/hangup',

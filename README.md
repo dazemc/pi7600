@@ -123,6 +123,7 @@ file in the server working directory. Serverpod settings live in
 | `PI7600_LOGIN_MAX_ATTEMPTS` | `5` | Failed logins per username or client address before throttling |
 | `PI7600_LOGIN_WINDOW_SECONDS` | `300` | Window used to count failed logins |
 | `PI7600_LOGIN_BLOCK_SECONDS` | `300` | How long a throttled key stays blocked |
+| `PI7600_AUDIT_RETENTION_DAYS` | `90` | Persistent audit-event retention |
 | `PI7600_LOG_LEVEL` | `INFO` | Minimum application log level (`debug`, `info`, `warn`, `error`) |
 | `PI7600_PING_INTERFACE` | `usb0` | Interface used for `data`/`dns` checks |
 | `PI7600_PING_TARGETS` | `1.1.1.1,www.google.com` | Ping targets for `data` and `dns` |
@@ -187,6 +188,13 @@ change the password, full name, email, disabled state, and administrator flag;
 changing the password or disabled state revokes that user's outstanding tokens.
 User responses never include password hashes, TOTP secrets, or recovery codes.
 
+Logins, WebSocket authentication, logout, `/at` commands, TOTP changes, and
+user administration are written to PostgreSQL. Administrators can read the
+newest events with `GET /audit?limit=100` and delete expired rows with
+`DELETE /audit/cleanup`; the configured `/at` response previews are bounded and
+sensitive commands are redacted before storage. Events older than
+`PI7600_AUDIT_RETENTION_DAYS` are removed only when cleanup is invoked.
+
 ### WebSocket authentication
 
 Browsers cannot set an `Authorization` header on a WebSocket handshake, so the
@@ -230,6 +238,8 @@ All routes except `/token`, `/token/refresh`, `/healthz`, `/readyz`, `/docs`,
 | `GET` | `/users` | List users (**admin only**) |
 | `POST` | `/users` | Create a user (**admin only**) |
 | `PATCH` | `/users/{user_id}` | Update a user (**admin only**) |
+| `GET` | `/audit` | Recent persistent audit events (**admin only**) |
+| `DELETE` | `/audit/cleanup` | Delete expired audit events (**admin only**) |
 | `GET` | `/totp` | TOTP status for the current user |
 | `POST` | `/totp/setup` | Start TOTP enrollment |
 | `POST` | `/totp/enable` | Enable TOTP with the first code |

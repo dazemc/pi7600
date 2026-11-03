@@ -35,6 +35,8 @@ void configureServer(Serverpod pod) {
     ..addRoute(InfoRoute(services), '/info')
     ..addRoute(GpsRoute(services), '/gps')
     ..addRoute(CameraSnapshotRoute(services), '/camera/snapshot')
+    ..addRoute(AuditLogRoute(services), '/audit')
+    ..addRoute(AuditCleanupRoute(services), '/audit/cleanup')
     ..addRoute(MetricsRoute(services), '/metrics')
     ..addRoute(PhoneCallRoute(services), '/phone/call')
     ..addRoute(PhoneHangupRoute(services), '/phone/hangup')

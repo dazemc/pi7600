@@ -1,0 +1,22 @@
+class: AuditEvent
+table: audit_events
+fields:
+  createdAt:
+    type: DateTime
+    column: created_at
+  eventType:
+    type: String
+    column: event_type
+  userName:
+    type: String?
+    column: user_name
+  remoteAddress:
+    type: String?
+    column: remote_address
+  success:
+    type: bool
+  detail:
+    type: String?
+indexes:
+  audit_events_created_at_idx:
+    fields: createdAt
