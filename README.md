@@ -94,8 +94,7 @@ dependencies:
 
 It contains `At`, `LibSerialPortTransport`, `ModemSettings`, `Sms`/`SmsParser`,
 `Gps`, and `Phone`. See `simcom_modem/README.md` for direct usage and the
-hardware-free test helpers. The legacy Python implementation remains on the
-library repository's `master` branch.
+hardware-free test helpers.
 
 ## Configuration
 
