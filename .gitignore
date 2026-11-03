@@ -16,7 +16,7 @@ pi7600_server/config/passwords.yaml
 *.db
 *.db-journal
 *.sqlite3
-data/
+/data/
 ml/embeddings/
 .log/
 
