@@ -185,6 +185,9 @@ All routes except `/token`, `/healthz`, `/readyz`, `/docs`, `/docs/*`, and
 | `GET` | `/` | Modem/network/GPS status |
 | `GET` | `/info` | Hostname, kernel, date, architecture |
 | `GET` | `/gps` | Current GPS fix and Google Maps link |
+| `POST` | `/phone/call` | Place a voice call (**admin only**) |
+| `POST` | `/phone/hangup` | Hang up the active call (**admin only**) |
+| `GET` | `/phone/calls` | List active calls (**admin only**) |
 | `GET` | `/sms` | Sync messages from the SIM and return the database rows |
 | `POST` | `/sms` | Send an SMS |
 | `DELETE` | `/sms/delete/{message_id}` | Delete by database `id` |

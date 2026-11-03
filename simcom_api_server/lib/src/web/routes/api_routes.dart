@@ -145,6 +145,84 @@ class GpsRoute extends Route {
   }
 }
 
+/// `POST /phone/call`
+class PhoneCallRoute extends Route {
+  PhoneCallRoute(this.services) : super(methods: {Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateAdmin(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
+
+    final body = await readJsonObject(request);
+    final number = body?['number'];
+    if (number is! String || number.trim().isEmpty) {
+      return errorResponse(422, 'number is required');
+    }
+    final normalized = number.trim();
+    if (!RegExp(r'^\+?[0-9]{1,32}$').hasMatch(normalized)) {
+      return errorResponse(422, 'Invalid phone number');
+    }
+
+    AppLog.info(
+      'Phone call requested by ${auth.user!.userName}',
+      name: 'pi7600.phone',
+    );
+    final connected = await services.phone.call(normalized);
+    if (!connected) {
+      return errorResponse(502, 'Call failed');
+    }
+    return jsonResponse({'response': 'Ok'}, status: 202);
+  }
+}
+
+/// `POST /phone/hangup`
+class PhoneHangupRoute extends Route {
+  PhoneHangupRoute(this.services) : super(methods: {Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateAdmin(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
+
+    AppLog.info(
+      'Phone hangup requested by ${auth.user!.userName}',
+      name: 'pi7600.phone',
+    );
+    final hungUp = await services.phone.hangupCall();
+    if (!hungUp) {
+      return errorResponse(502, 'Hangup failed');
+    }
+    return jsonResponse({'response': 'Ok'}, status: 202);
+  }
+}
+
+/// `GET /phone/calls`
+class PhoneCallsRoute extends Route {
+  PhoneCallsRoute(this.services) : super(methods: {Method.get});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateAdmin(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
+
+    final calls = await services.phone.activeCalls();
+    if (calls == null) {
+      return errorResponse(502, 'Unable to read active calls');
+    }
+    return jsonResponse({'response': calls});
+  }
+}
+
 /// `GET /sms` and `POST /sms`
 ///
 /// Relic only allows one route per path, so the two methods share a route and

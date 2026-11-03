@@ -189,9 +189,11 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Added `GET /gps`, `GpsFix`, and a clickable Google Maps link in the docs
     result panel.
 
-- [ ] **Phone endpoints.**
+- [x] **Phone endpoints.**
   - Expose the library's `Phone` helpers: dial, hang up, and active calls.
   - Decide on auth level and rate limiting before exposing call control.
+  - Added admin-only `POST /phone/call`, `POST /phone/hangup`, and
+    `GET /phone/calls`; library phone tests cover the modem commands.
 
 - [x] **GPS endpoints.**
   - Start/stop the GPS session and return the current position separately from

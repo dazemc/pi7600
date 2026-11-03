@@ -158,6 +158,48 @@ const apiEndpoints = <ApiEndpoint>[
     },
   ),
   ApiEndpoint(
+    method: 'POST',
+    path: '/phone/call',
+    summary: 'Place a voice call (admin only)',
+    description:
+        'Dials `number` through the modem. The number may contain an optional '
+        'leading `+` followed by digits.',
+    auth: ApiAuth.admin,
+    jsonBody: '{\n  "number": "+15551234567"\n}',
+    responses: {
+      '202': 'Call request accepted',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+      '422': 'Invalid phone number',
+      '502': 'The modem could not place the call',
+    },
+  ),
+  ApiEndpoint(
+    method: 'POST',
+    path: '/phone/hangup',
+    summary: 'Hang up the active call (admin only)',
+    auth: ApiAuth.admin,
+    responses: {
+      '202': 'Call ended',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+      '502': 'The modem could not hang up',
+    },
+  ),
+  ApiEndpoint(
+    method: 'GET',
+    path: '/phone/calls',
+    summary: 'List active calls (admin only)',
+    description: 'Returns the raw `+CLCC` response from the modem.',
+    auth: ApiAuth.admin,
+    responses: {
+      '200': 'Raw active-call response',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+      '502': 'The modem could not read active calls',
+    },
+  ),
+  ApiEndpoint(
     method: 'GET',
     path: '/sms',
     summary: 'List stored SMS messages',
