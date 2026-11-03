@@ -52,6 +52,7 @@ dart format pi7600_server pi7600_client
 dart analyze pi7600_server
 dart analyze pi7600_client
 cd pi7600_server && dart test
+cd pi7600_server && dart run tool/build_docs_client.dart
 cd pi7600_server && serverpod create-migration
 ```
 
@@ -73,7 +74,8 @@ cd pi7600_server && serverpod create-migration
 | `pi7600_server/lib/src/camera/` | V4L2 capture, video broadcaster, recognition interface |
 | `pi7600_server/lib/src/services/` | SMS/status business logic and service status Bloc |
 | `pi7600_server/lib/src/web/` | REST/WebSocket routes, `/readyz` middleware, and the Jaspr `/docs` explorer |
-| `pi7600_server/lib/src/web/docs/` | Shared endpoint catalog, OpenAPI generator, and Jaspr docs page |
+| `pi7600_server/lib/src/web/docs/` | Shared endpoint catalog, OpenAPI generator, Jaspr docs app, and client entrypoint |
+| `pi7600_server/tool/build_docs_client.dart` | Compile the Jaspr docs client to `web/docs/app.js` |
 | `pi7600_server/migrations/` | PostgreSQL migrations |
 | `pi7600_server/test/` | Hardware-free tests and fake serial transport |
 | `deploy/` | systemd unit and environment example |
@@ -94,9 +96,13 @@ cd pi7600_server && serverpod create-migration
   API/Insights ports are unused by the Pi7600 contract.
 - **Docs:** `GET /docs` is a server-rendered Jaspr page built from
   `lib/src/web/docs/api_catalog.dart`; `GET /openapi.json` is generated from
-  the same catalog. The page logs in through `POST /token` and sends requests
-  from the browser, so normal bearer/admin checks still apply. Disable the page
-  and schema with `PI7600_DOCS_ENABLED=false`.
+  the same catalog. The interactive parts are the same Jaspr component tree
+  compiled from `docs_app.client.dart` by `tool/build_docs_client.dart` and
+  served from `/docs/app.js`. The page logs in through `POST /token` and sends
+  requests from the browser, so normal bearer/admin checks still apply. The
+  compiled bundle is a build artifact (not committed); if it is missing,
+  `/docs/app.js` returns `503` and the page is read-only. Disable the page and
+  schema with `PI7600_DOCS_ENABLED=false`.
 - **Database:** PostgreSQL through Serverpod's database layer. Schema changes
   are Serverpod migrations, not `create_all`. The development config launches
   an embedded PostgreSQL under `pi7600_server/.serverpod/`.
@@ -179,8 +185,10 @@ cd pi7600_server && dart test
 ```
 
 The suite is hardware-free and covers PDU parsing, AT timeout/error handling,
-JWT/bcrypt auth, and SMS persistence/deletion. Add tests for new behavior and
-keep them runnable without a modem, camera, or database.
+JWT/bcrypt auth, SMS persistence/deletion, and the `/docs` catalog/page. The
+docs test also runs `dart compile js` on the Jaspr client entrypoint, so a
+client build failure fails the suite. Add tests for new behavior and keep them
+runnable without a modem, camera, or database.
 
 CI (`.github/workflows/ci.yml`) installs the stable Dart SDK and
 `libserialport0`, then runs `dart format --set-exit-if-changed`,

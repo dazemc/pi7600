@@ -58,6 +58,10 @@ openssl rsa -pubout -in pi7600_server/.keys/private.pem \
 
 cd pi7600_server
 
+# Build the interactive /docs client. This compiles the Jaspr browser app to
+# web/docs/app.js; the generated file is not committed.
+dart run tool/build_docs_client.dart
+
 # The development config launches an embedded PostgreSQL instance under
 # .serverpod/ and applies migrations.
 dart run bin/main.dart --apply-migrations
@@ -100,6 +104,7 @@ file in the server working directory. Serverpod settings live in
 | `PI7600_PING_INTERFACE` | `usb0` | Interface used for `data`/`dns` checks |
 | `PI7600_PING_TARGETS` | `1.1.1.1,www.google.com` | Ping targets for `data` and `dns` |
 | `PI7600_DOCS_ENABLED` | `true` | Serve the interactive `/docs` page and `/openapi.json` |
+| `PI7600_DOCS_CLIENT_PATH` | auto | Override the compiled `/docs/app.js` path |
 | `SERVERPOD_RUN_MODE` | `development` | Serverpod run mode (`development`, `test`, `production`) |
 | `SERVERPOD_DATABASE_PASSWORD` | from `passwords.yaml` | PostgreSQL password |
 
@@ -191,6 +196,19 @@ document, so the page and schema cannot drift apart. Both routes, and the
 `/docs/style.css` and `/docs/app.js` assets, are disabled with
 `PI7600_DOCS_ENABLED=false`.
 
+The interactive app is written in Dart with Jaspr. Its browser entrypoint is
+`lib/src/web/docs/docs_app.client.dart`; compile it with:
+
+```bash
+cd pi7600_server
+dart run tool/build_docs_client.dart
+```
+
+The output, `web/docs/app.js`, is a build artifact and is not committed. If it
+is missing, `/docs/app.js` returns `503` and the server-rendered page remains
+read-only. The native bundle looks for the file at
+`/opt/pi7600/web/docs/app.js`.
+
 ### Modem status
 
 ```bash
@@ -280,12 +298,18 @@ machine:
 ```bash
 cd pi7600_server
 dart pub get
+dart run tool/build_docs_client.dart
 dart build cli --target bin/main.dart \
   --target-os linux --target-arch arm64 \
   --output build/pi
+
+# Include the compiled docs client in the native bundle.
+mkdir -p build/pi/bundle/web/docs
+cp web/docs/app.js build/pi/bundle/web/docs/app.js
 ```
 
-The bundle is written to `pi7600_server/build/pi/bundle/`.
+The bundle is written to `pi7600_server/build/pi/bundle/`. It contains
+`bin/main`, the runtime libraries, and `web/docs/app.js`.
 
 1. Install runtime dependencies on the Pi:
 

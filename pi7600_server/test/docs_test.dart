@@ -1,7 +1,13 @@
-import 'dart:convert';
+@Timeout(Duration(minutes: 2))
+library;
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
 import 'package:pi7600_server/src/config/app_config.dart';
 import 'package:pi7600_server/src/web/docs/api_catalog.dart';
+import 'package:pi7600_server/src/web/docs/docs_client.dart';
 import 'package:pi7600_server/src/web/docs/docs_page.dart';
 import 'package:test/test.dart';
 
@@ -90,22 +96,76 @@ void main() {
       expect(html, contains('/wss/video'));
     });
 
-    test('serves JavaScript with login and try-it-out behaviour', () {
-      expect(docsJs, contains("fetch('/token'"));
-      expect(docsJs, contains('access_token'));
-      expect(docsJs, contains('URLSearchParams'));
-      expect(docsJs, contains('Signed in as'));
-      expect(docsJs, contains("querySelectorAll('[data-param]')"));
-      expect(docsJs, contains("querySelector('textarea[data-json]')"));
-      expect(docsJs, contains("querySelectorAll('[data-form]')"));
-      expect(docsJs, contains("headers['Authorization']"));
-      expect(docsJs, contains('method: method'));
+    test('loads a compiled client bundle from an explicit path', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'pi7600-docs-bundle-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File(p.join(directory.path, 'app.js'));
+      await file.writeAsString('console.log("pi7600 docs");');
+
+      final bytes = await loadDocsClientBundle(path: file.path);
+      expect(utf8.decode(bytes!), contains('pi7600 docs'));
+
+      final missing = await loadDocsClientBundle(
+        path: p.join(directory.path, 'missing.js'),
+      );
+      expect(missing, isNull);
     });
 
-    test('serves method colour styles', () {
+    test('serves method colour and hidden-state styles', () {
       expect(docsCss, contains('.method-get'));
       expect(docsCss, contains('.method-post'));
       expect(docsCss, contains('.method-delete'));
+      expect(docsCss, contains('.login-form[hidden]'));
+      expect(docsCss, contains('.session[hidden]'));
+    });
+  });
+
+  group('docs client', () {
+    late Directory tempDir;
+    late File bundle;
+
+    setUpAll(() async {
+      tempDir = await Directory.systemTemp.createTemp('pi7600-docs-client-');
+      bundle = File(p.join(tempDir.path, 'app.js'));
+      final root = _packageRoot();
+
+      final result = await Process.run(
+        Platform.resolvedExecutable,
+        [
+          'compile',
+          'js',
+          '-O2',
+          '--no-source-maps',
+          '-o',
+          bundle.path,
+          p.join('lib', 'src', 'web', 'docs', 'docs_app.client.dart'),
+        ],
+        workingDirectory: root,
+      );
+
+      if (result.exitCode != 0) {
+        fail(
+          'Failed to compile the Jaspr docs client '
+          '(${result.exitCode}):\n${result.stdout}\n${result.stderr}',
+        );
+      }
+    });
+
+    tearDownAll(() async {
+      await tempDir.delete(recursive: true);
+    });
+
+    test('compiles the Jaspr app to a browser bundle', () {
+      final js = bundle.readAsStringSync();
+
+      expect(js, isNotEmpty);
+      expect(js, contains('pi7600.docs.token'));
+      expect(js, contains('access_token'));
+      expect(js, contains('Authorization'));
+      expect(js, contains('Session expired'));
+      expect(js, contains('Executing...'));
     });
   });
 
@@ -131,4 +191,26 @@ void main() {
       }
     });
   });
+}
+
+String _packageRoot() {
+  final current = Directory.current;
+  for (final candidate in [
+    current.path,
+    p.join(current.path, 'pi7600_server'),
+  ]) {
+    final entrypoint = p.join(
+      candidate,
+      'lib',
+      'src',
+      'web',
+      'docs',
+      'docs_app.client.dart',
+    );
+    if (File(entrypoint).existsSync()) return candidate;
+  }
+
+  throw StateError(
+    'Could not locate the pi7600_server package root from ${current.path}.',
+  );
 }
