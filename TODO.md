@@ -92,9 +92,9 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Consider batching SMS persistence/upserts once the fingerprint index is in
     place.
   - Do not change API response shapes for this work.
-  - Evaluated: the composite SMS index is the main win and the default pool is
-    adequate for the Pi workload. Unix-socket and batching changes are deferred
-    until measurements show a need.
+  - Reduced the production pool to four connections for the 415 MiB Pi and
+    confirmed the service stays within it. Unix-socket and SMS batching changes
+    are deferred until measurements show a need.
 
 ## Correctness and security
 

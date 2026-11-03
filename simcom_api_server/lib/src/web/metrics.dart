@@ -89,7 +89,7 @@ Middleware requestMetricsMiddleware(RequestMetrics metrics) {
       try {
         final result = await next(request);
         metrics.record(
-          request.method.name,
+          request.method.name.toUpperCase(),
           metricPath(request.url),
           result is Response ? result.statusCode : 0,
           stopwatch.elapsedMicroseconds,
@@ -97,7 +97,7 @@ Middleware requestMetricsMiddleware(RequestMetrics metrics) {
         return result;
       } on Object {
         metrics.record(
-          request.method.name,
+          request.method.name.toUpperCase(),
           metricPath(request.url),
           500,
           stopwatch.elapsedMicroseconds,

@@ -296,6 +296,16 @@ is missing, `/docs/app.js` returns `503` and the server-rendered page remains
 read-only. The native bundle looks for the file at
 `/opt/simcom_api/web/docs/app.js`.
 
+The docs page and assets are gzipped when requested and carry `ETag` headers.
+Clients can send `If-None-Match` to get `304 Not Modified` instead of a full
+response.
+
+### Metrics
+
+`GET /metrics` returns Prometheus text with modem, camera, recognition, video
+client, lifecycle, and process-memory gauges, plus per-method/path/status
+request counts and duration summaries. It requires a bearer token.
+
 ### Modem status
 
 ```bash
