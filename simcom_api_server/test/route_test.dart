@@ -358,6 +358,14 @@ void main() {
       expect((await readResponse(second)).$1, 304);
     });
 
+    test('requires authentication for the modem report', () async {
+      final result = await call(
+        ModemInfoRoute(services),
+        buildRequest(Method.get, '/modem'),
+      );
+      expect((await readJsonResponse(result)).$1, 401);
+    });
+
     test('renders request metrics counters', () async {
       final admin = makeUser();
       db.users.add(admin);

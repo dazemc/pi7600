@@ -117,7 +117,7 @@ class ModemInfoService {
     return {
       'manufacturer': _payload(raw['AT+CGMI']),
       'model': _payload(raw['AT+CGMM']),
-      'firmware': _payload(raw['AT+CGMR']),
+      'firmware': _stripPrefix(_payload(raw['AT+CGMR']), '+CGMR:'),
       'imei': _digits(_payload(raw['AT+CGSN']), length: 15),
       'imsi': _digits(_payload(raw['AT+CIMI']), length: null),
       'iccid': _digits(_payload(raw['AT+CCID']), length: null),
@@ -175,6 +175,13 @@ class ModemInfoService {
     if (digits.isEmpty) return null;
     if (length != null && digits.length < length) return null;
     return digits;
+  }
+
+  static String? _stripPrefix(String? value, String prefix) {
+    if (value == null) return null;
+    return value.startsWith(prefix)
+        ? value.substring(prefix.length).trim()
+        : value;
   }
 
   static String? _cnumNumber(String? line) {
