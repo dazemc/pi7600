@@ -100,6 +100,10 @@ class AppServices {
   bool _started = false;
   bool _stopped = false;
 
+  Future<void>? _cameraStart;
+  Timer? _cameraIdleTimer;
+  int _videoClients = 0;
+
   /// Completes once startup has finished, successfully or not.
   Future<void> get ready => _ready.future;
 
@@ -142,24 +146,8 @@ class AppServices {
       );
     }
 
-    try {
-      await camera.start();
-      broadcaster.attach(camera.frames);
-      serviceStatus.cameraStarted();
-      AppLog.info(
-        'Camera streaming from ${camera.devicePath} '
-        '(${camera.frameWidth}x${camera.frameHeight} ${camera.frameFormat})',
-        name: 'pi7600.camera',
-      );
-    } on Object catch (error, stackTrace) {
-      serviceStatus.cameraFailed(error);
-      AppLog.warning(
-        'Camera unavailable: $error',
-        name: 'pi7600.camera',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
+    broadcaster.attach(camera.frames);
+    AppLog.info('Camera capture starts on demand', name: 'pi7600.camera');
 
     try {
       await recognition.initialize();
@@ -181,13 +169,91 @@ class AppServices {
     if (!_ready.isCompleted) _ready.complete();
   }
 
+  /// Start camera capture for the first video client.
+  ///
+  /// Returns `false` when the camera cannot be started. Concurrent callers
+  /// share the same in-flight start operation.
+  Future<bool> ensureCameraStarted() async {
+    _cameraIdleTimer?.cancel();
+    _cameraIdleTimer = null;
+    if (camera.isRunning) return true;
+
+    final existing = _cameraStart;
+    if (existing != null) {
+      await existing;
+      return camera.isRunning;
+    }
+
+    final future = _startCamera();
+    _cameraStart = future;
+    try {
+      await future;
+    } finally {
+      _cameraStart = null;
+    }
+    return camera.isRunning;
+  }
+
+  Future<void> _startCamera() async {
+    try {
+      await camera.start();
+      serviceStatus.cameraStarted();
+      AppLog.info(
+        'Camera streaming from ${camera.devicePath} '
+        '(${camera.frameWidth}x${camera.frameHeight} ${camera.frameFormat})',
+        name: 'pi7600.camera',
+      );
+    } on Object catch (error, stackTrace) {
+      serviceStatus.cameraFailed(error);
+      AppLog.warning(
+        'Camera unavailable: $error',
+        name: 'pi7600.camera',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  void videoClientConnected() {
+    _cameraIdleTimer?.cancel();
+    _cameraIdleTimer = null;
+    _videoClients++;
+  }
+
+  void videoClientDisconnected() {
+    if (_videoClients > 0) _videoClients--;
+    if (_videoClients > 0) return;
+
+    _cameraIdleTimer?.cancel();
+    _cameraIdleTimer = Timer(const Duration(seconds: 30), () {
+      _cameraIdleTimer = null;
+      if (_videoClients > 0 || !camera.isRunning) return;
+      unawaited(_stopCameraForIdle());
+    });
+  }
+
+  Future<void> _stopCameraForIdle() async {
+    try {
+      await camera.stop();
+      serviceStatus.cameraStopped();
+      AppLog.info('Camera stopped after idle timeout', name: 'pi7600.camera');
+    } on Object catch (error) {
+      AppLog.warning(
+        'Error stopping idle camera: $error',
+        name: 'pi7600.camera',
+      );
+    }
+  }
+
   /// Release the camera, modem, and WebSocket clients.
   Future<void> stop() async {
     if (_stopped) return;
     _stopped = true;
+    _cameraIdleTimer?.cancel();
+    _cameraIdleTimer = null;
     try {
       await broadcaster.stop();
-      await camera.stop();
+      await camera.dispose();
     } on Object catch (error) {
       AppLog.error('Error stopping camera: $error', name: 'pi7600.camera');
     }

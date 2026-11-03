@@ -125,12 +125,14 @@ class VideoWebSocketRoute extends Route {
 
       final user = auth.user!;
       await services.ready;
-      if (!services.camera.isRunning) {
+      final cameraReady = await services.ensureCameraStarted();
+      if (!cameraReady) {
         await _close(socket, 1011);
         await auth.events.cancel();
         return;
       }
 
+      services.videoClientConnected();
       services.broadcaster.add(socket);
       AppLog.info(
         'Video stream authenticated for ${user.userName}',
@@ -142,6 +144,7 @@ class VideoWebSocketRoute extends Route {
         }
       } finally {
         services.broadcaster.remove(socket);
+        services.videoClientDisconnected();
         await auth.events.cancel();
         AppLog.info(
           'Video stream disconnected for ${user.userName}',

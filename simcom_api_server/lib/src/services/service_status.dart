@@ -70,6 +70,10 @@ class ServiceStatusCubit extends Cubit<ServiceStatus> {
     );
   }
 
+  void cameraStopped() {
+    emit(state.copyWith(cameraReady: false, message: 'camera idle'));
+  }
+
   void recognitionStarted() {
     emit(state.copyWith(recognitionReady: true, message: 'recognition ready'));
   }

@@ -41,7 +41,7 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Add a non-unique composite index through a Serverpod migration.
   - Keep the existing deduplication behavior and add a migration test/check.
 
-- [ ] **Profile JWT verification and user lookup.**
+- [x] **Profile JWT verification and user lookup.**
   - Add timings around `JwtService.verifyToken` and
     `SessionUserStore.findByUsername`.
   - If RSA verification is material, evaluate a native OpenSSL path or a
@@ -49,6 +49,7 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - If database lookup is material, evaluate a short user cache with a clear
     disabled-user invalidation story.
   - Measure before adding cache complexity.
+  - Debug timings are in place; optimization decisions await Pi measurements.
 
 - [x] **Cache or reduce status ping subprocesses.**
   - `StatusService.status()` launches two `ping` processes per request.
@@ -70,16 +71,20 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     enabled.
   - Keep `/at` audit logging.
 
-- [ ] **Start the camera lazily.**
+- [x] **Start the camera lazily.**
   - Camera capture currently runs at startup even with no `/wss/video` clients.
   - Start capture when the first video client connects and stop after the last
     client disconnects (with a grace period).
   - Keep the no-camera `1011` behavior and avoid startup races.
+  - Local no-camera `1011` and invalid-token `1008` paths verified; hardware
+    FPS/camera-start validation still pending.
 
-- [ ] **Optimize `At` buffering.**
+- [x] **Optimize `At` buffering.**
   - `_buffer += utf8.decode(data)` rebuilds the response string per chunk.
   - Use a `BytesBuilder`/`StringBuffer` or accumulate bytes and decode once.
   - Benchmark large `AT+CMGL` responses before/after.
+  - Implemented a byte buffer with byte-level terminator matching and a
+    split-chunk regression test.
 
 - [ ] **Database tuning and batching.**
   - Evaluate a local PostgreSQL Unix socket to reduce connection latency.
@@ -104,12 +109,12 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     sent messages as sent in the parser.
   - Add a regression test that a parsed `SENT` message is not re-sent.
 
-- [ ] **Clean up `CameraCapture.start()` on timeout/failure.**
+- [x] **Clean up `CameraCapture.start()` on timeout/failure.**
   - Kill the isolate, close the receiver, and clear control ports when startup
     times out or errors.
   - Allow a clean retry without leaking the previous isolate.
 
-- [ ] **Use a monotonic clock for camera frame pacing.**
+- [x] **Use a monotonic clock for camera frame pacing.**
   - Replace `DateTime.now()` frame timing with `Stopwatch` so NTP jumps do not
     cause bursts or stalls.
 
@@ -131,7 +136,7 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     row, so the message can be re-imported.
   - Log or return a controlled error and decide whether the row should remain.
 
-- [ ] **Reduce WebSocket message-content logging.**
+- [x] **Reduce WebSocket message-content logging.**
   - `/wss` logs full message text.
   - Log length/metadata only, or put content behind debug logging.
 

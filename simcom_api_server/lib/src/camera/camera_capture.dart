@@ -66,21 +66,36 @@ class CameraCapture {
     _receiver = ReceivePort();
     _receiver!.listen(_handleMessage);
 
-    _isolate = await Isolate.spawn(_cameraIsolate, [
-      _receiver!.sendPort,
-      candidatePaths,
-      width,
-      height,
-      fps,
-    ]);
+    try {
+      _isolate = await Isolate.spawn(_cameraIsolate, [
+        _receiver!.sendPort,
+        candidatePaths,
+        width,
+        height,
+        fps,
+      ]);
 
-    return _ready!.future.timeout(
-      const Duration(seconds: 15),
-      onTimeout: () {
-        _error = StateError('Timed out while starting camera');
-        throw _error!;
-      },
-    );
+      return await _ready!.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          _error = StateError('Timed out while starting camera');
+          throw _error!;
+        },
+      );
+    } on Object {
+      _resetCapture();
+      rethrow;
+    }
+  }
+
+  void _resetCapture() {
+    _isolate?.kill(priority: Isolate.immediate);
+    _isolate = null;
+    _control = null;
+    _running = false;
+    _latestFrame = null;
+    _receiver?.close();
+    _receiver = null;
   }
 
   void _handleMessage(Object? message) {
@@ -121,6 +136,8 @@ class CameraCapture {
   }
 
   /// Stop capture and release the device.
+  ///
+  /// The frame stream stays open so capture can be started again on demand.
   Future<void> stop() async {
     final control = _control;
     if (control != null) {
@@ -131,13 +148,12 @@ class CameraCapture {
         // The isolate is killed below.
       }
     }
-    _isolate?.kill(priority: Isolate.immediate);
-    _isolate = null;
-    _control = null;
-    _receiver?.close();
-    _receiver = null;
-    _running = false;
-    _latestFrame = null;
+    _resetCapture();
+  }
+
+  /// Stop capture and permanently close the frame stream.
+  Future<void> dispose() async {
+    await stop();
     if (!_frames.isClosed) await _frames.close();
   }
 }
@@ -193,10 +209,11 @@ Future<void> _cameraIsolate(List<Object?> args) async {
   final frameInterval = Duration(
     microseconds: (1000000 / (fps < 1 ? 1 : fps)).round(),
   );
+  final clock = Stopwatch()..start();
 
   try {
     while (!stop) {
-      final started = DateTime.now();
+      final started = clock.elapsed;
       final frame = device.readFrame();
       if (frame == null) {
         await Future<void>.delayed(const Duration(milliseconds: 5));
@@ -217,7 +234,7 @@ Future<void> _cameraIsolate(List<Object?> args) async {
         'data': TransferableTypedData.fromList([jpeg]),
       });
 
-      final elapsed = DateTime.now().difference(started);
+      final elapsed = clock.elapsed - started;
       if (elapsed < frameInterval) {
         await Future<void>.delayed(frameInterval - elapsed);
       }
