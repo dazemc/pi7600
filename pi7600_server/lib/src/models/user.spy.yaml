@@ -1,0 +1,26 @@
+class: User
+table: users
+fields:
+  userName:
+    type: String
+    column: user_name
+    unique: true
+  userPassword:
+    type: String
+    column: user_password
+  userFullName:
+    type: String?
+    column: user_full_name
+  userEmail:
+    type: String?
+    column: user_email
+  isDisabled:
+    type: bool
+    column: is_disabled
+    defaultModel: 'false'
+    defaultPersist: 'false'
+  isAdmin:
+    type: bool
+    column: is_admin
+    defaultModel: 'false'
+    defaultPersist: 'false'

@@ -1,0 +1,43 @@
+# Production configuration for the Pi7600 service.
+#
+# The service runs on a Raspberry Pi with a local PostgreSQL instance. The
+# database password is read from SERVERPOD_DATABASE_PASSWORD (or
+# config/passwords.yaml); do not commit it here.
+#
+# Pi7600's REST and WebSocket routes are registered on the web server, so
+# `webServer.port` is the port the API listens on (8000, matching the previous
+# Python service). The Serverpod API/Insights ports are unused by the Pi7600
+# contract but must remain valid.
+
+apiServer:
+  port: 8080
+  publicHost: 192.168.1.11
+  publicPort: 8080
+  publicScheme: http
+
+insightsServer:
+  port: 8081
+  publicHost: 192.168.1.11
+  publicPort: 8081
+  publicScheme: http
+
+webServer:
+  port: 8000
+  publicHost: 192.168.1.11
+  publicPort: 8000
+  publicScheme: http
+
+database:
+  host: localhost
+  port: 5432
+  name: pi7600
+  user: pi7600
+  requireSsl: false
+  #maxConnectionCount: 10 # Defaults to 10, a negative or null value removes the limit
+
+maxRequestSize: 524288 # The maximum size of requests allowed in bytes
+
+sessionLogs:
+  persistentEnabled: false
+  consoleEnabled: true
+  consoleLogFormat: text

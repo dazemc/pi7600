@@ -1,0 +1,42 @@
+class: Message
+table: messages
+fields:
+  messageIndex:
+    type: String?
+    column: message_index
+  messageType:
+    type: String
+    column: message_type
+  messageOriginatingAddress:
+    type: String?
+    column: message_originating_address
+  messageDestinationAddress:
+    type: String?
+    column: message_destination_address
+  messageDate:
+    type: String
+    column: message_date
+  messageTime:
+    type: String
+    column: message_time
+  messageContents:
+    type: String
+    column: message_contents
+  partialKey:
+    type: String?
+    column: partial_key
+  partialCount:
+    type: int?
+    column: partial_count
+  partialIndex:
+    type: int?
+    column: partial_index
+  isPartial:
+    type: bool
+    column: is_partial
+  inSimMemory:
+    type: bool?
+    column: in_sim_memory
+  isSent:
+    type: bool?
+    column: is_sent

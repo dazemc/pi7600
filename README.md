@@ -1,22 +1,39 @@
-# Pi7600: SIM7600 modem library and REST API
+# Pi7600: SIM7600 modem service
 
-Pi7600 is a Python library and FastAPI service for the
+Pi7600 is a [Serverpod 4](https://serverpod.dev/) service for the
 [Waveshare SIM7600G-H 4G HAT](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B))
 on a Raspberry Pi. It exposes modem status, host information, SMS
 send/read/delete, GPS, an admin-only raw AT command endpoint, and authenticated
 WebSocket echo/video streams.
 
-The repository contains:
+The implementation is Dart end to end: the modem library, SMS PDU decoder,
+camera capture, WebSocket handling, authentication, and database access all run
+on the Dart VM with PostgreSQL. There is no Python runtime.
 
-- the FastAPI application (`main.py`, `Auth.py`, `Database.py`, `Camera.py`),
-- the modem library in the `pi7600/` git submodule, and
-- deployment and helper scripts in `deploy/` and `scripts/`.
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `pi7600_server/` | Serverpod server, modem library, camera/V4L2 capture, REST and WebSocket routes |
+| `pi7600_client/` | Generated Serverpod protocol client package (not a Flutter app) |
+| `pi7600_server/lib/src/modem/` | AT client, stream-based serial transport, settings, SMS/PDU, GPS, phone |
+| `pi7600_server/lib/src/camera/` | V4L2 capture, JPEG broadcaster, recognition interface |
+| `pi7600_server/lib/src/web/` | REST routes and WebSocket upgrade handlers |
+| `pi7600_server/migrations/` | PostgreSQL schema migrations |
+| `third_party/relic_io/` | Vendored `relic_io` with RFC 6455 close-code support for 1008/1011 |
+| `deploy/` | systemd unit and environment example |
+| `scripts/` | Helper scripts (`setup.sh`, model downloads) |
+| `docs/` | Roadmap and the SIM7600 AT command manual |
+| `ml/` | Optional face detection/recognition models (embeddings are gitignored) |
 
 ## Requirements
 
-- Python **3.13** (the app and CI target 3.13).
-- [uv](https://docs.astral.sh/uv/) for dependency management.
-- A SIM7600-series modem on `/dev/ttyUSB2` and a camera on `/dev/video*`.
+- Dart **3.13** (the workspace targets `^3.12.2`).
+- PostgreSQL **16+**.
+- `libserialport` (`libserialport0` on Debian). Debian's runtime package ships
+  only `libserialport.so.0`; set `LIBSERIALPORT_PATH=libserialport.so.0` so the
+  Dart FFI loader does not look for the unversioned `.so` symlink.
+- A SIM7600-series modem on `/dev/ttyUSB2` and a V4L2 camera on `/dev/video*`.
 - Membership in the `dialout` and `video` groups.
 
 ```bash
@@ -26,59 +43,73 @@ sudo usermod -aG dialout,video "$USER"
 ModemManager can claim the serial ports. `scripts/setup.sh` disables it; review
 the script before running it.
 
-## Quick start
+## Quick start (development)
 
 ```bash
-uv sync --python 3.13
+dart pub get
 
-# JWT signing keys (required by /token and WebSocket auth).
-mkdir -p .keys
+# JWT signing keys. The development server resolves these relative to
+# pi7600_server/, so create them there.
+mkdir -p pi7600_server/.keys
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
-  -out .keys/private.pem
-openssl rsa -pubout -in .keys/private.pem -out .keys/public.pem
+  -out pi7600_server/.keys/private.pem
+openssl rsa -pubout -in pi7600_server/.keys/private.pem \
+  -out pi7600_server/.keys/public.pem
 
-# Local configuration.
-cp .env.example .env
+cd pi7600_server
 
-# Apply the database schema.
-uv run alembic upgrade head
-
-# Create the first API user (add --admin for /at access).
-uv run python scripts/create_user.py --admin
-
-# Run the API.
-uv run uvicorn main:app --reload
-# or: ./start.sh
+# The development config launches an embedded PostgreSQL instance under
+# .serverpod/ and applies migrations.
+dart run bin/main.dart --apply-migrations
 ```
 
-The service listens on `http://localhost:8000`; interactive docs are at `/docs`
-and `/redoc`.
+The development server listens on `http://localhost:8082`. Leave it running and
+create an API user in another terminal:
+
+```bash
+cd pi7600_server
+dart run bin/create_user.dart --username alice --admin
+```
+
+Without a modem or camera the process still starts; hardware failures are
+logged, reflected in the service status Bloc, and surfaced as `ERROR` values in
+the API rather than aborting the process.
 
 ## Configuration
 
-Settings are loaded from environment variables with the `PI7600_` prefix or from
-`.env`. See `.env.example` and `deploy/pi7600.env.example`.
+Pi7600 settings are read from `PI7600_*` environment variables or from a `.env`
+file in the server working directory. Serverpod settings live in
+`pi7600_server/config/<runMode>.yaml`; the database password comes from
+`SERVERPOD_DATABASE_PASSWORD` or `pi7600_server/config/passwords.yaml`.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `PI7600_DATABASE_URL` | `sqlite+aiosqlite:///./cmgl.db` | Async SQLAlchemy URL |
 | `PI7600_AT_COM` | `/dev/ttyUSB2` | Modem serial port |
 | `PI7600_AT_BAUDRATE` | `115200` | Serial speed |
 | `PI7600_AT_TIMEOUT` | `10` | Raw AT command timeout (seconds) |
-| `PI7600_CAMERA_INDEX` | `-1` | OpenCV camera index |
+| `PI7600_CAMERA_DEVICE` | unset | Explicit V4L2 device; probes `/dev/video0`-`/dev/video31` when unset |
+| `PI7600_CAMERA_INDEX` | `-1` | Prefer `/dev/video<index>` during probing |
 | `PI7600_CAMERA_FPS` | `15` | Video stream frame rate |
+| `PI7600_CAMERA_WIDTH` | `640` | Requested capture width |
+| `PI7600_CAMERA_HEIGHT` | `480` | Requested capture height |
 | `PI7600_JWT_PRIVATE_KEY_PATH` | `.keys/private.pem` | JWT signing key |
 | `PI7600_JWT_PUBLIC_KEY_PATH` | `.keys/public.pem` | JWT verification key |
 | `PI7600_JWT_ISSUER` | `pi.daazed.dev` | JWT issuer claim |
 | `PI7600_JWT_EXPIRE_MINUTES` | `30` | Access token lifetime |
 | `PI7600_WEBSOCKET_AUTH_TIMEOUT` | `5` | Seconds to wait for the auth message |
+| `PI7600_PING_INTERFACE` | `usb0` | Interface used for `data`/`dns` checks |
+| `PI7600_PING_TARGETS` | `1.1.1.1,www.google.com` | Ping targets for `data` and `dns` |
+| `SERVERPOD_RUN_MODE` | `development` | Serverpod run mode (`development`, `test`, `production`) |
+| `SERVERPOD_DATABASE_PASSWORD` | from `passwords.yaml` | PostgreSQL password |
+
+See `deploy/pi7600.env.example` for a production template.
 
 ## Authentication
 
 `POST /token` uses the OAuth2 password form and returns an RS256 JWT:
 
 ```bash
-curl -X POST http://localhost:8000/token \
+curl -X POST http://localhost:8082/token \
   -d 'username=alice&password=secret'
 ```
 
@@ -87,7 +118,7 @@ curl -X POST http://localhost:8000/token \
 ```
 
 Send the token as `Authorization: Bearer <token>` on HTTP requests. Invalid,
-expired, and disabled-user tokens return `401`.
+expired, and disabled-user tokens return `401` with `WWW-Authenticate: Bearer`.
 
 ### WebSocket authentication
 
@@ -100,23 +131,23 @@ server accepts the connection and waits for a first JSON message:
 
 The socket is closed with code `1008` when authentication fails or the message
 does not arrive within `PI7600_WEBSOCKET_AUTH_TIMEOUT` seconds. Only then does
-`/wss` echo messages or `/wss/video` subscribe the client to JPEG frames.
+`/wss` echo messages or `/wss/video` subscribe the client to JPEG frames. If no
+camera is streaming, `/wss/video` closes with code `1011`.
 
-```python
-import asyncio
-import json
+```dart
+import 'dart:convert';
+import 'dart:io';
 
-import websockets
-
-
-async def main() -> None:
-    async with websockets.connect("ws://localhost:8000/wss") as ws:
-        await ws.send(json.dumps({"type": "auth", "token": token}))
-        await ws.send("hello")
-        print(await ws.recv())
-
-
-asyncio.run(main())
+Future<void> main() async {
+  final socket = await WebSocket.connect('ws://localhost:8082/wss');
+  socket.add(jsonEncode({'type': 'auth', 'token': token}));
+  socket.add('hello');
+  await for (final message in socket) {
+    print(message);
+    break;
+  }
+  await socket.close();
+}
 ```
 
 ## API
@@ -138,10 +169,13 @@ All routes except `/token`, `/healthz`, and `/readyz` require a bearer token.
 | `WS` | `/wss` | Authenticated echo |
 | `WS` | `/wss/video` | Authenticated JPEG frame stream |
 
+The REST payloads, status codes, JWT claims, and WebSocket authentication
+protocol match the previous Python service.
+
 ### Modem status
 
 ```bash
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/
 ```
 
 ```json
@@ -163,12 +197,12 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/
 ### SMS
 
 ```bash
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/sms
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/sms
 
 curl -X POST -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"number":"+15551234567","msg":"Hello"}' \
-  http://localhost:8000/sms
+  http://localhost:8082/sms
 ```
 
 A successful send returns `201` with the stored message. If the row is stored
@@ -187,7 +221,7 @@ and a truncated response:
 curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"cmd":"AT+CSQ"}' \
-  http://localhost:8000/at
+  http://localhost:8082/at
 ```
 
 ### Health checks
@@ -195,9 +229,63 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
 `/healthz` is a process liveness check. `/readyz` additionally runs a database
 query and returns `503` when the database is unavailable.
 
+## Database and migrations
+
+The schema is managed by Serverpod migrations under
+`pi7600_server/migrations/`. `--apply-migrations` applies pending migrations at
+startup. To create a migration after changing a model:
+
+```bash
+cd pi7600_server
+serverpod create-migration
+```
+
+### Creating users
+
+`bin/create_user.dart` reads the active Serverpod configuration, so it works
+against the embedded development database while the server is running:
+
+```bash
+cd pi7600_server
+dart run bin/create_user.dart --username alice --admin
+```
+
+In production, set `SERVERPOD_RUN_MODE=production` and
+`SERVERPOD_DATABASE_PASSWORD`, then run the same command from `/opt/pi7600`.
+
 ## Deployment with systemd
 
-1. Create a service user and directories:
+The Pi runs a cross-compiled native executable. Build it on a development
+machine:
+
+```bash
+cd pi7600_server
+dart pub get
+dart build cli --target bin/main.dart \
+  --target-os linux --target-arch arm64 \
+  --output build/pi
+```
+
+The bundle is written to `pi7600_server/build/pi/bundle/`.
+
+1. Install runtime dependencies on the Pi:
+
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y libserialport0 postgresql
+   sudo systemctl enable --now postgresql
+   ```
+
+2. Create the database and role:
+
+   ```bash
+   sudo -u postgres psql <<'SQL'
+   CREATE ROLE pi7600 LOGIN PASSWORD 'change-me';
+   CREATE DATABASE pi7600 OWNER pi7600;
+   SQL
+   ```
+
+3. Create the service user and directories:
 
    ```bash
    sudo useradd --system --home /opt/pi7600 --shell /usr/sbin/nologin pi7600
@@ -206,17 +294,20 @@ query and returns `503` when the database is unavailable.
    sudo chown -R pi7600:pi7600 /opt/pi7600 /var/lib/pi7600
    ```
 
-2. Copy the repository to `/opt/pi7600` and install dependencies as that user:
+4. Copy the bundle, configuration, and migrations:
 
    ```bash
-   cd /opt/pi7600
-   sudo -u pi7600 uv sync --python 3.13 --frozen
+   sudo cp -a build/pi/bundle/. /opt/pi7600/
+   sudo cp -a config migrations /opt/pi7600/
+   sudo chown -R pi7600:pi7600 /opt/pi7600
    ```
 
-3. Generate keys in `/etc/pi7600/keys`, copy
-   `deploy/pi7600.env.example` to `/etc/pi7600/pi7600.env`, and adjust paths.
+5. Generate keys in `/etc/pi7600/keys`, copy
+   `deploy/pi7600.env.example` to `/etc/pi7600/pi7600.env`, and set the database
+   password, `LIBSERIALPORT_PATH=libserialport.so.0`, and any host-specific
+   paths.
 
-4. Install and start the unit:
+6. Install and start the unit:
 
    ```bash
    sudo cp deploy/pi7600.service /etc/systemd/system/
@@ -225,40 +316,44 @@ query and returns `503` when the database is unavailable.
    sudo journalctl -u pi7600 -f
    ```
 
-The unit runs `alembic upgrade head` before starting the API, so existing
-databases are migrated automatically.
+The unit runs `/opt/pi7600/bin/main --apply-migrations`, so existing databases
+are migrated automatically.
 
 ## Development
 
 ```bash
-uv sync --python 3.13
-uv run ruff check .
-uv run ruff format --check .
-uv run pytest -q
+dart pub get
+dart format pi7600_server pi7600_client
+dart analyze pi7600_server
+dart analyze pi7600_client
+cd pi7600_server && dart test
 ```
 
-Tests use fake modem, SMS, GPS, camera, and temporary SQLite fixtures, so they
-do not require hardware. CI runs the same commands on Python 3.13.
+Tests use fake serial transports and in-memory stores, so they do not require a
+modem, camera, or database. CI runs the same commands on the stable Dart SDK.
 
-See `docs/roadmap.md` for SQLCipher, TOTP, and face-recognition follow-up work.
+See `docs/roadmap.md` for SQLCipher/PostgreSQL encryption notes, TOTP, and
+face-recognition follow-up work.
 
 ### Optional face models
 
-The face detector and recognizer models are not committed. Download them into
-`ml/` when you want recognition enabled:
+The face detector and recognizer models are not all committed. Download them
+into `ml/` when you want recognition enabled:
 
 ```bash
-uv run python scripts/download_models.py
+./scripts/download_models.sh
 ```
 
-Embeddings are written to `data/embeddings/`, which is gitignored.
+Embeddings are written to `data/embeddings/`, which is gitignored. The
+recognition backend is currently a pluggable interface with inference disabled
+by default; see `docs/roadmap.md`.
 
 ## Security notes
 
 - Treat `/at` as a privileged administration endpoint; keep admin accounts
   limited.
-- Keep `.keys/`, `.env`, databases, and `data/embeddings/` out of version
-  control.
+- Keep `.keys/`, `.env`, `config/passwords.yaml`, and `data/embeddings/` out of
+  version control.
 - Put the service behind HTTPS (for example a reverse proxy) when exposing it
   beyond a trusted network.
 - The modem and camera device permissions are granted through the `dialout` and

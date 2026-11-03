@@ -1,0 +1,137 @@
+import 'dart:io';
+
+/// Application configuration for the Pi7600 service.
+///
+/// All settings are read from `PI7600_*` environment variables. For local
+/// development a `.env` file in the working directory is also read; real
+/// environment variables always take precedence.
+class AppConfig {
+  AppConfig({
+    required this.atCom,
+    required this.atBaudrate,
+    required this.atTimeout,
+    required this.cameraIndex,
+    required this.cameraDevice,
+    required this.cameraFps,
+    required this.cameraWidth,
+    required this.cameraHeight,
+    required this.faceDetectorModel,
+    required this.faceRecognizerModel,
+    required this.faceEmbeddingsDir,
+    required this.faceMatchThreshold,
+    required this.jwtPrivateKeyPath,
+    required this.jwtPublicKeyPath,
+    required this.jwtIssuer,
+    required this.jwtExpireMinutes,
+    required this.websocketAuthTimeout,
+    required this.logLevel,
+    required this.pingInterface,
+    required this.pingTargets,
+  });
+
+  final String atCom;
+  final int atBaudrate;
+  final int atTimeout;
+  final int cameraIndex;
+
+  /// Optional explicit V4L2 device path, for example `/dev/video0`.
+  final String? cameraDevice;
+  final int cameraFps;
+  final int cameraWidth;
+  final int cameraHeight;
+  final String faceDetectorModel;
+  final String faceRecognizerModel;
+  final String faceEmbeddingsDir;
+  final double faceMatchThreshold;
+  final String jwtPrivateKeyPath;
+  final String jwtPublicKeyPath;
+  final String jwtIssuer;
+  final int jwtExpireMinutes;
+  final double websocketAuthTimeout;
+  final String logLevel;
+  final String pingInterface;
+  final List<String> pingTargets;
+
+  static AppConfig fromEnvironment([Map<String, String>? environment]) {
+    final env = _loadEnvironment(environment ?? Platform.environment);
+
+    String string(String key, String fallback) =>
+        (env['PI7600_$key'] ?? '').trim().isNotEmpty
+        ? env['PI7600_$key']!.trim()
+        : fallback;
+
+    int integer(String key, int fallback) =>
+        int.tryParse(string(key, '$fallback')) ?? fallback;
+
+    double decimal(String key, double fallback) =>
+        double.tryParse(string(key, '$fallback')) ?? fallback;
+
+    final targets = string('PING_TARGETS', '1.1.1.1,www.google.com')
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+
+    return AppConfig(
+      atCom: string('AT_COM', '/dev/ttyUSB2'),
+      atBaudrate: integer('AT_BAUDRATE', 115200),
+      atTimeout: integer('AT_TIMEOUT', 10),
+      cameraIndex: integer('CAMERA_INDEX', -1),
+      cameraDevice: _nullIfEmpty(env['PI7600_CAMERA_DEVICE']),
+      cameraFps: integer('CAMERA_FPS', 15),
+      cameraWidth: integer('CAMERA_WIDTH', 640),
+      cameraHeight: integer('CAMERA_HEIGHT', 480),
+      faceDetectorModel: string(
+        'FACE_DETECTOR_MODEL',
+        './ml/face_detection_yunet_2023mar_int8bq.onnx',
+      ),
+      faceRecognizerModel: string(
+        'FACE_RECOGNIZER_MODEL',
+        './ml/face_recognition_sface_2021dec.onnx',
+      ),
+      faceEmbeddingsDir: string('FACE_EMBEDDINGS_DIR', './data/embeddings'),
+      faceMatchThreshold: decimal('FACE_MATCH_THRESHOLD', 0.363),
+      jwtPrivateKeyPath: string('JWT_PRIVATE_KEY_PATH', '.keys/private.pem'),
+      jwtPublicKeyPath: string('JWT_PUBLIC_KEY_PATH', '.keys/public.pem'),
+      jwtIssuer: string('JWT_ISSUER', 'pi.daazed.dev'),
+      jwtExpireMinutes: integer('JWT_EXPIRE_MINUTES', 30),
+      websocketAuthTimeout: decimal('WEBSOCKET_AUTH_TIMEOUT', 5.0),
+      logLevel: string('LOG_LEVEL', 'INFO'),
+      pingInterface: string('PING_INTERFACE', 'usb0'),
+      pingTargets: targets.isEmpty ? const ['1.1.1.1'] : targets,
+    );
+  }
+
+  static String? _nullIfEmpty(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  static Map<String, String> _loadEnvironment(Map<String, String> environment) {
+    final merged = <String, String>{};
+    try {
+      final file = File('.env');
+      if (file.existsSync()) {
+        for (final rawLine in file.readAsLinesSync()) {
+          final line = rawLine.trim();
+          if (line.isEmpty || line.startsWith('#')) continue;
+          final separator = line.indexOf('=');
+          if (separator <= 0) continue;
+          final key = line.substring(0, separator).trim();
+          var value = line.substring(separator + 1).trim();
+          if (value.length >= 2 &&
+              ((value.startsWith('"') && value.endsWith('"')) ||
+                  (value.startsWith("'") && value.endsWith("'")))) {
+            value = value.substring(1, value.length - 1);
+          }
+          merged[key] = value;
+        }
+      }
+    } on FileSystemException {
+      // A missing or unreadable .env is not an error.
+    }
+    merged.addAll(environment);
+    return merged;
+  }
+}

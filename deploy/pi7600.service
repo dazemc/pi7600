@@ -1,6 +1,6 @@
 [Unit]
 Description=Pi7600 SIM7600 modem API
-After=network-online.target
+After=network-online.target postgresql.service
 Wants=network-online.target
 
 [Service]
@@ -10,9 +10,7 @@ Group=pi7600
 SupplementaryGroups=dialout video
 WorkingDirectory=/opt/pi7600
 EnvironmentFile=/etc/pi7600/pi7600.env
-ExecStartPre=/usr/bin/mkdir -p /opt/pi7600/.log
-ExecStartPre=/usr/local/bin/uv run alembic upgrade head
-ExecStart=/usr/local/bin/uv run uvicorn main:app --host 0.0.0.0 --port 8000 --log-config log.yaml
+ExecStart=/opt/pi7600/bin/main --apply-migrations
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20
@@ -22,7 +20,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/pi7600 /var/lib/pi7600
+ReadWritePaths=/var/lib/pi7600
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

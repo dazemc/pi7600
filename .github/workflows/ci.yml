@@ -6,45 +6,47 @@ on:
   pull_request:
 
 jobs:
-  lint:
+  analyze:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: dart-lang/setup-dart@v1
         with:
-          enable-cache: true
+          sdk: stable
+
+      - name: Install libserialport
+        run: sudo apt-get update && sudo apt-get install -y libserialport0
 
       - name: Install dependencies
-        run: uv sync --python 3.13
+        run: dart pub get
 
-      - name: Lint parent
-        run: uv run ruff check .
+      - name: Check formatting
+        run: >-
+          dart format --output=none --set-exit-if-changed
+          pi7600_server pi7600_client
 
-      - name: Check parent formatting
-        run: uv run ruff format --check .
+      - name: Analyze server
+        run: dart analyze pi7600_server
 
-      - name: Lint submodule
-        run: uv run ruff check pi7600 --config pi7600/ruff.toml
-
-      - name: Check submodule formatting
-        run: uv run ruff format --check pi7600 --config pi7600/ruff.toml
+      - name: Analyze client
+        run: dart analyze pi7600_client
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: dart-lang/setup-dart@v1
         with:
-          enable-cache: true
+          sdk: stable
+
+      - name: Install libserialport
+        run: sudo apt-get update && sudo apt-get install -y libserialport0
 
       - name: Install dependencies
-        run: uv sync --python 3.13
+        run: dart pub get
 
-      - name: Run tests
-        run: uv run pytest -q
+      - name: Run hardware-free tests
+        working-directory: pi7600_server
+        run: dart test
