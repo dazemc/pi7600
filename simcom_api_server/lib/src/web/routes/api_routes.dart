@@ -613,6 +613,26 @@ class InfoRoute extends Route {
   }
 }
 
+/// `GET /modem`
+class ModemInfoRoute extends Route {
+  ModemInfoRoute(this.services) : super(methods: {Method.get});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
+    AppLog.info(
+      '/modem GET: Accessed by ${auth.user!.userName}',
+      name: 'simcom_api',
+    );
+    final info = await services.modemInfoService().read();
+    return jsonResponse(info);
+  }
+}
+
 /// `GET /gps`
 class GpsRoute extends Route {
   GpsRoute(this.services) : super(methods: {Method.get});

@@ -31,6 +31,7 @@ void main() {
           '/users/{id}',
           '/',
           '/info',
+          '/modem',
           '/gps',
           '/camera/snapshot',
           '/audit',
@@ -111,6 +112,7 @@ void main() {
 
       expect(html, contains('data-method="GET"'));
       expect(html, contains('data-method="DELETE"'));
+      expect(html, contains('data-path="/modem"'));
       expect(html, contains('data-path="/gps"'));
       expect(html, contains('data-path="/camera/snapshot"'));
       expect(html, contains('data-path="/sms/delete/{id}"'));

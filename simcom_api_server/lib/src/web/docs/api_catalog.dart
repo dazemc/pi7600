@@ -326,6 +326,22 @@ const apiEndpoints = <ApiEndpoint>[
   ),
   ApiEndpoint(
     method: 'GET',
+    path: '/modem',
+    summary: 'Complete modem settings and status report',
+    description:
+        'Queries a broad SIM7600 catalog covering identity, SIM, network, '
+        'packet data, SMS settings, audio, power, GPS, phone state, and the '
+        'full `AT&V` settings dump. Returns parsed core values, sectioned raw '
+        'responses, and a flat `raw` map. Unsupported commands are included '
+        'with their raw error response.',
+    auth: ApiAuth.user,
+    responses: {
+      '200': 'Parsed values plus raw responses for every queried command',
+      '401': 'Authentication required',
+    },
+  ),
+  ApiEndpoint(
+    method: 'GET',
     path: '/info',
     summary: 'Host information',
     auth: ApiAuth.user,

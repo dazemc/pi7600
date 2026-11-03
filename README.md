@@ -245,6 +245,7 @@ All routes except `/token`, `/token/refresh`, `/healthz`, `/readyz`, `/docs`,
 | `POST` | `/totp/enable` | Enable TOTP with the first code |
 | `POST` | `/totp/disable` | Disable TOTP |
 | `GET` | `/` | Modem/network/GPS status |
+| `GET` | `/modem` | Full modem settings and status report |
 | `GET` | `/info` | Hostname, kernel, date, architecture |
 | `GET` | `/gps` | Current GPS fix and Google Maps link |
 | `GET` | `/camera/snapshot` | Latest camera frame as JPEG |
@@ -267,6 +268,15 @@ All routes except `/token`, `/token/refresh`, `/healthz`, `/readyz`, `/docs`,
 
 The REST payloads, status codes, JWT claims, and WebSocket authentication
 protocol are unchanged.
+
+### Complete modem report
+
+`GET /modem` queries the full modem diagnostics catalog: identity and firmware,
+SIM state, signal and registration, packet-data contexts, SMS/audio settings,
+power, GPS, active calls, and the complete `AT&V` settings dump. The response
+contains parsed core values under `parsed`, raw responses grouped under
+`sections`, and every command response under `raw`. Unsupported commands are
+reported with their error response instead of being omitted.
 
 ### Interactive API explorer
 
@@ -307,6 +317,8 @@ client, lifecycle, and process-memory gauges, plus per-method/path/status
 request counts and duration summaries. It requires a bearer token.
 
 ### Modem status
+
+`GET /` returns the fast, frequently polled status summary:
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/
