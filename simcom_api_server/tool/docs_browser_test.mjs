@@ -245,7 +245,25 @@ async function main() {
     console.log('DOCS_BROWSER_TEST=pass');
   } finally {
     chrome.kill('SIGKILL');
-    rmSync(profile, { recursive: true, force: true });
+    if (chrome.exitCode === null) {
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, 2000);
+        chrome.once('exit', () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+    }
+    try {
+      rmSync(profile, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 100,
+      });
+    } catch (_) {
+      // Chrome may still be flushing its profile; cleanup is best-effort.
+    }
   }
 }
 
