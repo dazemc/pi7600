@@ -1,17 +1,28 @@
-"""This is an example demonstrating sqlalchemy with timebased one time passwords(TOTP)"""
+"""Example demonstrating SQLAlchemy with time-based one-time passwords (TOTP).
 
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
-from sqlalchemy.orm import sessionmaker, Session, declarative_base
+This is a standalone demonstration, not part of the Pi7600 API. Install the
+optional dependencies before running it:
+
+    uv pip install pyotp qrcode pillow
+
+See ``docs/roadmap.md`` for the planned production design.
+"""
+
+from io import BytesIO
+
 import pyotp
 import qrcode
-from io import BytesIO
 from PIL import Image
+from sqlalchemy import Boolean, Column, Integer, String, create_engine
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 
 # 1. Define the DatabaseManager class
 class DatabaseManager:
     """
-    Manages the database connection, session, and provides methods to interact with the database.
+    Manages the database connection and session.
+
+    Provides methods to interact with the database.
     """
 
     def __init__(self, db_url: str):
@@ -49,7 +60,7 @@ class UserModel:
     """
 
     def __init__(self, Base):
-        # Define the User class within the scope of this method to tie it to the provided Base
+        # Define User in this method so it binds to the provided Base.
         class User(Base):
             __tablename__ = "users"
             id = Column(Integer, primary_key=True, index=True)
@@ -144,7 +155,8 @@ class UserService:
             qr_image = self.totp_manager.generate_qr_code(username, totp_secret)
             qr_image.show()  # Opens the QR code image using the default image viewer
             print(
-                f"User '{username}' created successfully. Scan the QR code with Google Authenticator."
+                f"User '{username}' created successfully. "
+                "Scan the QR code with Google Authenticator."
             )
         finally:
             session.close()

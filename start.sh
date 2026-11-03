@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 LOG_DIR=".log"
 LOG_PATH="${LOG_DIR}/uvicorn.log"
@@ -13,5 +14,4 @@ fi
 
 touch "$LOG_PATH"
 
-uvicorn main:app --host 0.0.0.0 --log-config log.yaml
-
+exec uv run uvicorn main:app --host 0.0.0.0 --log-config log.yaml

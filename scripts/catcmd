@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # send one line commands with sys arg
 import serial
 import sys
