@@ -21,7 +21,7 @@ dependencies:
   serverpod: 4.1.0
   serverpod_shared: 4.1.0
   simcom_modem:
-    path: ../pi7600
+    path: ../simcom_modem
   universal_web: ^1.1.1
 
 dev_dependencies:

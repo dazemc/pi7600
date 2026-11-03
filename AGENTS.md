@@ -20,8 +20,8 @@ The repository is split:
   WebSocket routes, models, migrations, and tests.
 - **`pi7600_client/`:** generated Serverpod protocol client package. It is not a
   Flutter app and has no UI.
-- **`pi7600/`:** git submodule containing the standalone Dart modem library
-  (`pi7600-lib`): AT commands, serial transport, settings, SMS/PDU, GPS, and
+- **`simcom_modem/`:** git submodule containing the standalone `simcom_modem`
+  Dart library: AT commands, serial transport, settings, SMS/PDU, GPS, and
   phone control.
 - **`third_party/relic_io/`:** vendored `relic_io` with a patch that allows RFC
   6455 close codes `1008` and `1011`.
@@ -52,12 +52,12 @@ dart run bin/create_user.dart --username alice --admin
 Common commands:
 
 ```bash
-dart format pi7600_server pi7600_client pi7600
+dart format pi7600_server pi7600_client simcom_modem
 dart analyze pi7600_server
 dart analyze pi7600_client
-dart analyze pi7600
+dart analyze simcom_modem
 cd pi7600_server && dart test
-cd pi7600 && dart test
+cd simcom_modem && dart test
 cd pi7600_server && dart run tool/build_docs_client.dart
 cd pi7600_server && serverpod create-migration
 ```
@@ -76,7 +76,7 @@ cd pi7600_server && serverpod create-migration
 | `pi7600_server/lib/src/data/` | Session-bound user/message stores |
 | `pi7600_server/lib/src/models/` | Serverpod model definitions (`*.spy.yaml`) |
 | `pi7600_server/lib/src/generated/` | Generated Serverpod models and repositories |
-| `pi7600/` | Submodule: `simcom_modem` Dart library (`At`, serial transport, settings, SMS/PDU, GPS, phone) |
+| `simcom_modem/` | Submodule: `simcom_modem` Dart library (`At`, serial transport, settings, SMS/PDU, GPS, phone) |
 | `pi7600_server/lib/src/camera/` | V4L2 capture, video broadcaster, recognition interface |
 | `pi7600_server/lib/src/services/` | SMS/status business logic and service status Bloc |
 | `pi7600_server/lib/src/web/` | REST/WebSocket routes, `/readyz` middleware, and the Jaspr `/docs` explorer |
@@ -118,9 +118,9 @@ cd pi7600_server && serverpod create-migration
   first JSON message `{"type": "auth", "token": "<jwt>"}` within
   `PI7600_WEBSOCKET_AUTH_TIMEOUT` and close with `1008` on failure.
 - **Modem library:** the standalone `simcom_modem` Dart package lives in the
-  `pi7600` submodule and is consumed through a path dependency. It owns `At`,
-  `SerialTransport`/`LibSerialPortTransport`, `ModemSettings`, `Sms`/`SmsParser`,
-  `Gps`, and `Phone`.
+  `simcom_modem` submodule and is consumed through a path dependency. It owns
+  `At`, `SerialTransport`/`LibSerialPortTransport`, `ModemSettings`,
+  `Sms`/`SmsParser`, `Gps`, and `Phone`.
 - **Modem I/O:** all commands go through `At.sendAt` / `At.sendRaw` over
   `/dev/ttyUSB2`. `LibSerialPortTransport` uses `SerialPortReader` in an
   isolate and publishes chunks on a broadcast stream; `At` subscribes to that
@@ -192,7 +192,7 @@ cd pi7600_server && serverpod create-migration
 
 ```bash
 cd pi7600_server && dart test
-cd pi7600 && dart test
+cd simcom_modem && dart test
 ```
 
 The service suite is hardware-free and covers JWT/bcrypt auth, SMS
@@ -213,12 +213,12 @@ library.
 
 ## Definition of done
 
-- `dart format --output=none --set-exit-if-changed pi7600_server pi7600_client pi7600`
+- `dart format --output=none --set-exit-if-changed pi7600_server pi7600_client simcom_modem`
   passes.
 - `dart analyze pi7600_server`, `dart analyze pi7600_client`, and
-  `dart analyze pi7600` pass.
-- `cd pi7600_server && dart test` and `cd pi7600 && dart test` pass without
-  hardware.
+  `dart analyze simcom_modem` pass.
+- `cd pi7600_server && dart test` and `cd simcom_modem && dart test` pass
+  without hardware.
 - New behavior is covered by tests in the package that owns it.
 - `README.md` is updated for user-visible changes.
 - Generated files are regenerated from models, not hand-edited.

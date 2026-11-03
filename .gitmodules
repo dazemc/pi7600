@@ -1,4 +1,4 @@
-[submodule "pi7600"]
-	path = pi7600
-	url = https://github.com/dazemc/pi7600-lib.git
+[submodule "simcom_modem"]
+	path = simcom_modem
+	url = https://github.com/dazemc/simcom_modem.git
 	branch = main

@@ -16,7 +16,7 @@ on the Dart VM with PostgreSQL. There is no Python runtime.
 | --- | --- |
 | `pi7600_server/` | Serverpod server, camera/V4L2 capture, REST and WebSocket routes |
 | `pi7600_client/` | Generated Serverpod protocol client package (not a Flutter app) |
-| `pi7600/` | Git submodule: standalone Dart `simcom_modem` library (`pi7600-lib`) |
+| `simcom_modem/` | Git submodule: standalone Dart `simcom_modem` library |
 | `pi7600_server/lib/src/camera/` | V4L2 capture, JPEG broadcaster, recognition interface |
 | `pi7600_server/lib/src/web/` | REST routes and WebSocket upgrade handlers |
 | `pi7600_server/migrations/` | PostgreSQL schema migrations |
@@ -82,18 +82,18 @@ the API rather than aborting the process.
 
 ### Modem library
 
-The modem stack is the `simcom_modem` Dart package in the `pi7600/` submodule
-([`pi7600-lib`](https://github.com/dazemc/pi7600-lib)). The server consumes it
-through a path dependency:
+The modem stack is the `simcom_modem` Dart package in the `simcom_modem/`
+submodule ([`simcom_modem`](https://github.com/dazemc/simcom_modem)). The server
+consumes it through a path dependency:
 
 ```yaml
 dependencies:
   simcom_modem:
-    path: ../pi7600
+    path: ../simcom_modem
 ```
 
 It contains `At`, `LibSerialPortTransport`, `ModemSettings`, `Sms`/`SmsParser`,
-`Gps`, and `Phone`. See `pi7600/README.md` for direct usage and the
+`Gps`, and `Phone`. See `simcom_modem/README.md` for direct usage and the
 hardware-free test helpers. The legacy Python implementation remains on the
 library repository's `master` branch.
 
@@ -386,12 +386,12 @@ are migrated automatically.
 ```bash
 git submodule update --init --recursive
 dart pub get
-dart format pi7600_server pi7600_client pi7600
+dart format pi7600_server pi7600_client simcom_modem
 dart analyze pi7600_server
 dart analyze pi7600_client
-dart analyze pi7600
+dart analyze simcom_modem
 cd pi7600_server && dart test
-cd pi7600 && dart test
+cd simcom_modem && dart test
 ```
 
 Tests use `FakeTransport` from `package:simcom_modem/testing.dart` and in-memory

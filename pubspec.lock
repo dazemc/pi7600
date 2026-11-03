@@ -627,7 +627,7 @@ packages:
   simcom_modem:
     dependency: transitive
     description:
-      path: pi7600
+      path: simcom_modem
       relative: true
     source: path
     version: "0.2.0"
