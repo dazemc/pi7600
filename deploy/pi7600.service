@@ -1,0 +1,32 @@
+[Unit]
+Description=Pi7600 SIM7600 modem API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi7600
+Group=pi7600
+SupplementaryGroups=dialout video
+WorkingDirectory=/opt/pi7600
+EnvironmentFile=/etc/pi7600/pi7600.env
+ExecStartPre=/usr/local/bin/uv run alembic upgrade head
+ExecStart=/usr/local/bin/uv run uvicorn main:app --host 0.0.0.0 --port 8000 --log-config log.yaml
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+
+# Hardening. Keep device access available for the modem and camera.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/pi7600 /var/lib/pi7600
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
