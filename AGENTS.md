@@ -94,9 +94,9 @@ cd pi7600_server && serverpod create-migration
   API/Insights ports are unused by the Pi7600 contract.
 - **Docs:** `GET /docs` is a server-rendered Jaspr page built from
   `lib/src/web/docs/api_catalog.dart`; `GET /openapi.json` is generated from
-  the same catalog. The page's vanilla-JS asset sends requests from the
-  browser, so normal bearer/admin checks still apply. Disable the page and
-  schema with `PI7600_DOCS_ENABLED=false`.
+  the same catalog. The page logs in through `POST /token` and sends requests
+  from the browser, so normal bearer/admin checks still apply. Disable the page
+  and schema with `PI7600_DOCS_ENABLED=false`.
 - **Database:** PostgreSQL through Serverpod's database layer. Schema changes
   are Serverpod migrations, not `create_all`. The development config launches
   an embedded PostgreSQL under `pi7600_server/.serverpod/`.

@@ -74,14 +74,29 @@ a:hover { text-decoration: underline; }
 
 .auth-bar label { font-weight: 600; font-size: 0.85rem; }
 .auth-bar input {
-  flex: 1 1 18rem;
-  min-width: 12rem;
+  flex: 0 1 12rem;
+  min-width: 9rem;
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
   font-size: 0.85rem;
 }
+
+.login-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  flex: 1 1 auto;
+}
+.session {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex: 1 1 auto;
+}
+.error-text { color: var(--delete); }
 
 .muted { color: var(--muted); font-size: 0.82rem; }
 
@@ -253,8 +268,13 @@ const docsJs = r'''
   'use strict';
 
   var TOKEN_KEY = 'pi7600.docs.token';
-  var tokenInput = document.getElementById('token');
-  var tokenStatus = document.getElementById('token-status');
+  var loginForm = document.getElementById('login-form');
+  var usernameInput = document.getElementById('username');
+  var passwordInput = document.getElementById('password');
+  var loginStatus = document.getElementById('login-status');
+  var sessionView = document.getElementById('session');
+  var sessionStatus = document.getElementById('session-status');
+  var logoutButton = document.getElementById('logout');
 
   function savedToken() {
     try {
@@ -264,41 +284,113 @@ const docsJs = r'''
     }
   }
 
-  function setTokenStatus(text) {
-    if (tokenStatus) tokenStatus.textContent = text;
+  function storeToken(token) {
+    try {
+      if (token) window.localStorage.setItem(TOKEN_KEY, token);
+      else window.localStorage.removeItem(TOKEN_KEY);
+    } catch (error) {}
   }
 
-  function refreshTokenUi() {
+  function decodeSubject(token) {
+    try {
+      var part = token.split('.')[1];
+      if (!part) return '';
+      part = part.replace(/-/g, '+').replace(/_/g, '/');
+      var padded = part + '='.repeat((4 - part.length % 4) % 4);
+      var payload = JSON.parse(atob(padded));
+      return typeof payload.sub === 'string' ? payload.sub : '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function setLoginStatus(text, isError) {
+    if (!loginStatus) return;
+    loginStatus.textContent = text || '';
+    loginStatus.className = 'muted' + (isError ? ' error-text' : '');
+  }
+
+  function refreshSessionUi() {
     var token = savedToken();
-    if (tokenInput) tokenInput.value = token;
-    setTokenStatus(token ? 'Token saved in this browser' : 'No token saved');
+    var signedIn = !!token;
+
+    if (loginForm) loginForm.hidden = signedIn;
+    if (sessionView) sessionView.hidden = !signedIn;
+    if (sessionStatus) {
+      var subject = token ? decodeSubject(token) : '';
+      sessionStatus.textContent = signedIn
+        ? (subject ? 'Signed in as ' + subject : 'Signed in')
+        : '';
+    }
+    if (signedIn) setLoginStatus('', false);
   }
 
-  refreshTokenUi();
+  refreshSessionUi();
 
-  var saveButton = document.getElementById('save-token');
-  if (saveButton) {
-    saveButton.addEventListener('click', function () {
-      var value = tokenInput ? tokenInput.value.trim() : '';
-      try {
-        if (value) window.localStorage.setItem(TOKEN_KEY, value);
-        else window.localStorage.removeItem(TOKEN_KEY);
-      } catch (error) {
-        setTokenStatus('Could not save token');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      var username = usernameInput ? usernameInput.value.trim() : '';
+      var password = passwordInput ? passwordInput.value : '';
+      if (!username || !password) {
+        setLoginStatus('Enter a username and password.', true);
         return;
       }
-      refreshTokenUi();
+
+      var submitButton = loginForm.querySelector('button[type="submit"]');
+      var previous = submitButton ? submitButton.textContent : '';
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Signing in...';
+      }
+      setLoginStatus('', false);
+
+      try {
+        var form = new URLSearchParams();
+        form.append('username', username);
+        form.append('password', password);
+
+        var response = await fetch('/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: form.toString()
+        });
+        var text = await response.text();
+        var data = null;
+        try {
+          data = JSON.parse(text);
+        } catch (error) {}
+
+        if (!response.ok || !data || !data.access_token) {
+          var detail = data && data.detail
+            ? data.detail
+            : 'Login failed (HTTP ' + response.status + ')';
+          setLoginStatus(detail, true);
+          return;
+        }
+
+        storeToken(data.access_token);
+        if (passwordInput) passwordInput.value = '';
+        refreshSessionUi();
+      } catch (error) {
+        setLoginStatus('Network error: ' + error.message, true);
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = previous;
+        }
+      }
     });
   }
 
-  var clearButton = document.getElementById('clear-token');
-  if (clearButton) {
-    clearButton.addEventListener('click', function () {
-      try {
-        window.localStorage.removeItem(TOKEN_KEY);
-      } catch (error) {}
-      if (tokenInput) tokenInput.value = '';
-      refreshTokenUi();
+  if (logoutButton) {
+    logoutButton.addEventListener('click', function () {
+      storeToken('');
+      if (passwordInput) passwordInput.value = '';
+      refreshSessionUi();
+      setLoginStatus('Signed out.', false);
+      if (usernameInput) usernameInput.focus();
     });
   }
 
@@ -374,6 +466,11 @@ const docsJs = r'''
         body: body
       });
       var text = await response.text();
+      if (response.status === 401 && card.dataset.auth !== 'none') {
+        storeToken('');
+        refreshSessionUi();
+        setLoginStatus('Session expired. Sign in again.', true);
+      }
       var pretty = text;
       try {
         pretty = JSON.stringify(JSON.parse(text), null, 2);
@@ -471,32 +568,52 @@ class _DocsPage extends StatelessComponent {
 
   Component _authBar() {
     return section(classes: 'auth-bar', [
-      label([Component.text('Bearer token')], htmlFor: 'token'),
-      input(
-        type: InputType.password,
-        id: 'token',
-        attributes: const {
-          'placeholder': 'Paste a JWT from POST /token',
-          'autocomplete': 'off',
-          'spellcheck': 'false',
-        },
+      form(
+        [
+          label([Component.text('Username')], htmlFor: 'username'),
+          input(
+            type: InputType.text,
+            id: 'username',
+            attributes: const {
+              'name': 'username',
+              'autocomplete': 'username',
+              'required': '',
+              'spellcheck': 'false',
+            },
+          ),
+          label([Component.text('Password')], htmlFor: 'password'),
+          input(
+            type: InputType.password,
+            id: 'password',
+            attributes: const {
+              'name': 'password',
+              'autocomplete': 'current-password',
+              'required': '',
+            },
+          ),
+          button(
+            [Component.text('Login')],
+            type: ButtonType.submit,
+            classes: 'primary',
+          ),
+        ],
+        id: 'login-form',
+        classes: 'login-form',
       ),
-      button(
-        [Component.text('Save')],
-        id: 'save-token',
-        type: ButtonType.button,
-        classes: 'primary',
+      div(
+        [
+          span([], id: 'session-status', classes: 'muted'),
+          button(
+            [Component.text('Logout')],
+            id: 'logout',
+            type: ButtonType.button,
+          ),
+        ],
+        id: 'session',
+        classes: 'session',
+        attributes: const {'hidden': ''},
       ),
-      button(
-        [Component.text('Clear')],
-        id: 'clear-token',
-        type: ButtonType.button,
-      ),
-      span(
-        [Component.text('No token saved')],
-        id: 'token-status',
-        classes: 'muted',
-      ),
+      span([], id: 'login-status', classes: 'muted'),
     ]);
   }
 
@@ -504,19 +621,22 @@ class _DocsPage extends StatelessComponent {
     return section(classes: 'intro', [
       h2([Component.text('Try the API')]),
       p([
-        Component.text('Get a token with '),
+        Component.text(
+          'Sign in above with your Pi7600 username and password. The page '
+          'exchanges them for a JWT with ',
+        ),
         code([Component.text('POST /token')]),
         Component.text(
-          ', save it above, then expand an endpoint and press Execute. '
-          'Requests are sent from this browser to the same origin, so the '
-          'existing CORS and authentication rules apply.',
+          ' and keeps only the token in this browser. Then expand an endpoint '
+          'and press Execute. Requests are sent from this browser to the same '
+          'origin, so the existing CORS and authentication rules apply.',
         ),
       ]),
       p([
         Component.text(
           'This page is a convenience client. It does not bypass any checks: '
           'admin-only endpoints still return 403 without an administrator '
-          'token.',
+          'account.',
         ),
       ]),
     ]);

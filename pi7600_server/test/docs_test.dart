@@ -80,16 +80,26 @@ void main() {
       expect(html, contains('data-form="username"'));
       expect(html, contains('Execute'));
 
+      expect(html, contains('id="login-form"'));
+      expect(html, contains('id="username"'));
+      expect(html, contains('id="password"'));
+      expect(html, contains('id="logout"'));
+      expect(html, contains('id="session"'));
+
       expect(html, contains('WebSocket endpoints'));
       expect(html, contains('/wss/video'));
     });
 
-    test('serves JavaScript with try-it-out behaviour', () {
+    test('serves JavaScript with login and try-it-out behaviour', () {
+      expect(docsJs, contains("fetch('/token'"));
+      expect(docsJs, contains('access_token'));
+      expect(docsJs, contains('URLSearchParams'));
+      expect(docsJs, contains('Signed in as'));
       expect(docsJs, contains("querySelectorAll('[data-param]')"));
       expect(docsJs, contains("querySelector('textarea[data-json]')"));
       expect(docsJs, contains("querySelectorAll('[data-form]')"));
       expect(docsJs, contains("headers['Authorization']"));
-      expect(docsJs, contains("method: method"));
+      expect(docsJs, contains('method: method'));
     });
 
     test('serves method colour styles', () {

@@ -179,11 +179,12 @@ protocol match the previous Python service.
 ### Interactive API explorer
 
 `GET /docs` serves a server-rendered Jaspr page that lists every HTTP and
-WebSocket endpoint. Expand an endpoint to edit path parameters, JSON bodies, or
-form fields, then press **Execute** to send the request from the browser. Paste
-a token from `POST /token` into the token bar; it is kept in `localStorage` for
-the current browser only. The page never bypasses the normal bearer/admin
-checks.
+WebSocket endpoint. Sign in with a Pi7600 username and password: the page
+exchanges them for a JWT with `POST /token` and keeps only the token in
+`localStorage` for the current browser. Expand an endpoint to edit path
+parameters, JSON bodies, or form fields, then press **Execute** to send the
+request. **Logout** clears the stored token. The page never bypasses the normal
+bearer/admin checks.
 
 `GET /openapi.json` returns the same endpoint catalog as an OpenAPI 3.1
 document, so the page and schema cannot drift apart. Both routes, and the

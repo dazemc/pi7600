@@ -56,5 +56,5 @@ pure Dart. Recognition is kept behind the `RecognitionBackend` interface:
   `{"type": "auth", "token": "<jwt>"}` and close with `1008` on failure.
 - `/healthz` and `/readyz` are unauthenticated.
 - `/docs` is a server-rendered Jaspr API explorer driven by the same endpoint
-  catalog as `/openapi.json`; both are public and can be disabled with
-  `PI7600_DOCS_ENABLED=false`.
+  catalog as `/openapi.json`; it logs in through `POST /token`, and both routes
+  are public and can be disabled with `PI7600_DOCS_ENABLED=false`.
