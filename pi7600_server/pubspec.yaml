@@ -17,11 +17,11 @@ dependencies:
   image: ^4.12.0
   jaspr: ^0.23.5
   path: ^1.9.1
-  pi7600:
-    path: ../pi7600
   postgres: ^3.5.20
   serverpod: 4.1.0
   serverpod_shared: 4.1.0
+  simcom_modem:
+    path: ../pi7600
   universal_web: ^1.1.1
 
 dev_dependencies:

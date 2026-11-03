@@ -76,7 +76,7 @@ cd pi7600_server && serverpod create-migration
 | `pi7600_server/lib/src/data/` | Session-bound user/message stores |
 | `pi7600_server/lib/src/models/` | Serverpod model definitions (`*.spy.yaml`) |
 | `pi7600_server/lib/src/generated/` | Generated Serverpod models and repositories |
-| `pi7600/` | Submodule: Dart modem library (`At`, serial transport, settings, SMS/PDU, GPS, phone) |
+| `pi7600/` | Submodule: `simcom_modem` Dart library (`At`, serial transport, settings, SMS/PDU, GPS, phone) |
 | `pi7600_server/lib/src/camera/` | V4L2 capture, video broadcaster, recognition interface |
 | `pi7600_server/lib/src/services/` | SMS/status business logic and service status Bloc |
 | `pi7600_server/lib/src/web/` | REST/WebSocket routes, `/readyz` middleware, and the Jaspr `/docs` explorer |
@@ -117,8 +117,8 @@ cd pi7600_server && serverpod create-migration
   from PostgreSQL. `/at` additionally requires `is_admin`. WebSockets accept a
   first JSON message `{"type": "auth", "token": "<jwt>"}` within
   `PI7600_WEBSOCKET_AUTH_TIMEOUT` and close with `1008` on failure.
-- **Modem library:** the standalone `pi7600` Dart package lives in the `pi7600`
-  submodule and is consumed through a path dependency. It owns `At`,
+- **Modem library:** the standalone `simcom_modem` Dart package lives in the
+  `pi7600` submodule and is consumed through a path dependency. It owns `At`,
   `SerialTransport`/`LibSerialPortTransport`, `ModemSettings`, `Sms`/`SmsParser`,
   `Gps`, and `Phone`.
 - **Modem I/O:** all commands go through `At.sendAt` / `At.sendRaw` over
@@ -175,7 +175,7 @@ cd pi7600_server && serverpod create-migration
 8. **Migrations matter.** `create_all` is not used. Add a Serverpod migration
    for schema changes and apply it with `--apply-migrations`.
 9. **Hardware-dependent code.** A full run requires `/dev/ttyUSB2` and a V4L2
-   camera. Tests must use `package:pi7600/testing.dart` (`FakeTransport`) and
+   camera. Tests must use `package:simcom_modem/testing.dart` (`FakeTransport`) and
    fake stores; do not assume hardware is present in CI.
 10. **`/at` is privileged.** Keep it admin-only and audited; do not log
     credentials or secrets.
@@ -202,7 +202,7 @@ build failure fails the suite.
 
 The modem library suite is also hardware-free and covers AT timeout/error
 handling, stream subscription/reopen behavior, and PDU parsing. It uses
-`package:pi7600/testing.dart` instead of a real serial port. Add tests for new
+`package:simcom_modem/testing.dart` instead of a real serial port. Add tests for new
 behavior in the package that owns it and keep everything runnable without a
 modem, camera, or database.
 

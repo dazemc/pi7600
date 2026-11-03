@@ -60,5 +60,6 @@ pure Dart. Recognition is kept behind the `RecognitionBackend` interface:
   compiled by `tool/build_docs_client.dart`. It logs in through `POST /token`,
   and both routes are public and can be disabled with
   `PI7600_DOCS_ENABLED=false`.
-- The modem library is the standalone Dart package in the `pi7600` submodule
-  (`pi7600-lib`); the service consumes it through a path dependency.
+- The modem library is the standalone `simcom_modem` Dart package in the
+  `pi7600` submodule (`pi7600-lib`); the service consumes it through a path
+  dependency.

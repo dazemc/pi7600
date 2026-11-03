@@ -1,6 +1,6 @@
 import 'dart:developer' as developer;
 
-import 'package:pi7600/pi7600.dart';
+import 'package:simcom_modem/simcom_modem.dart';
 import 'package:pi7600_server/src/data/message_store.dart';
 import 'package:pi7600_server/src/generated/message.dart';
 

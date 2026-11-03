@@ -16,7 +16,7 @@ on the Dart VM with PostgreSQL. There is no Python runtime.
 | --- | --- |
 | `pi7600_server/` | Serverpod server, camera/V4L2 capture, REST and WebSocket routes |
 | `pi7600_client/` | Generated Serverpod protocol client package (not a Flutter app) |
-| `pi7600/` | Git submodule: standalone Dart modem library (`pi7600-lib`) |
+| `pi7600/` | Git submodule: standalone Dart `simcom_modem` library (`pi7600-lib`) |
 | `pi7600_server/lib/src/camera/` | V4L2 capture, JPEG broadcaster, recognition interface |
 | `pi7600_server/lib/src/web/` | REST routes and WebSocket upgrade handlers |
 | `pi7600_server/migrations/` | PostgreSQL schema migrations |
@@ -82,13 +82,13 @@ the API rather than aborting the process.
 
 ### Modem library
 
-The modem stack is the standalone Dart package in the `pi7600/` submodule
+The modem stack is the `simcom_modem` Dart package in the `pi7600/` submodule
 ([`pi7600-lib`](https://github.com/dazemc/pi7600-lib)). The server consumes it
 through a path dependency:
 
 ```yaml
 dependencies:
-  pi7600:
+  simcom_modem:
     path: ../pi7600
 ```
 
@@ -394,7 +394,7 @@ cd pi7600_server && dart test
 cd pi7600 && dart test
 ```
 
-Tests use `FakeTransport` from `package:pi7600/testing.dart` and in-memory
+Tests use `FakeTransport` from `package:simcom_modem/testing.dart` and in-memory
 stores, so they do not require a modem, camera, or database. CI checks out
 submodules and runs the same commands on the stable Dart SDK.
 
