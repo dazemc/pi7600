@@ -1,480 +1,525 @@
-# TODO: ! sqlcipher, totp !
-"""FastAPI for SIMCOM 7600G-H"""
+"""FastAPI for SIMCOM 7600G-H."""
 
-from contextlib import asynccontextmanager
-import logging
-import os
 import asyncio
-import threading
+import logging
 import subprocess
-import cv2
+from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import List
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from typing import Annotated
+
 from fastapi import (
-    FastAPI,
-    status,
     Depends,
+    FastAPI,
     HTTPException,
+    Request,
     WebSocket,
     WebSocketDisconnect,
+    status,
 )
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from fastapi.responses import StreamingResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
-from pi7600 import GPS, SMS, TIMEOUT, Settings
-from Models import *
-from Utils import *
-from Camera import VideoCaptureThread, VideoStreamManager, FacialRecognition
-from Websockets import ConnectionManager
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# Integrate into uvicorn logger
+from Auth import (
+    authenticate_websocket,
+    get_current_admin,
+    get_current_user,
+    get_user_by_username,
+)
+from Camera import FacialRecognition, VideoCaptureThread, VideoStreamManager
+from Config import get_settings
+from Database import close_db, get_db, run_migrations
+from Models import (
+    AtRequest,
+    DeleteResponse,
+    HealthResponse,
+    InfoResponse,
+    MessageCreate,
+    Messages,
+    SendMessageRequest,
+    StatusResponse,
+    TokenResponse,
+    UserDB,
+)
+from pi7600 import GPS, SMS, TIMEOUT
+from pi7600 import Settings as ModemSettings
+from Utils import create_jwt, verify_password
+
 logger = logging.getLogger("uvicorn.pi7600")
 
 
-# Camera
+class SMSDeliveryError(Exception):
+    """Raised when the modem reports that an SMS could not be sent."""
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global video_stream_manager, video_capture
-    global sms, gps, settings
-
-    logger.info("Initializing sim modules")
-
-    # Initialize modem modules during application startup.
-    settings = Settings()
-    sms = SMS()
-    gps = GPS()
-
-    logger.info("Sim modules ready")
-
-    video_stream_manager = VideoStreamManager()
-    video_capture = VideoCaptureThread()
-
-    try:
-        yield
-    finally:
-        video_capture.release()
-        cv2.destroyAllWindows()
-
-lock = threading.Lock()
-
-app = FastAPI(lifespan=lifespan)
-cwd = os.getcwd()
-websocket_manager = ConnectionManager()
-
-# Database
-DATABASE_URL = "sqlite:///./cmgl.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+    def __init__(self, message: MessageCreate) -> None:
+        self.message = message
+        super().__init__("SMS delivery failed")
 
 
-def get_db():
-    logger.info("Starting database session")
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def _at_ok(response: str | None) -> bool:
+    return bool(response) and "ERROR" not in response
 
 
-def get_user(db: Session, username: str):
-    user: UserDB = db.query(UserDB).filter(UserDB.user_name == username).first()
-    return user if user else None
+def _response_line(response: str, index: int) -> str:
+    lines = response.splitlines()
+    return lines[index] if len(lines) > index else "ERROR"
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    payload = verify_jwt(token)
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return payload
-
-
-async def create_message(db: Session, message: MessageCreate):
-    existing_message = (
-        db.query(MessageCreate)
-        .filter(
-            MessageCreate.message_contents == message.message_contents,
-            MessageCreate.message_date == message.message_date,
-            MessageCreate.message_time == message.message_time,
-        )
-        .first()
+async def run_async_subprocess(cmd: list[str], timeout_seconds: float = 5.0) -> str:
+    """Run a subprocess without blocking the event loop."""
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
-    if existing_message:
-        if existing_message.in_sim_memory != message.in_sim_memory:
-            logger.info("Message exists, updating...")
-            existing_message.in_sim_memory = message.in_sim_memory
-            db.commit()
-            db.refresh(existing_message)
-        logger.info("Message exists, skipping...")
-        return
-    if message.message_type == "SENT":
-        logger.info("Checking if message needs to be sent...")
-        if not message.is_sent:
-            logger.info(
-                f"Sending message\n{message.message_destination_address}\n{message.message_contents}"
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(), timeout=timeout_seconds
+        )
+    except TimeoutError:
+        process.kill()
+        await process.wait()
+        return "ERROR: subprocess timed out"
+    return stdout.decode(errors="ignore") if stdout else stderr.decode(errors="ignore")
+
+
+def get_modem(request: Request) -> ModemSettings:
+    return request.app.state.modem
+
+
+def get_sms(request: Request) -> SMS:
+    return request.app.state.sms
+
+
+def get_gps(request: Request) -> GPS:
+    return request.app.state.gps
+
+
+def get_video_manager(request: Request) -> VideoStreamManager:
+    return request.app.state.video_manager
+
+
+def get_video_capture(request: Request) -> VideoCaptureThread | None:
+    return request.app.state.video_capture
+
+
+def get_face_recognition(request: Request) -> FacialRecognition:
+    return request.app.state.face_recognition
+
+
+async def create_message(
+    db: AsyncSession,
+    message: Messages,
+    sms: SMS,
+) -> MessageCreate:
+    """Persist a message, sending it first when it is an outgoing SMS."""
+    existing = (
+        await db.execute(
+            select(MessageCreate).where(
+                MessageCreate.message_type == message.message_type,
+                MessageCreate.message_contents == message.message_contents,
+                MessageCreate.message_date == message.message_date,
+                MessageCreate.message_time == message.message_time,
             )
-            try:
-                is_success = await sms.send_message(
-                    message.message_destination_address, message.message_contents
-                )
-                if is_success:
-                    message.is_sent = True
-            except Exception as e:
-                logger.error(f"create_message: {e}")
-                return
-    logger.info("Commiting message to database")
-    db_message = MessageCreate(**message.dict())
-    db.add(db_message)
-    db.commit()
-    db.refresh(db_message)
-
-
-async def messages_from_db(db: Session):
-    messages_db = db.query(MessageCreate).all()
-    messages_pydantic = [Messages.model_validate(msg) for msg in messages_db]
-    return messages_pydantic
-
-
-async def messages_to_delete(db: Session):
-    messages_delete = (
-        db.query(MessageCreate).filter(MessageCreate.in_sim_memory == True).all()
-    )
-    for msg in messages_delete:
-        logger.info(f"Deleting message at idx: {msg.message_index}")
-        await sms.delete_message(msg_idx=int(msg.message_index))
-        msg.in_sim_memory = False
-        db.commit()
-        db.refresh(msg)
-
-
-async def delete_db_message(db: Session, msg_idx: int):
-    message_db = db.query(MessageCreate).filter(MessageCreate.id == msg_idx).first()
-    if message_db:
-        if message_db.in_sim_memory:
-            await sms.delete_message(msg_idx=msg_idx)
-        db.delete(message_db)
-        db.commit()
-        logger.info(f"Message id: {msg_idx} deleted")
-    return
-
-
-Base.metadata.create_all(bind=engine)
-
-
-# API
-
-
-# async def generate_frames_multipart():
-#     while True:
-#         with lock:
-#             ret, frame = webcam.read()
-#             if not ret:
-#                 break
-#             encoded_frame = webcam.encode_frame(frame)
-#             yield (b'--frame\r\n'
-#                 b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame + b'\r\n')
-
-
-@app.post("/token", status_code=status.HTTP_200_OK)
-async def generate_token(
-    db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()
-):
-    # user_data = {"sub": "example_user"}
-    try:
-        user = get_user(db, form_data.username)
-        if user:
-            user_data = {"sub": form_data.username}
-            if verify_password(form_data.password, user.user_password):
-                token = create_jwt(data=user_data)
-                return {"access_token": token, "token_type": "bearer"}
-    except Exception as e:
-        logger.error(f"/token ERROR: {e}")
-        return status.HTTP_401_UNAUTHORIZED
-
-
-# TODO:
-# @app.post("/user", status_code=status.HTTP_201_CREATED)
-# async def create_user(request: User, db: Session = Depends(get_db)):
-#    new_user: dict = request.model_dump()
-#    new_user["user_password"] = hash_password(new_user["user_password"])
-#    new_user = UserDB(**new_user)
-#    db.add(new_user)
-#    db.commit()
-#    return {"response": "User created successfully", "username": new_user.user_name}
-
-
-@app.get("/", response_model=StatusResponse, status_code=status.HTTP_200_OK)
-async def root(user=Depends(get_current_user)) -> StatusResponse:
-    """Parses out modem and network information
-
-    Returns:
-        dict: Various network and device checks
-    """
-    logger.info(f"/ GET: Accessed by {user['sub']}")
-    logger.info("Compiling modem status information")
-    # Ensure to await all asynchronous calls
-    at_check = await settings.send_at("AT", "OK", TIMEOUT)
-    at = at_check.splitlines()[2] if at_check else "ERROR"
-
-    cnum_check = await settings.send_at("AT+CNUM", "+CNUM:", TIMEOUT)
-    cnum = (
-        cnum_check.splitlines()[2].split(",")[1].replace('"', "")
-        if cnum_check
-        else "ERROR"
-    )
-
-    csq_check = await settings.send_at("AT+CSQ", "OK", TIMEOUT)
-    csq = csq_check.splitlines()[2] if csq_check else "ERROR"
-
-    cpin_check = await settings.send_at("AT+CPIN?", "READY", TIMEOUT)
-    cpin = cpin_check.splitlines()[2] if cpin_check else "ERROR"
-
-    creg_check = await settings.send_at("AT+CREG?", "OK", TIMEOUT)
-    creg = creg_check.splitlines()[2] if creg_check else "ERROR"
-
-    cops_check = await settings.send_at("AT+COPS?", "OK", TIMEOUT)
-    cops = cops_check.splitlines()[2] if cops_check else "ERROR"
-
-    # Await the GPS position asynchronously
-    gps_check = await gps.get_gps_position()  # Await the GPS position
-    gpsinfo = gps_check if gps_check else "ERROR"
-
-    # Asynchronously run subprocess commands using asyncio.create_subprocess_exec
-    data_check = await run_async_subprocess(
-        ["ping", "-I", "usb0", "-c", "1", "1.1.1.1"]
-    )
-    data = "ERROR" if "Unreachable" in data_check else "OK"
-
-    dns_check = await run_async_subprocess(
-        ["ping", "-I", "usb0", "-c", "1", "www.google.com"]
-    )
-    dns = "ERROR" if "Unreachable" in dns_check else "OK"
-
-    apn_check = await settings.send_at("AT+CGDCONT?", "OK", TIMEOUT)
-    apn = (
-        ",".join(apn_check.splitlines()[2].split(",")[2:3])[1:-1]
-        if apn_check
-        else "ERROR"
-    )
-    timezone = settings.timezone
-
-    return StatusResponse(
-        at=at,
-        cnum=cnum,
-        csq=csq,
-        cpin=cpin,
-        creg=creg,
-        cops=cops,
-        gpsinfo=gpsinfo,
-        data=data,
-        dns=dns,
-        apn=apn,
-        timezone=timezone,
-    )
-
-
-async def run_async_subprocess(cmd: List[str]) -> str:
-    """Runs a subprocess command asynchronously and captures its output."""
-    proc = await asyncio.create_subprocess_exec(
-        *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-    stdout, stderr = await proc.communicate()
-    return stdout.decode() if stdout else stderr.decode()
-
-
-@app.get("/info", response_model=InfoResponse, status_code=status.HTTP_200_OK)
-async def info(user: dict = Depends(get_current_user)) -> InfoResponse:
-    """Host device information
-
-    Returns:
-        dict: hostname, uname, date, arch
-    """
-    logger.info(f"/info GET: Accesed by {user['sub']}")
-    logger.info("Compiling host device information")
-
-    hostname = await run_async_subprocess(["hostname"])
-    uname = await run_async_subprocess(["uname", "-r"])
-    date = await run_async_subprocess(["date"])
-    arch = await run_async_subprocess(["arch"])
-
-    return InfoResponse(
-        hostname=hostname.strip(),
-        uname=uname.strip(),
-        date=date.strip(),
-        arch=arch.strip(),
-    )
-
-
-# TODO: Update queries to match PDU
-@app.get("/sms", response_model=List[Messages], status_code=status.HTTP_200_OK)
-async def sms_root(
-    db: Session = Depends(get_db),
-    user: dict = Depends(get_current_user),
-) -> List[Messages]:
-    """Read messages from modem
-    Returns:
-        List<dict>: [{Messages}, {Messages}]
-    """
-    (logger.info(f"/sms GET: Accessed by {user['sub']}"),)
-    logger.info("Reading all messages")
-
-    # Await the receive_message function to ensure async execution
-    messages = await sms.receive_messages()
-    if messages is None:
-        messages = []
-    for msg in messages:
-        try:
-            # this should set true for any message read from the sim
-            # since the storage is limited, this can be used to remove later
-            await create_message(db=db, message=msg)
-        except ValidationError as e:
-            logger.error(f"Validation error: {e} for raw message: {msg}")
-            continue
-    return await messages_from_db(db=db)
-
-
-@app.delete("/sms/delete/{msg_idx}", status_code=status.HTTP_202_ACCEPTED)
-async def delete_msg(
-    msg_idx: int, db: Session = Depends(get_db), user: dict = Depends(get_current_user)
-) -> dict:
-    """Delete sms message by MODEM index
-
-    Args:
-        msg_idx (int): MODEM message index
-
-    Returns:
-        dict: {"response": "Success"} | False
-    """
-    logger.info(f"/sms/delete DELETE: Accessed by {user['sub']}")
-    logger.info(f"DELETED_SMS: {msg_idx}")
-    # resp = await sms.delete_message(msg_idx)  # Await the async delete_message call
-    await delete_db_message(db=db, msg_idx=msg_idx)
-    return {"response": "Ok"}
-
-
-@app.delete("/sms/cleanup/", status_code=status.HTTP_202_ACCEPTED)
-async def clear_sim_memory(
-    db: Session = Depends(get_db), user: dict = Depends(get_current_user)
-) -> dict:
-    logger.info(f"/sms/cleanup DELETE: Accessed by {user['sub']}")
-    logger.info("Clearing sim sms memory")
-    await messages_to_delete(db=db)
-    return {"response": "Ok"}
-
-
-@app.post("/sms", status_code=status.HTTP_201_CREATED)
-async def send_msg(
-    request: SendMessageRequest,
-    db: Session = Depends(get_db),
-    user: dict = Depends(get_current_user),
-) -> Messages:
-    """POST SMS Message to destination number
-
-    Args:
-        msg (str): sms text body
-        number (str): sms destination number
-
-    Returns:
-        MessageCreate
-    """
-    logger.info(f"/sms POST: Accessed by {user['sub']}")
-    # Await the async send_message call
-    current_time = datetime.now()
-    msg = Messages(
-        message_index=None,
-        message_type="SENT",
-        message_originating_address=None,
-        message_destination_address=request.number,
-        message_date=current_time.strftime("%Y-%m-%d"),
-        message_time=current_time.strftime("%H:%M:%S"),
-        message_contents=request.msg,
-        in_sim_memory=False,
-        is_sent=False,
-        is_partial=False,  # TODO: break up large messages
-    )
-    await create_message(
-        db=db, message=msg
-    )  # TODO: return db message in create_message instead to avoid this next bit
-    db_msg = (
-        db.query(MessageCreate)
-        .filter(
-            MessageCreate.message_contents == msg.message_contents,
-            MessageCreate.message_date == msg.message_date,
-            MessageCreate.message_time == msg.message_time,
         )
-        .first()
+    ).scalar_one_or_none()
+
+    if existing is not None:
+        if existing.in_sim_memory != message.in_sim_memory:
+            existing.in_sim_memory = message.in_sim_memory
+            await db.commit()
+            await db.refresh(existing)
+        return existing
+
+    data = message.model_dump()
+    data.pop("id", None)
+    db_message = MessageCreate(**data)
+    db.add(db_message)
+    await db.commit()
+    await db.refresh(db_message)
+
+    if message.message_type == "SENT" and not message.is_sent:
+        try:
+            sent = await sms.send_message(
+                message.message_destination_address,
+                message.message_contents,
+            )
+        except Exception as exc:
+            logger.error("SMS send failed: %s", exc)
+            sent = False
+        if not sent:
+            raise SMSDeliveryError(db_message)
+        db_message.is_sent = True
+        await db.commit()
+        await db.refresh(db_message)
+
+    return db_message
+
+
+async def messages_from_db(db: AsyncSession) -> list[Messages]:
+    result = await db.execute(select(MessageCreate).order_by(MessageCreate.id))
+    return [Messages.model_validate(message) for message in result.scalars().all()]
+
+
+async def messages_to_delete(db: AsyncSession, sms: SMS) -> None:
+    result = await db.execute(
+        select(MessageCreate).where(MessageCreate.in_sim_memory.is_(True))
     )
-    return db_msg
-
-
-@app.post("/at", status_code=status.HTTP_202_ACCEPTED)
-async def catcmd(request: AtRequest, user: dict = Depends(get_current_user)) -> str:
-    r"""Sends raw AT commands to modem and returns raw stdout, will not work with commands that require input, return response
-
-    Args:
-        cmd (str, optional): Defaults to "AT".
-
-    Returns:
-        str: raw stdout response if "OK" or "ERROR" if "\r\n" is returned
-    """
-    logger.info(f"/at POST: Accessed by {user['sub']}")
-    logger.info(f"Sending AT cmd: {request.cmd}")
-    # Run command asynchronously if possible, otherwise handle it synchronously
-    resp = subprocess.run(
-        ["./scripts/catcmd", request.cmd], capture_output=True, text=True, check=False
-    ).stdout
-    return resp
-
-
-@app.websocket("/wss")
-async def websocket_end(
-    websocket: WebSocket,
-    # user: dict = Depends(get_current_user)
-):
-    #    logger.info(f"/ws WEBSOCKET: Accessed by {user['sub']}")
-    await websocket.accept()
-    logger.info("Websocket created")
-    try:
-        while True:
-            logger.info("Waiting for data..")
-            data = await websocket.receive_text()
-            logger.info(f"/wss WEBSOCKET: {data}")
-            await websocket.send_text(f"Message received: {data}")
-    except WebSocketDisconnect:
-        logger.info("WebSocket diconnected")
-
-
-@app.websocket("/wss/video")
-async def video_stream(websocket: WebSocket):
-    await video_stream_manager.connect(websocket)
-    face = FacialRecognition()
-    try:
-        while True:
-            # print(f'reading frame: {self.frame}')
-            ret, frame = video_capture.cap.read()
-            if not ret:
-                break
-            # frame = await video_capture.encode_frame_base64(frame)
-            ouput = face.recognize_face(frame)
-            _, buffer = cv2.imencode(".jpg", frame)
-            if not _:
+    for message in result.scalars().all():
+        if message.message_index is not None:
+            logger.info("Deleting message at modem index %s", message.message_index)
+            response = await sms.delete_message(int(message.message_index))
+            if response.get("response") != "Success":
+                logger.error(
+                    "Unable to delete modem message %s: %s",
+                    message.message_index,
+                    response,
+                )
                 continue
-            frame_bytes = buffer.tobytes()
-            await video_stream_manager.send_frame(frame_bytes)
-    except WebSocketDisconnect:  # TODO: Closing one stream, closes all...
-        video_stream_manager.disconnect(websocket)
-    except Exception as e:
-        print(f"ERROR: {e}")
+        message.in_sim_memory = False
+        await db.commit()
+        await db.refresh(message)
 
 
-# @app.get("/video")
-# async def stream():
-#     return StreamingResponse(generate_frames_multipart(), media_type="multipart/x-mixed-replace; boundary=frame")
-#
+async def delete_db_message(
+    db: AsyncSession,
+    message_id: int,
+    sms: SMS,
+) -> bool:
+    message = await db.get(MessageCreate, message_id)
+    if message is None:
+        return False
+    if message.in_sim_memory and message.message_index is not None:
+        response = await sms.delete_message(int(message.message_index))
+        if response.get("response") != "Success":
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Modem could not delete message {message.message_index}",
+            )
+    await db.delete(message)
+    await db.commit()
+    logger.info("Message id %s deleted", message_id)
+    return True
+
+
+def create_app() -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        settings = get_settings()
+        logger.info("Initializing services")
+
+        modem = ModemSettings(com=settings.at_com, baudrate=settings.at_baudrate)
+        await modem.initialize()
+        app.state.modem = modem
+        app.state.sms = SMS()
+        app.state.gps = GPS()
+        app.state.video_manager = VideoStreamManager()
+
+        app.state.video_capture = None
+        try:
+            capture = VideoCaptureThread(settings.camera_index, settings.camera_fps)
+            capture.start()
+            app.state.video_capture = capture
+            await app.state.video_manager.start(capture, settings.camera_fps)
+        except Exception as exc:
+            logger.warning("Camera unavailable: %s", exc)
+
+        app.state.face_recognition = FacialRecognition(
+            settings.face_detector_model,
+            settings.face_recognizer_model,
+            settings.face_embeddings_dir,
+            settings.face_match_threshold,
+        )
+
+        await asyncio.to_thread(run_migrations)
+        logger.info("Services ready")
+        try:
+            yield
+        finally:
+            try:
+                await app.state.video_manager.stop()
+                if app.state.video_capture is not None:
+                    await asyncio.to_thread(app.state.video_capture.release)
+                await modem.close()
+                await close_db()
+            except Exception:
+                logger.exception("Error during shutdown")
+
+    app = FastAPI(lifespan=lifespan)
+
+    @app.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+    async def generate_token(
+        form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+        db: Annotated[AsyncSession, Depends(get_db)],
+    ) -> TokenResponse:
+        user = await get_user_by_username(db, form_data.username)
+        if (
+            user is None
+            or user.is_disabled
+            or not verify_password(form_data.password, user.user_password)
+        ):
+            logger.warning("Failed login for %r", form_data.username)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        token = create_jwt({"sub": user.user_name})
+        return TokenResponse(access_token=token)
+
+    @app.get("/", response_model=StatusResponse, status_code=status.HTTP_200_OK)
+    async def root(
+        user: Annotated[UserDB, Depends(get_current_user)],
+        modem: Annotated[ModemSettings, Depends(get_modem)],
+        gps: Annotated[GPS, Depends(get_gps)],
+    ) -> StatusResponse:
+        logger.info("/ GET: Accessed by %s", user.user_name)
+        gps_task = asyncio.create_task(gps.get_gps_position())
+        data_task = asyncio.create_task(
+            run_async_subprocess(["ping", "-I", "usb0", "-c", "1", "1.1.1.1"])
+        )
+        dns_task = asyncio.create_task(
+            run_async_subprocess(["ping", "-I", "usb0", "-c", "1", "www.google.com"])
+        )
+
+        at_check = await modem.send_at("AT", "OK", TIMEOUT)
+        at = _response_line(at_check, 2) if _at_ok(at_check) else "ERROR"
+
+        cnum_check = await modem.send_at("AT+CNUM", "+CNUM:", TIMEOUT)
+        cnum = "ERROR"
+        if _at_ok(cnum_check):
+            parts = _response_line(cnum_check, 2).split(",")
+            if len(parts) > 1:
+                cnum = parts[1].replace('"', "")
+
+        csq_check = await modem.send_at("AT+CSQ", "OK", TIMEOUT)
+        csq = _response_line(csq_check, 2) if _at_ok(csq_check) else "ERROR"
+
+        cpin_check = await modem.send_at("AT+CPIN?", "READY", TIMEOUT)
+        cpin = _response_line(cpin_check, 2) if _at_ok(cpin_check) else "ERROR"
+
+        creg_check = await modem.send_at("AT+CREG?", "OK", TIMEOUT)
+        creg = _response_line(creg_check, 2) if _at_ok(creg_check) else "ERROR"
+
+        cops_check = await modem.send_at("AT+COPS?", "OK", TIMEOUT)
+        cops = _response_line(cops_check, 2) if _at_ok(cops_check) else "ERROR"
+
+        apn_check = await modem.send_at("AT+CGDCONT?", "OK", TIMEOUT)
+        apn = "ERROR"
+        if _at_ok(apn_check):
+            for line in apn_check.splitlines():
+                if "+CGDCONT:" in line:
+                    parts = [part.strip().strip('"') for part in line.split(",")]
+                    if len(parts) > 2:
+                        apn = parts[2]
+                    break
+
+        gpsinfo = await gps_task or "ERROR"
+        data_check = await data_task
+        dns_check = await dns_task
+        data = "ERROR" if "unreachable" in data_check.lower() else "OK"
+        dns = "ERROR" if "unreachable" in dns_check.lower() else "OK"
+
+        return StatusResponse(
+            at=at,
+            cnum=cnum,
+            csq=csq,
+            cpin=cpin,
+            creg=creg,
+            cops=cops,
+            gpsinfo=gpsinfo,
+            data=data,
+            dns=dns,
+            apn=apn,
+            timezone=modem.timezone,
+        )
+
+    @app.get("/info", response_model=InfoResponse, status_code=status.HTTP_200_OK)
+    async def info(
+        user: Annotated[UserDB, Depends(get_current_user)],
+    ) -> InfoResponse:
+        logger.info("/info GET: Accessed by %s", user.user_name)
+        hostname, uname, date, arch = await asyncio.gather(
+            run_async_subprocess(["hostname"]),
+            run_async_subprocess(["uname", "-r"]),
+            run_async_subprocess(["date"]),
+            run_async_subprocess(["arch"]),
+        )
+        return InfoResponse(
+            hostname=hostname.strip(),
+            uname=uname.strip(),
+            date=date.strip(),
+            arch=arch.strip(),
+        )
+
+    @app.get("/sms", response_model=list[Messages], status_code=status.HTTP_200_OK)
+    async def sms_root(
+        db: Annotated[AsyncSession, Depends(get_db)],
+        sms: Annotated[SMS, Depends(get_sms)],
+        user: Annotated[UserDB, Depends(get_current_user)],
+    ) -> list[Messages]:
+        logger.info("/sms GET: Accessed by %s", user.user_name)
+        messages = await sms.receive_messages()
+        if messages is None:
+            messages = []
+        for message in messages:
+            try:
+                await create_message(db, message, sms)
+            except ValidationError as exc:
+                logger.error("Validation error: %s for raw message: %s", exc, message)
+        return await messages_from_db(db)
+
+    @app.delete(
+        "/sms/delete/{message_id}",
+        response_model=DeleteResponse,
+        status_code=status.HTTP_202_ACCEPTED,
+    )
+    async def delete_msg(
+        message_id: int,
+        db: Annotated[AsyncSession, Depends(get_db)],
+        sms: Annotated[SMS, Depends(get_sms)],
+        user: Annotated[UserDB, Depends(get_current_user)],
+    ) -> DeleteResponse:
+        logger.info("/sms/delete DELETE: Accessed by %s", user.user_name)
+        deleted = await delete_db_message(db, message_id, sms)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Message {message_id} not found",
+            )
+        return DeleteResponse(response="Ok")
+
+    @app.delete(
+        "/sms/cleanup/",
+        response_model=DeleteResponse,
+        status_code=status.HTTP_202_ACCEPTED,
+    )
+    async def clear_sim_memory(
+        db: Annotated[AsyncSession, Depends(get_db)],
+        sms: Annotated[SMS, Depends(get_sms)],
+        user: Annotated[UserDB, Depends(get_current_user)],
+    ) -> DeleteResponse:
+        logger.info("/sms/cleanup DELETE: Accessed by %s", user.user_name)
+        await messages_to_delete(db, sms)
+        return DeleteResponse(response="Ok")
+
+    @app.post(
+        "/sms",
+        response_model=Messages,
+        status_code=status.HTTP_201_CREATED,
+    )
+    async def send_msg(
+        request: SendMessageRequest,
+        db: Annotated[AsyncSession, Depends(get_db)],
+        sms: Annotated[SMS, Depends(get_sms)],
+        user: Annotated[UserDB, Depends(get_current_user)],
+    ) -> Messages:
+        logger.info("/sms POST: Accessed by %s", user.user_name)
+        current_time = datetime.now()
+        message = Messages(
+            message_index=None,
+            message_type="SENT",
+            message_originating_address=None,
+            message_destination_address=request.number,
+            message_date=current_time.strftime("%Y-%m-%d"),
+            message_time=current_time.strftime("%H:%M:%S"),
+            message_contents=request.msg,
+            in_sim_memory=False,
+            is_sent=False,
+            is_partial=False,
+        )
+        try:
+            db_message = await create_message(db, message, sms)
+        except SMSDeliveryError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Message was stored but the modem could not send it",
+            ) from exc
+        return Messages.model_validate(db_message)
+
+    @app.post("/at", response_model=str, status_code=status.HTTP_202_ACCEPTED)
+    async def catcmd(
+        request: AtRequest,
+        admin: Annotated[UserDB, Depends(get_current_admin)],
+        modem: Annotated[ModemSettings, Depends(get_modem)],
+    ) -> str:
+        logger.info("AT audit: user=%s cmd=%r", admin.user_name, request.cmd)
+        response = await modem.send_raw(
+            request.cmd, timeout_seconds=get_settings().at_timeout
+        )
+        logger.info(
+            "AT audit: user=%s cmd=%r response=%r",
+            admin.user_name,
+            request.cmd,
+            response[:500],
+        )
+        return response
+
+    @app.websocket("/wss")
+    async def websocket_end(
+        websocket: WebSocket,
+        db: Annotated[AsyncSession, Depends(get_db)],
+    ) -> None:
+        user = await authenticate_websocket(
+            websocket, db, get_settings().websocket_auth_timeout
+        )
+        if user is None:
+            return
+        logger.info("WebSocket authenticated for %s", user.user_name)
+        try:
+            while True:
+                data = await websocket.receive_text()
+                logger.info("/wss message from %s: %s", user.user_name, data)
+                await websocket.send_text(f"Message received: {data}")
+        except WebSocketDisconnect:
+            logger.info("WebSocket disconnected for %s", user.user_name)
+
+    @app.websocket("/wss/video")
+    async def video_stream(
+        websocket: WebSocket,
+        db: Annotated[AsyncSession, Depends(get_db)],
+        manager: Annotated[VideoStreamManager, Depends(get_video_manager)],
+        capture: Annotated[VideoCaptureThread | None, Depends(get_video_capture)],
+    ) -> None:
+        user = await authenticate_websocket(
+            websocket, db, get_settings().websocket_auth_timeout
+        )
+        if user is None:
+            return
+        if capture is None:
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+            return
+
+        await manager.add(websocket)
+        logger.info("Video stream authenticated for %s", user.user_name)
+        try:
+            while True:
+                # The shared broadcaster pushes frames; wait for a disconnect.
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            logger.info("Video stream disconnected for %s", user.user_name)
+        finally:
+            await manager.remove(websocket)
+
+    @app.get("/healthz", response_model=HealthResponse)
+    async def healthz() -> HealthResponse:
+        return HealthResponse(status="ok")
+
+    @app.get("/readyz", response_model=HealthResponse)
+    async def readyz(
+        db: Annotated[AsyncSession, Depends(get_db)],
+    ) -> HealthResponse:
+        try:
+            await db.execute(text("SELECT 1"))
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database unavailable",
+            ) from exc
+        return HealthResponse(status="ok")
+
+    return app
+
+
+app = create_app()

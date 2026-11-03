@@ -1,214 +1,274 @@
-# Pi7600: Python Library and REST API for SIM7600 (Simcom says the AT commands are compatible with the 8200 and 8260 5g models as well)
+# Pi7600: SIM7600 modem library and REST API
 
-[GitHub Repository](https://github.com/dazemc/pi7600)
+Pi7600 is a Python library and FastAPI service for the
+[Waveshare SIM7600G-H 4G HAT](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B))
+on a Raspberry Pi. It exposes modem status, host information, SMS
+send/read/delete, GPS, an admin-only raw AT command endpoint, and authenticated
+WebSocket echo/video streams.
 
-## Overview
+The repository contains:
 
-**Pi7600** is a Python library and FastAPI-based REST API for managing the [SIM7600 4G HAT from Waveshare](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B)) on systems like the Raspberry Pi. The project enables various operations for modem control, including:
+- the FastAPI application (`main.py`, `Auth.py`, `Database.py`, `Camera.py`),
+- the modem library in the `pi7600/` git submodule, and
+- deployment and helper scripts in `deploy/` and `scripts/`.
 
-- Checking modem information and status
-- Retrieving host system details
-- Managing SMS messages (send, read, delete)
-- Executing raw AT commands
-- Accessing GPS data
+## Requirements
 
-This tool integrates various modules such as `GPS`, `SMS`, and `Settings` to provide comprehensive control over the modem, all while supporting asynchronous execution for improved performance.
-
-## Features
-
-- **Modem Information**: Retrieve network and device status asynchronously.
-- **Host System Information**: Fetch system details like hostname, kernel version, and architecture.
-- **SMS Management**: Send, read, and delete SMS messages with asynchronous support.
-- **AT Command Interface**: Execute raw AT commands and get modem responses asynchronously.
-- **GPS Data**: Access GPS coordinates via the SIM7600 module asynchronously.
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Usage](#usage)
-- [API Endpoints](#api-endpoints)
-  - [Modem Status `/`](#modem-status-)
-  - [Host Information `/info`](#host-information-info)
-  - [SMS Management `/sms`](#sms-management-sms)
-    - [Read SMS `GET /sms`](#read-sms-get-sms)
-    - [Send SMS `POST /sms`](#send-sms-post-sms)
-    - [Delete SMS `DELETE /sms/delete/{msg_idx}`](#delete-sms-delete-smsdelete-msg_idx)
-  - [AT Command Interface `/at`](#at-command-interface-at)
-  - [API Documentation `/docs` and `/redoc`](#api-documentation-docs-and-redoc)
-- [Resources](#resources)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Installation
-
-*Detailed installation instructions will be provided in the future once the project reaches a stable release.*
-
-## Usage
-
-To run the API, use the FastAPI server powered by `uvicorn`:
+- Python **3.13** (the app and CI target 3.13).
+- [uv](https://docs.astral.sh/uv/) for dependency management.
+- A SIM7600-series modem on `/dev/ttyUSB2` and a camera on `/dev/video*`.
+- Membership in the `dialout` and `video` groups.
 
 ```bash
-uvicorn main:app --reload
+sudo usermod -aG dialout,video "$USER"
 ```
 
-This starts the API server at `http://localhost:8000`.
+ModemManager can claim the serial ports. `scripts/setup.sh` disables it; review
+the script before running it.
 
-## API Endpoints
-
-### Modem Status `/`
-
-- **Method**: `GET`
-- **Description**: Returns modem information, including AT command checks, signal quality, SIM status, network registration, and GPS info.
-
-**Example Request**:
+## Quick start
 
 ```bash
-curl -X GET http://localhost:8000/
+uv sync --python 3.13
+
+# JWT signing keys (required by /token and WebSocket auth).
+mkdir -p .keys
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+  -out .keys/private.pem
+openssl rsa -pubout -in .keys/private.pem -out .keys/public.pem
+
+# Local configuration.
+cp .env.example .env
+
+# Apply the database schema.
+uv run alembic upgrade head
+
+# Create the first API user (add --admin for /at access).
+uv run python scripts/create_user.py --admin
+
+# Run the API.
+uv run uvicorn main:app --reload
+# or: ./start.sh
 ```
 
-**Response**:
+The service listens on `http://localhost:8000`; interactive docs are at `/docs`
+and `/redoc`.
+
+## Configuration
+
+Settings are loaded from environment variables with the `PI7600_` prefix or from
+`.env`. See `.env.example` and `deploy/pi7600.env.example`.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PI7600_DATABASE_URL` | `sqlite+aiosqlite:///./cmgl.db` | Async SQLAlchemy URL |
+| `PI7600_AT_COM` | `/dev/ttyUSB2` | Modem serial port |
+| `PI7600_AT_BAUDRATE` | `115200` | Serial speed |
+| `PI7600_AT_TIMEOUT` | `10` | Raw AT command timeout (seconds) |
+| `PI7600_CAMERA_INDEX` | `-1` | OpenCV camera index |
+| `PI7600_CAMERA_FPS` | `15` | Video stream frame rate |
+| `PI7600_JWT_PRIVATE_KEY_PATH` | `.keys/private.pem` | JWT signing key |
+| `PI7600_JWT_PUBLIC_KEY_PATH` | `.keys/public.pem` | JWT verification key |
+| `PI7600_JWT_ISSUER` | `pi.daazed.dev` | JWT issuer claim |
+| `PI7600_JWT_EXPIRE_MINUTES` | `30` | Access token lifetime |
+| `PI7600_WEBSOCKET_AUTH_TIMEOUT` | `5` | Seconds to wait for the auth message |
+
+## Authentication
+
+`POST /token` uses the OAuth2 password form and returns an RS256 JWT:
+
+```bash
+curl -X POST http://localhost:8000/token \
+  -d 'username=alice&password=secret'
+```
+
+```json
+{"access_token": "...", "token_type": "bearer"}
+```
+
+Send the token as `Authorization: Bearer <token>` on HTTP requests. Invalid,
+expired, and disabled-user tokens return `401`.
+
+### WebSocket authentication
+
+Browsers cannot set an `Authorization` header on a WebSocket handshake, so the
+server accepts the connection and waits for a first JSON message:
+
+```json
+{"type": "auth", "token": "<jwt>"}
+```
+
+The socket is closed with code `1008` when authentication fails or the message
+does not arrive within `PI7600_WEBSOCKET_AUTH_TIMEOUT` seconds. Only then does
+`/wss` echo messages or `/wss/video` subscribe the client to JPEG frames.
+
+```python
+import asyncio
+import json
+
+import websockets
+
+
+async def main() -> None:
+    async with websockets.connect("ws://localhost:8000/wss") as ws:
+        await ws.send(json.dumps({"type": "auth", "token": token}))
+        await ws.send("hello")
+        print(await ws.recv())
+
+
+asyncio.run(main())
+```
+
+## API
+
+All routes except `/token`, `/healthz`, and `/readyz` require a bearer token.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/token` | Issue a JWT |
+| `GET` | `/` | Modem/network/GPS status |
+| `GET` | `/info` | Hostname, kernel, date, architecture |
+| `GET` | `/sms` | Sync messages from the SIM and return the database rows |
+| `POST` | `/sms` | Send an SMS |
+| `DELETE` | `/sms/delete/{message_id}` | Delete by database `id` |
+| `DELETE` | `/sms/cleanup/` | Delete all SIM-backed messages |
+| `POST` | `/at` | Send a raw AT command (**admin only**, audit-logged) |
+| `GET` | `/healthz` | Liveness |
+| `GET` | `/readyz` | Readiness (database check) |
+| `WS` | `/wss` | Authenticated echo |
+| `WS` | `/wss/video` | Authenticated JPEG frame stream |
+
+### Modem status
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/
+```
+
 ```json
 {
   "at": "OK",
-  "cnum": "+11234567890",
-  "csq": "+CSQ: 15,99",
+  "cnum": "+15551234567",
+  "csq": "+CSQ: 20,99",
   "cpin": "+CPIN: READY",
   "creg": "+CREG: 0,1",
   "cops": "+COPS: 0,0,\"Home\",7",
   "gpsinfo": "GPS is active but no signal was found",
   "data": "OK",
   "dns": "OK",
-  "apn": "fast.t-mobile.com"
+  "apn": "internet",
+  "timezone": 0
 }
 ```
 
-### Host Information `/info`
-
-- **Method**: `GET`
-- **Description**: Fetches host system details like hostname, kernel version, and architecture.
-
-**Example Request**:
+### SMS
 
 ```bash
-curl -X GET http://localhost:8000/info
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/sms
+
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"number":"+15551234567","msg":"Hello"}' \
+  http://localhost:8000/sms
 ```
 
-**Response**:
-```json
-{
-  "hostname": "raspberrypi",
-  "uname": "5.10.17-v7l+",
-  "date": "Tue Sep 17 22:48:47 2024",
-  "arch": "armv7l"
-}
-```
+A successful send returns `201` with the stored message. If the row is stored
+but the modem cannot send it, the API returns `502` and keeps the row with
+`is_sent: false` for retry.
 
-### SMS Management `/sms`
+`DELETE /sms/delete/{message_id}` takes the **database** id. When the row came
+from SIM storage, the API uses its stored `message_index` for the modem delete.
 
-#### Read SMS `GET /sms`
+### Raw AT commands
 
-- **Method**: `GET`
-- **Description**: Reads SMS messages from the modem. Supports querying all messages or by specific types (e.g., "REC READ").
-
-**Example Request**:
+`POST /at` is restricted to users with `is_admin` and logs the user, command,
+and a truncated response:
 
 ```bash
-curl -X GET "http://localhost:8000/sms?msg_query=ALL"
+curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"cmd":"AT+CSQ"}' \
+  http://localhost:8000/at
 ```
 
-**Response**:
-```json
-[
-  {
-    "message_index": "1",
-    "message_type": "REC READ",
-    "message_originating_address": "+1234567890",
-    "message_destination_address": null,
-    "message_date": "2024-09-17",
-    "message_time": "22:48:47",
-    "message_contents": "Hello World"
-  }
-]
-```
+### Health checks
 
-#### Send SMS `POST /sms`
+`/healthz` is a process liveness check. `/readyz` additionally runs a database
+query and returns `503` when the database is unavailable.
 
-- **Method**: `POST`
-- **Description**: Sends an SMS message to the specified phone number.
+## Deployment with systemd
 
-**Example Request**:
+1. Create a service user and directories:
+
+   ```bash
+   sudo useradd --system --home /opt/pi7600 --shell /usr/sbin/nologin pi7600
+   sudo usermod -aG dialout,video pi7600
+   sudo mkdir -p /opt/pi7600 /var/lib/pi7600 /etc/pi7600/keys
+   sudo chown -R pi7600:pi7600 /opt/pi7600 /var/lib/pi7600
+   ```
+
+2. Copy the repository to `/opt/pi7600` and install dependencies as that user:
+
+   ```bash
+   cd /opt/pi7600
+   sudo -u pi7600 uv sync --python 3.13 --frozen
+   ```
+
+3. Generate keys in `/etc/pi7600/keys`, copy
+   `deploy/pi7600.env.example` to `/etc/pi7600/pi7600.env`, and adjust paths.
+
+4. Install and start the unit:
+
+   ```bash
+   sudo cp deploy/pi7600.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now pi7600
+   sudo journalctl -u pi7600 -f
+   ```
+
+The unit runs `alembic upgrade head` before starting the API, so existing
+databases are migrated automatically.
+
+## Development
 
 ```bash
-curl -X POST -H "Content-Type: application/json" \
--d '{"number":"+1234567890","msg":"Hello World"}' \
-"http://localhost:8000/sms"
+uv sync --python 3.13
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest -q
 ```
 
-**Response**:
-```json
-{
-  "response": true
-}
-```
+Tests use fake modem, SMS, GPS, camera, and temporary SQLite fixtures, so they
+do not require hardware. CI runs the same commands on Python 3.13.
 
-#### Delete SMS `DELETE /sms/delete/{msg_idx}`
+See `docs/roadmap.md` for SQLCipher, TOTP, and face-recognition follow-up work.
 
-- **Method**: `DELETE`
-- **Description**: Deletes an SMS by its message index.
+### Optional face models
 
-**Example Request**:
+The face detector and recognizer models are not committed. Download them into
+`ml/` when you want recognition enabled:
 
 ```bash
-curl -X DELETE http://localhost:8000/sms/delete/1
+uv run python scripts/download_models.py
 ```
 
-**Response**:
-```json
-{
-  "response": "Success"
-}
-```
+Embeddings are written to `data/embeddings/`, which is gitignored.
 
-### AT Command Interface `/at`
+## Security notes
 
-- **Method**: `POST`
-- **Description**: Sends raw AT commands to the modem and retrieves the response.
-
-**Example Request**:
-
-```bash
-curl -X POST -H "Content-Type: application/json" \
--d '{"cmd":"AT+CSQ"}' \
-"http://localhost:8000/at"
-```
-
-**Response**:
-```json
-"OK"
-```
-
-### API Documentation `/docs` and `/redoc`
-
-FastAPI provides built-in interactive documentation to explore the API endpoints:
-
-- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-
-These pages allow you to explore and test the API directly from the browser.
+- Treat `/at` as a privileged administration endpoint; keep admin accounts
+  limited.
+- Keep `.keys/`, `.env`, databases, and `data/embeddings/` out of version
+  control.
+- Put the service behind HTTPS (for example a reverse proxy) when exposing it
+  beyond a trusted network.
+- The modem and camera device permissions are granted through the `dialout` and
+  `video` groups; do not run the API as root.
 
 ## Resources
 
-- [SIM7600G-H 4G HAT Product Page](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B))
-- [SIM7600 AT Command Manual](https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf)
-
-## Contributing
-
-Contributions are welcome! Feel free to open an issue or submit a pull request if you have suggestions or improvements.
+- [SIM7600G-H 4G HAT product page](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B))
+- [SIM7600 AT command manual](https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf)
 
 ## License
 
-MIT license
-
----
-
-*Note: This project is under active development, and documentation will be updated as features are added.*
+MIT

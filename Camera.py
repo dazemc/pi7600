@@ -1,145 +1,261 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-import numpy as np
-import threading
-import cv2
-import base64
 import asyncio
-from pi7600.Utils import SingletonMeta
+import logging
+import threading
+import time
+from pathlib import Path
 
-app = FastAPI()
+import cv2
+import numpy as np
+from fastapi import WebSocket
+
+logger = logging.getLogger("uvicorn.pi7600")
 
 
-class VideoCaptureThread(metaclass=SingletonMeta):
-    def __init__(self):
-        self.cap = cv2.VideoCapture(-1, cv2.CAP_V4L2)
-        self.running = True
-        self.frame = None
-        # self.queue = asyncio.Queue()  # Using asyncio.Queue for async-safe frame handling
-        # self.thread = threading.Thread(target=self._reader)
-        # self.thread.daemon = True
-        # self.thread.start()
+class VideoCaptureThread:
+    """Read frames from a camera in a background thread.
 
-    def reader(self):
-        #     loop = asyncio.new_event_loop()  # Create a new event loop in this thread
-        #     asyncio.set_event_loop(loop)  # Set the new event loop as the current loop
-        while self.running:
-            # print(f'reading frame: {self.frame}')
-            ret, frame = self.cap.read()
-            if not ret:
+    The thread keeps only the latest JPEG frame so slow or multiple WebSocket
+    clients cannot block the capture loop.
+    """
+
+    def __init__(self, index: int = -1, fps: int = 15) -> None:
+        self.index = index
+        self.fps = max(1, fps)
+        self.cap: cv2.VideoCapture | None = None
+        self._thread: threading.Thread | None = None
+        self._stop = threading.Event()
+        self._lock = threading.Lock()
+        self._frame: bytes | None = None
+
+    def start(self) -> None:
+        if self._thread is not None and self._thread.is_alive():
+            return
+
+        self.cap = cv2.VideoCapture(self.index, cv2.CAP_V4L2)
+        if not self.cap.isOpened():
+            self.cap.release()
+            self.cap = cv2.VideoCapture(self.index)
+        if not self.cap.isOpened():
+            self.cap.release()
+            self.cap = None
+            raise RuntimeError(f"Unable to open camera index {self.index}")
+
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._reader, name="video-capture", daemon=True
+        )
+        self._thread.start()
+
+    def _reader(self) -> None:
+        frame_interval = 1.0 / self.fps
+        while not self._stop.is_set():
+            started = time.monotonic()
+            if self.cap is None:
                 break
-            _, buffer = cv2.imencode(".jpg", frame)
-            if not _:
+            ok, frame = self.cap.read()
+            if not ok:
+                time.sleep(0.05)
                 continue
-            frame_bytes = buffer.tobytes()
-            self.frame = frame_bytes
+            encoded, buffer = cv2.imencode(".jpg", frame)
+            if encoded:
+                with self._lock:
+                    self._frame = buffer.tobytes()
+            remaining = frame_interval - (time.monotonic() - started)
+            if remaining > 0:
+                time.sleep(remaining)
 
-    #         loop.run_until_complete(self.queue.put(frame))  # Run the async task in the new loop
+    def get_frame(self) -> bytes | None:
+        with self._lock:
+            return self._frame
 
-    async def encode_frame_base64(self, frame) -> str:
-        _, buffer = cv2.imencode(".jpg", frame)
-        return base64.b64encode(buffer).decode("utf-8")
-
-    # async def get_frame(self):
-    # frame = await self.queue.get()
-    # return await self.encode_frame_base64(frame)
-
-    def release(self):
-        self.running = False
-        # self.cap.release()
-        # self.thread.join()
+    def release(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2)
+            self._thread = None
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+        with self._lock:
+            self._frame = None
 
 
 class VideoStreamManager:
-    def __init__(self):
-        self.connections = []
+    """Track video WebSocket clients and broadcast frames safely."""
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.connections.append(websocket)
+    def __init__(self) -> None:
+        self.connections: list[WebSocket] = []
+        self._lock = asyncio.Lock()
+        self._capture: VideoCaptureThread | None = None
+        self._fps = 15
+        self._task: asyncio.Task | None = None
 
-    async def send_frame(self, frame):
-        for websocket in self.connections:
-            await websocket.send_bytes(frame)
+    async def add(self, websocket: WebSocket) -> None:
+        async with self._lock:
+            if websocket not in self.connections:
+                self.connections.append(websocket)
 
-    def disconnect(self, websocket: WebSocket):
-        self.connections.remove(websocket)
+    async def remove(self, websocket: WebSocket) -> None:
+        async with self._lock:
+            if websocket in self.connections:
+                self.connections.remove(websocket)
+
+    async def start(self, capture: VideoCaptureThread, fps: int) -> None:
+        """Start the single broadcaster that feeds every connected client."""
+        if self._task is not None and not self._task.done():
+            return
+        self._capture = capture
+        self._fps = max(1, fps)
+        self._task = asyncio.create_task(self._broadcast_loop())
+
+    async def _broadcast_loop(self) -> None:
+        interval = 1.0 / self._fps
+        while True:
+            frame = self._capture.get_frame() if self._capture is not None else None
+            if frame is not None:
+                await self.broadcast(frame)
+            await asyncio.sleep(interval)
+
+    async def broadcast(self, frame: bytes) -> None:
+        async with self._lock:
+            connections = list(self.connections)
+        for websocket in connections:
+            try:
+                await websocket.send_bytes(frame)
+            except Exception:
+                await self.remove(websocket)
+
+    async def stop(self) -> None:
+        task = self._task
+        self._task = None
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        self._capture = None
+        await self.close_all()
+
+    async def close_all(self) -> None:
+        async with self._lock:
+            connections = list(self.connections)
+            self.connections.clear()
+        for websocket in connections:
+            try:
+                await websocket.close()
+            except Exception:
+                pass
 
 
 class FacialRecognition:
-    def __init__(self):
-        self.cam = VideoCaptureThread()
-        self.face_detect = cv2.CascadeClassifier(
-            "./ml/haarcascade_frontalface_default.xml"
-        )
-        self.model = cv2.dnn.readNetFromONNX(
-            "./ml/face_detection_yunet_2023mar_int8bq.onnx"
-        )
-        self.known_embeddings = {}
-        self.known_faces = {"me": np.load("./ml/embeddings/me_embedding.npy")}
+    """Face detection + embedding-based recognition using OpenCV.
 
-    def detect_face(self, image_path):
-        img = cv2.imread(image_path)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = self.face_detect.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+    YuNet is used for detection and SFace for embeddings. The recognizer model
+    is intentionally not committed to the repository; see
+    ``scripts/download_models.py``.
+    """
 
-        if len(faces) > 0:
-            (x, y, w, h) = faces[0]
-            face_roi = img[y : y + h, x : x + w]
-            return face_roi
+    def __init__(
+        self,
+        detector_path: str,
+        recognizer_path: str,
+        embeddings_dir: str,
+        threshold: float = 0.363,
+    ) -> None:
+        self.threshold = threshold
+        self.embeddings_dir = Path(embeddings_dir)
+        self.enabled = False
+        self.detector: cv2.FaceDetectorYN | None = None
+        self.recognizer: cv2.FaceRecognizerSF | None = None
+        self.known_faces: dict[str, np.ndarray] = {}
 
-    def preprocess_face(self, face_image):
-        resized = cv2.resize(face_image, (224, 224))
-        # image_float = resized.astype(np.float32) / 255.0
-        image_uint8 = ((resized / np.max(resized)) * 255).astype("uint8")
-        transposed = image_uint8.transpose(1, 0, 2)
-        image_final = np.expand_dims(transposed, axis=0)
-        return image_final
+        try:
+            if not Path(detector_path).is_file():
+                raise FileNotFoundError(detector_path)
+            if not Path(recognizer_path).is_file():
+                raise FileNotFoundError(recognizer_path)
+            self.detector = cv2.FaceDetectorYN.create(detector_path, "", (320, 320))
+            self.recognizer = cv2.FaceRecognizerSF.create(recognizer_path, "")
+            self.enabled = True
+        except Exception as exc:
+            logger.warning("Facial recognition disabled: %s", exc)
 
-    def get_embedding(self, face_image):
-        processed_face = self.preprocess_face(face_image)[0]
-        bgr = cv2.cvtColor(processed_face, cv2.COLOR_RGB2BGR)
-        blob = cv2.dnn.blobFromImage(bgr, swapRB=True)
-        self.model.setInput(blob)
-        embedding = self.model.forward()
-        return embedding.flatten()
+        self._load_known_faces()
 
-    def store_emeddings(self, face_image):
-        if face_image is not None:
-            embedding = self.get_embedding(face_image)
-            self.known_embeddings["me"] = embedding
-            np.save("me_embedding.npy", embedding)
-        else:
-            print("No face detected")
+    def _load_known_faces(self) -> None:
+        self.known_faces = {}
+        if not self.embeddings_dir.is_dir():
+            return
+        for path in sorted(self.embeddings_dir.glob("*.npy")):
+            try:
+                self.known_faces[path.stem] = np.load(path).flatten()
+            except Exception as exc:
+                logger.warning("Unable to load embedding %s: %s", path, exc)
 
-    def recognize_face(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = self.face_detect.detectMultiScale(gray, 1.1, 5)
-        for x, y, w, h in faces:
-            face_roi = frame[y : y + h, x : x + w]
-            embedding = self.get_embedding(face_roi)
-            identity = "Unknown"
-            max_similarity = -1
-            for name, known_embedding in self.known_faces.items():
-                similarity = np.dot(embedding, known_embedding) / (
-                    np.linalg.norm(embedding) * np.linalg.norm(known_embedding)
-                )
-                if similarity > max_similarity and similarity > 0.6:
-                    max_similarity = similarity
-                    identity = name
+    def detect_faces(self, frame: np.ndarray) -> np.ndarray | None:
+        if not self.enabled or self.detector is None:
+            return None
+        height, width = frame.shape[:2]
+        self.detector.setInputSize((width, height))
+        _, faces = self.detector.detect(frame)
+        return faces
 
+    def get_embedding(self, frame: np.ndarray, face: np.ndarray) -> np.ndarray | None:
+        if not self.enabled or self.recognizer is None:
+            return None
+        try:
+            aligned = self.recognizer.alignCrop(frame, face)
+            return self.recognizer.feature(aligned).flatten()
+        except Exception as exc:
+            logger.warning("Unable to compute face embedding: %s", exc)
+            return None
+
+    def identify(self, embedding: np.ndarray) -> str:
+        best_name = "Unknown"
+        best_score = -1.0
+        embedding_norm = np.linalg.norm(embedding)
+        if embedding_norm == 0:
+            return best_name
+        for name, known in self.known_faces.items():
+            known_norm = np.linalg.norm(known)
+            if known_norm == 0:
+                continue
+            score = float(np.dot(embedding, known) / (embedding_norm * known_norm))
+            if score > best_score:
+                best_score = score
+                best_name = name
+        return best_name if best_score >= self.threshold else "Unknown"
+
+    def recognize_face(self, frame: np.ndarray) -> np.ndarray:
+        faces = self.detect_faces(frame)
+        if faces is None:
+            return frame
+        for face in faces:
+            x, y, w, h = (int(value) for value in face[:4])
+            embedding = self.get_embedding(frame, face)
+            identity = self.identify(embedding) if embedding is not None else "Unknown"
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.putText(
                 frame,
                 identity,
-                (x, y - 10),
+                (x, max(y - 10, 0)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.9,
                 (0, 255, 0),
                 2,
             )
-            return frame
+        return frame
 
-
-# face_test = FacialRecognition()
-# front = face_test.detect_face("/home/daze/images/front.jpg")
-# face_test.store_emeddings(front)
+    def enroll(self, name: str, frame: np.ndarray) -> bool:
+        faces = self.detect_faces(frame)
+        if faces is None or len(faces) == 0:
+            return False
+        embedding = self.get_embedding(frame, faces[0])
+        if embedding is None:
+            return False
+        self.embeddings_dir.mkdir(parents=True, exist_ok=True)
+        path = self.embeddings_dir / f"{name}.npy"
+        np.save(path, embedding)
+        self.known_faces[name] = embedding
+        return True
