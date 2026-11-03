@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --python 3.13
+
+      - name: Lint parent
+        run: uv run ruff check .
+
+      - name: Check parent formatting
+        run: uv run ruff format --check .
+
+      - name: Lint submodule
+        run: uv run ruff check pi7600 --config pi7600/ruff.toml
+
+      - name: Check submodule formatting
+        run: uv run ruff format --check pi7600 --config pi7600/ruff.toml
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --python 3.13
+
+      - name: Run tests
+        run: uv run pytest -q
