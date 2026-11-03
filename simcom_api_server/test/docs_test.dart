@@ -27,6 +27,8 @@ void main() {
           '/totp/setup',
           '/totp/enable',
           '/totp/disable',
+          '/users',
+          '/users/{id}',
           '/',
           '/info',
           '/gps',

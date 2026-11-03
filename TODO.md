@@ -247,9 +247,12 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     `POST /token/refresh`. Logout revokes every outstanding token for the user;
     the docs page now calls the server on logout.
 
-- [ ] **User management API.**
+- [x] **User management API.**
   - Create, list, disable, and promote users without the CLI.
   - Keep it admin-only and audited.
+  - Added admin-only `GET /users`, `POST /users`, and `PATCH /users/{id}`.
+    Password/disabled changes revoke tokens; responses omit credentials and
+    TOTP material; self-disable and self-demotion are rejected.
 
 - [ ] **Persistent audit log.**
   - Store `/at` and authentication events in PostgreSQL or a dedicated audit

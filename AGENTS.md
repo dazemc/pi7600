@@ -127,7 +127,8 @@ cd simcom_api_server && serverpod create-migration
   per-user token version; `POST /logout` increments it and revokes all
   outstanding access and refresh tokens. Users can enable TOTP through
   `/totp/setup` and `/totp/enable`; `/token` then requires `otp`, and recovery
-  codes are single-use.
+  codes are single-use. Administrators manage users through `/users`; those
+  responses never include password hashes or TOTP material.
 - **Modem library:** the standalone `simcom_modem` Dart package lives in the
   `simcom_modem` submodule and is consumed through a path dependency. It owns
   `At`, `SerialTransport`/`LibSerialPortTransport`, `ModemSettings`,

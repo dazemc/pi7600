@@ -187,6 +187,69 @@ const apiEndpoints = <ApiEndpoint>[
   ),
   ApiEndpoint(
     method: 'GET',
+    path: '/users',
+    summary: 'List API users (admin only)',
+    description:
+        'Returns id, username, full name, email, disabled/admin flags, and '
+        'whether TOTP is enabled. Passwords, TOTP secrets, and recovery codes '
+        'are never returned.',
+    auth: ApiAuth.admin,
+    responses: {
+      '200': 'Array of users',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+    },
+  ),
+  ApiEndpoint(
+    method: 'POST',
+    path: '/users',
+    summary: 'Create an API user (admin only)',
+    description:
+        'Usernames are 1-64 characters (letters, digits, dot, underscore, or '
+        'hyphen). Passwords must be at least 8 characters and are stored as '
+        'bcrypt hashes.',
+    auth: ApiAuth.admin,
+    jsonBody:
+        '{\n  "username": "bob",\n  "password": "a-long-password",\n'
+        '  "full_name": "Bob Example",\n  "email": "bob@example.com",\n'
+        '  "is_admin": false\n}',
+    responses: {
+      '201': 'Created user',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+      '409': 'Username already exists',
+      '422': 'Invalid user fields',
+    },
+  ),
+  ApiEndpoint(
+    method: 'PATCH',
+    path: '/users/{id}',
+    summary: 'Update an API user (admin only)',
+    description:
+        'Updates any supplied fields. Changing the password or disabled state '
+        'revokes the user\'s outstanding tokens. Administrators cannot disable '
+        'their own account or remove their own administrator access. Send '
+        '`null` or an empty string for `full_name`/`email` to clear it.',
+    auth: ApiAuth.admin,
+    pathParameters: [
+      ApiPathParameter(
+        name: 'id',
+        description: 'PostgreSQL user id',
+      ),
+    ],
+    jsonBody:
+        '{\n  "is_disabled": false,\n  "is_admin": true,\n'
+        '  "full_name": "Bob Example",\n  "email": "bob@example.com"\n}',
+    responses: {
+      '200': 'Updated user',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+      '404': 'User not found',
+      '422': 'Invalid fields or self-protection rule',
+    },
+  ),
+  ApiEndpoint(
+    method: 'GET',
     path: '/totp',
     summary: 'TOTP status for the current user',
     auth: ApiAuth.user,

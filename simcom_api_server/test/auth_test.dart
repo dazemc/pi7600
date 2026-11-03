@@ -299,6 +299,23 @@ class _FakeUserStore implements UserStore {
   }
 
   @override
+  Future<User?> findById(int id) async {
+    return user?.id == id ? user : null;
+  }
+
+  @override
+  Future<List<User>> findAll() async {
+    return [?user];
+  }
+
+  @override
+  Future<User> insert(User user) async {
+    updates++;
+    this.user = user;
+    return user;
+  }
+
+  @override
   Future<User> update(User user) async {
     updates++;
     this.user = user;

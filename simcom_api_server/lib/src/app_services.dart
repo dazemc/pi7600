@@ -13,6 +13,7 @@ import 'package:simcom_api_server/src/data/user_store.dart';
 import 'package:simcom_api_server/src/services/service_status.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/services/status_service.dart';
+import 'package:simcom_api_server/src/services/user_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:serverpod/serverpod.dart';
 
@@ -127,6 +128,10 @@ class AppServices {
 
   SmsService smsService(Session session) {
     return SmsService(sms: sms, store: SessionMessageStore(session));
+  }
+
+  UserService userService(Session session) {
+    return UserService(users: SessionUserStore(session));
   }
 
   /// Initialize the modem, camera, and recognition backends.

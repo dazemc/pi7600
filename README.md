@@ -182,6 +182,11 @@ Recovery codes work in the same `otp` field and are consumed on use.
 password plus a current TOTP or recovery code. Secrets and codes are never
 logged.
 
+Administrators can list, create, and update users through `/users`. Updates can
+change the password, full name, email, disabled state, and administrator flag;
+changing the password or disabled state revokes that user's outstanding tokens.
+User responses never include password hashes, TOTP secrets, or recovery codes.
+
 ### WebSocket authentication
 
 Browsers cannot set an `Authorization` header on a WebSocket handshake, so the
@@ -222,6 +227,9 @@ All routes except `/token`, `/token/refresh`, `/healthz`, `/readyz`, `/docs`,
 | `POST` | `/token` | Issue access and refresh tokens (optional `otp` when TOTP is enabled) |
 | `POST` | `/token/refresh` | Exchange a refresh token for a new pair |
 | `POST` | `/logout` | Revoke all tokens for the current user |
+| `GET` | `/users` | List users (**admin only**) |
+| `POST` | `/users` | Create a user (**admin only**) |
+| `PATCH` | `/users/{user_id}` | Update a user (**admin only**) |
 | `GET` | `/totp` | TOTP status for the current user |
 | `POST` | `/totp/setup` | Start TOTP enrollment |
 | `POST` | `/totp/enable` | Enable TOTP with the first code |

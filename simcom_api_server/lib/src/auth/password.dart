@@ -112,3 +112,11 @@ Future<bool> verifyPasswordAsync(String password, String encodedHash) async {
     return false;
   }
 }
+
+/// Hash a new password on a worker isolate.
+Future<String> hashPasswordAsync(String password) {
+  return Isolate.run(
+    () => bcrypt(utf8.encode(password)),
+    debugName: 'pi7600.bcrypt',
+  );
+}

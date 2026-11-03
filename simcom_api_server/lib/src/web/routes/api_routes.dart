@@ -7,6 +7,7 @@ import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
 import 'package:simcom_api_server/src/generated/user.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
+import 'package:simcom_api_server/src/services/user_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/web/at_audit.dart';
 import 'package:simcom_api_server/src/web/http.dart';
@@ -330,6 +331,169 @@ class TotpDisableRoute extends Route {
     }
     services.loginLimiter.reset(throttleKey);
     return jsonResponse({'enabled': false});
+  }
+}
+
+/// `GET /users` and `POST /users`
+class UsersRoute extends Route {
+  UsersRoute(this.services) : super(methods: {Method.get, Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateAdmin(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+
+    if (request.method == Method.post) {
+      return _create(session, request, auth.user!);
+    }
+
+    final users = await services.userService(session).list();
+    return jsonResponse(users.map(userToJson).toList(growable: false));
+  }
+
+  Future<Result> _create(
+    Session session,
+    Request request,
+    User actor,
+  ) async {
+    final body = await readJsonObject(request);
+    if (body == null) return errorResponse(422, 'Invalid JSON body');
+
+    final username = body['username'];
+    final password = body['password'];
+    if (username is! String || username.trim().isEmpty) {
+      return errorResponse(422, 'username is required');
+    }
+    if (password is! String || password.isEmpty) {
+      return errorResponse(422, 'password is required');
+    }
+
+    final fullName = body['full_name'];
+    if (fullName != null && fullName is! String) {
+      return errorResponse(422, 'full_name must be a string');
+    }
+    final email = body['email'];
+    if (email != null && email is! String) {
+      return errorResponse(422, 'email must be a string');
+    }
+    final isAdmin = body['is_admin'];
+    if (isAdmin != null && isAdmin is! bool) {
+      return errorResponse(422, 'is_admin must be a boolean');
+    }
+
+    try {
+      final user = await services
+          .userService(session)
+          .create(
+            username: username,
+            password: password,
+            fullName: fullName as String?,
+            email: email as String?,
+            isAdmin: isAdmin as bool? ?? false,
+          );
+      AppLog.audit(
+        'User ${actor.userName} created user ${user.userName} '
+        'admin=${user.isAdmin}',
+      );
+      return jsonResponse(userToJson(user), status: 201);
+    } on UserNameTakenException {
+      return errorResponse(409, 'Username already exists');
+    } on UserValidationException catch (error) {
+      return errorResponse(422, error.message);
+    }
+  }
+}
+
+/// `PATCH /users/:id`
+class UserUpdateRoute extends Route {
+  UserUpdateRoute(this.services) : super(methods: {Method.patch});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateAdmin(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+
+    final rawId = request.rawPathParameters[#id];
+    final id = rawId == null ? null : int.tryParse(rawId);
+    if (id == null) return errorResponse(422, 'Invalid user id');
+
+    final body = await readJsonObject(request);
+    if (body == null) return errorResponse(422, 'Invalid JSON body');
+
+    final password = body['password'];
+    if (password != null && password is! String) {
+      return errorResponse(422, 'password must be a string');
+    }
+    final isDisabled = body['is_disabled'];
+    if (isDisabled != null && isDisabled is! bool) {
+      return errorResponse(422, 'is_disabled must be a boolean');
+    }
+    final isAdmin = body['is_admin'];
+    if (isAdmin != null && isAdmin is! bool) {
+      return errorResponse(422, 'is_admin must be a boolean');
+    }
+
+    String? fullName;
+    if (body.containsKey('full_name')) {
+      final value = body['full_name'];
+      if (value == null) {
+        fullName = '';
+      } else if (value is String) {
+        fullName = value;
+      } else {
+        return errorResponse(422, 'full_name must be a string or null');
+      }
+    }
+
+    String? email;
+    if (body.containsKey('email')) {
+      final value = body['email'];
+      if (value == null) {
+        email = '';
+      } else if (value is String) {
+        email = value;
+      } else {
+        return errorResponse(422, 'email must be a string or null');
+      }
+    }
+
+    final changed = [
+      if (password != null) 'password',
+      if (fullName != null) 'full_name',
+      if (email != null) 'email',
+      if (isDisabled != null) 'is_disabled',
+      if (isAdmin != null) 'is_admin',
+    ];
+    if (changed.isEmpty) {
+      return errorResponse(422, 'No fields to update');
+    }
+
+    try {
+      final user = await services
+          .userService(session)
+          .update(
+            id: id,
+            actor: auth.user!,
+            password: password as String?,
+            fullName: fullName,
+            email: email,
+            isDisabled: isDisabled as bool?,
+            isAdmin: isAdmin as bool?,
+          );
+      AppLog.audit(
+        'User ${auth.user!.userName} updated user ${user.userName}: '
+        '${changed.join(',')}',
+      );
+      return jsonResponse(userToJson(user));
+    } on UserNotFoundException {
+      return errorResponse(404, 'User $id not found');
+    } on UserValidationException catch (error) {
+      return errorResponse(422, error.message);
+    }
   }
 }
 
