@@ -1,0 +1,212 @@
+# TODO
+
+Backlog for the `simcom_api` service and `simcom_modem` library.
+
+## Workflow
+
+- Keep `simcom_api/main`, `simcom_modem/main`, and the `simcom_modem` submodule
+  pointer up to date before and after each batch.
+- For each item: update code and tests, run format/analyze/tests, update docs
+  where behavior changes, commit, push, and confirm CI.
+- Work in the order below: performance, correctness/security, testing/CI, then
+  features.
+
+## Performance
+
+- [ ] **Move bcrypt off the main isolate.**
+  - `TokenRoute` currently awaits `hashlib` bcrypt on the event loop.
+  - Use a long-lived worker isolate (or `Isolate.run`) so a 6–9 second login
+    does not block `/healthz`, `/docs`, `/info`, or WebSockets.
+  - Keep the pure-Dart verifier as the fallback.
+
+- [ ] **Use native bcrypt through `libcrypt` FFI.**
+  - Replace pure-Dart bcrypt verification with `crypt_rn`/`crypt_r` from
+    `libcrypt` where available.
+  - Keep `hashlib` as a fallback for systems without `libcrypt`.
+  - Test on x86 and ARM64; target login latency well under 2 seconds on the Pi.
+  - Do not reduce the bcrypt cost.
+
+- [ ] **Cache static `/info` values.**
+  - `StatusService.info()` spawns `hostname`, `uname -r`, `date`, and `arch`
+    processes on every request.
+  - Use `Platform.localHostname` for hostname and cache `uname`/`arch` at
+    startup or behind a TTL.
+  - Keep `date` current, or format it in Dart without a subprocess.
+  - Target: at most one process spawn per `/info` request.
+
+- [ ] **Add an SMS fingerprint index.**
+  - `SessionMessageStore.findByFingerprint` queries `message_type`,
+    `message_contents`, `message_date`, and `message_time` with no index.
+  - Add a non-unique composite index through a Serverpod migration.
+  - Keep the existing deduplication behavior and add a migration test/check.
+
+- [ ] **Profile JWT verification and user lookup.**
+  - Add timings around `JwtService.verifyToken` and
+    `SessionUserStore.findByUsername`.
+  - If RSA verification is material, evaluate a native OpenSSL path or a
+    short-lived verified-token cache.
+  - If database lookup is material, evaluate a short user cache with a clear
+    disabled-user invalidation story.
+  - Measure before adding cache complexity.
+
+- [ ] **Cache or reduce status ping subprocesses.**
+  - `StatusService.status()` launches two `ping` processes per request.
+  - Add a short TTL cache for `data`/`dns` results (5–10 seconds) or use a
+    persistent network monitor.
+  - Document the freshness trade-off.
+
+- [ ] **Optimize docs asset delivery.**
+  - Serve a gzipped `web/docs/app.js` and `style.css`.
+  - Add `ETag`/`If-None-Match` and cache headers.
+  - Keep the bundle build artifact out of git.
+
+- [ ] **Implement `PI7600_LOG_LEVEL` and reduce production session logging.**
+  - `AppConfig.logLevel` is parsed but unused.
+  - Add a small logger filter for debug/info/warn/error.
+  - Disable per-request console session logs in production unless explicitly
+    enabled.
+  - Keep `/at` audit logging.
+
+- [ ] **Start the camera lazily.**
+  - Camera capture currently runs at startup even with no `/wss/video` clients.
+  - Start capture when the first video client connects and stop after the last
+    client disconnects (with a grace period).
+  - Keep the no-camera `1011` behavior and avoid startup races.
+
+- [ ] **Optimize `At` buffering.**
+  - `_buffer += utf8.decode(data)` rebuilds the response string per chunk.
+  - Use a `BytesBuilder`/`StringBuffer` or accumulate bytes and decode once.
+  - Benchmark large `AT+CMGL` responses before/after.
+
+- [ ] **Database tuning and batching.**
+  - Evaluate a local PostgreSQL Unix socket to reduce connection latency.
+  - Tune `maxConnectionCount` for the Pi workload.
+  - Consider batching SMS persistence/upserts once the fingerprint index is in
+    place.
+  - Do not change API response shapes for this work.
+
+## Correctness and security
+
+- [ ] **Await `AppServices.ready` in hardware routes.**
+  - `StatusRoute`, `SmsRoute`, `SmsDeleteRoute`, `SmsCleanupRoute`, and
+    `AtRoute` can touch the modem before `ModemSettings.initialize()` runs.
+  - Await `services.ready` before hardware use; readiness completes even when
+    hardware fails, so the existing `ERROR` behavior remains.
+  - Add a startup-race regression test if practical.
+
+- [ ] **Prevent duplicate sends of parsed `SENT` messages.**
+  - `SmsService.createMessage` sends when `messageType == 'SENT'` and
+    `isSent != true`.
+  - Change the condition to only send when `isSent == false`, or mark parsed
+    sent messages as sent in the parser.
+  - Add a regression test that a parsed `SENT` message is not re-sent.
+
+- [ ] **Clean up `CameraCapture.start()` on timeout/failure.**
+  - Kill the isolate, close the receiver, and clear control ports when startup
+    times out or errors.
+  - Allow a clean retry without leaking the previous isolate.
+
+- [ ] **Use a monotonic clock for camera frame pacing.**
+  - Replace `DateTime.now()` frame timing with `Stopwatch` so NTP jumps do not
+    cause bursts or stalls.
+
+- [ ] **Pin JWT verification to RS256.**
+  - Reject tokens whose header algorithm is not `RS256` before verification.
+  - Keep issuer, expiry, and subject checks unchanged.
+
+- [ ] **Redact sensitive `/at` audit logs.**
+  - Avoid logging PIN/password values from commands such as `AT+CPIN`,
+    `AT+CLCK`, and `AT+CPWD`.
+  - Keep the admin audit trail without leaking secrets.
+
+- [ ] **Handle malformed token form bodies.**
+  - Catch `FormatException` from `Uri.splitQueryString` and return a controlled
+    `422` instead of a 500.
+
+- [ ] **Handle SMS rows marked in SIM without a `messageIndex`.**
+  - Delete/cleanup currently skips the modem operation and removes/updates the
+    row, so the message can be re-imported.
+  - Log or return a controlled error and decide whether the row should remain.
+
+- [ ] **Reduce WebSocket message-content logging.**
+  - `/wss` logs full message text.
+  - Log length/metadata only, or put content behind debug logging.
+
+## Testing and CI
+
+- [ ] **WebSocket auth and close-code tests.**
+  - Cover missing, invalid, and expired tokens with close code `1008`.
+  - Cover the missing-camera `/wss/video` path with close code `1011`.
+  - Keep the vendored `relic_io` patch covered.
+
+- [ ] **Camera and video broadcaster tests.**
+  - Test YUYV-to-JPEG conversion with a synthetic frame.
+  - Test broadcaster client removal when `trySendBytes` fails.
+  - Test frame pacing with a fake device/clock where practical.
+
+- [ ] **Route-level tests.**
+  - Exercise token, status, SMS, and `/at` handlers with fake services.
+  - Cover auth failure, admin failure, validation errors, and startup readiness.
+
+- [ ] **Browser docs test in CI.**
+  - Automate login, logout, unauthenticated execute, and authenticated execute.
+  - Use the existing headless-browser flow or a lightweight Playwright setup.
+
+- [ ] **Benchmark harness.**
+  - Measure `/healthz`, `/token`, `/info`, `/`, and `/sms` with fake hardware.
+  - Measure camera capture/encode FPS on hardware with a V4L2 device.
+  - Track bcrypt, JWT, DB, AT command, and process-spawn timings.
+
+- [ ] **Release build script.**
+  - Automate `dart build cli` plus copying `web/docs/app.js` into the bundle.
+  - Ensure the submodule and docs client are built in the correct order.
+
+## Features
+
+- [ ] **Google Maps links for GPS coordinates.**
+  - Add a `maps_url` field or docs link for valid coordinates.
+  - Decide whether this belongs on `/`, a GPS endpoint, or the docs page.
+  - Handle no-fix and malformed `+CGPSINFO` values without generating links.
+
+- [ ] **Phone endpoints.**
+  - Expose the library's `Phone` helpers: dial, hang up, and active calls.
+  - Decide on auth level and rate limiting before exposing call control.
+
+- [ ] **GPS endpoints.**
+  - Start/stop the GPS session and return the current position separately from
+    the aggregate status response.
+
+- [ ] **Camera snapshot endpoint.**
+  - Return the latest JPEG as a single HTTP response in addition to
+    `/wss/video`.
+
+- [ ] **SMS pagination, search, and retry.**
+  - Add optional pagination/search without breaking the existing list contract
+    where possible.
+  - Add a retry path for stored-but-unsent messages.
+
+- [ ] **Metrics endpoint.**
+  - Expose request counts, latency, modem state, camera state, and process
+    metrics in Prometheus format.
+
+- [ ] **Login rate limiting and TOTP.**
+  - Add per-user/IP throttling for failed logins.
+  - Add TOTP enrollment and verification as described in `docs/roadmap.md`.
+
+- [ ] **Token revocation and refresh.**
+  - Current logout only clears browser storage; add a server-side revocation
+    path or short-lived access tokens with refresh.
+
+- [ ] **User management API.**
+  - Create, list, disable, and promote users without the CLI.
+  - Keep it admin-only and audited.
+
+- [ ] **Persistent audit log.**
+  - Store `/at` and authentication events in PostgreSQL or a dedicated audit
+    table.
+  - Redact secrets and define retention.
+
+- [ ] **Rename deployment artifacts.**
+  - Decide whether to rename `deploy/pi7600.service`,
+    `deploy/pi7600.env.example`, `/opt/pi7600`, and `PI7600_*` to `simcom_api`.
+  - This is a breaking operational change; plan a migration path.
