@@ -24,7 +24,8 @@ ReadWritePaths=/var/lib/simcom_api
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# ping -I <interface> uses netlink to resolve interface addresses.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 LockPersonality=true
 # Allow the status endpoint's `ping` subprocess to open ICMP sockets.
 AmbientCapabilities=CAP_NET_RAW
