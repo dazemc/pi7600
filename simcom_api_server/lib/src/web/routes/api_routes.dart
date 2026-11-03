@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:simcom_api_server/src/app_services.dart';
+import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
@@ -106,6 +107,41 @@ class InfoRoute extends Route {
     );
     final result = await services.status.info();
     return jsonResponse(result.toJson());
+  }
+}
+
+/// `GET /gps`
+class GpsRoute extends Route {
+  GpsRoute(this.services) : super(methods: {Method.get});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
+    AppLog.info(
+      '/gps GET: Accessed by ${auth.user!.userName}',
+      name: 'pi7600',
+    );
+
+    final raw = await services.gps.getGpsPosition();
+    final fix = parseGpsInfo(raw);
+    return jsonResponse({
+      'raw': raw,
+      ...?fix?.toJson(),
+      if (fix == null) ...{
+        'latitude': null,
+        'longitude': null,
+        'date': null,
+        'time': null,
+        'altitude': null,
+        'speed_knots': null,
+        'course_degrees': null,
+        'maps_url': null,
+      },
+    });
   }
 }
 

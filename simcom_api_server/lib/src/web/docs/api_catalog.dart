@@ -145,6 +145,20 @@ const apiEndpoints = <ApiEndpoint>[
   ),
   ApiEndpoint(
     method: 'GET',
+    path: '/gps',
+    summary: 'Current GPS fix and Google Maps link',
+    description:
+        'Returns the raw `+CGPSINFO` response plus parsed latitude, longitude, '
+        'altitude, speed, course, and a Google Maps URL when a fix is '
+        'available. Coordinates and `maps_url` are null when there is no fix.',
+    auth: ApiAuth.user,
+    responses: {
+      '200': 'GPS fix or null coordinate fields',
+      '401': 'Authentication required',
+    },
+  ),
+  ApiEndpoint(
+    method: 'GET',
     path: '/sms',
     summary: 'List stored SMS messages',
     auth: ApiAuth.user,

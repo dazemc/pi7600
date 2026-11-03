@@ -229,6 +229,21 @@ async function main() {
       'authenticated response body was not rendered',
     );
 
+    const gps = await execute('/gps');
+    assert(
+      gps.status.startsWith('HTTP 200'),
+      `expected 200 from /gps, got ${gps.status}`,
+    );
+    const gpsLink = await evaluate(`(function () {
+      const card = document.querySelector('.endpoint[data-path="/gps"]');
+      const link = card.querySelector('.result-link a');
+      return link ? link.href : '';
+    })()`);
+    assert(
+      gpsLink.includes('google.com/maps'),
+      'GPS result did not include a Google Maps link',
+    );
+
     await evaluate(`document.getElementById('logout').click()`);
     const loggedOut = await waitFor(
       `({

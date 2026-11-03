@@ -232,6 +232,7 @@ button:disabled { opacity: 0.6; cursor: progress; }
 .result-status.ok { color: var(--post); }
 .result-status.error { color: var(--delete); }
 .result-status.network { color: var(--put); }
+.result-link { margin-top: 0.5rem; font-size: 0.85rem; }
 .result {
   margin: 0;
   background: var(--code-bg);

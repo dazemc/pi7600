@@ -25,6 +25,7 @@ void configureServer(Serverpod pod) {
     ..addRoute(TokenRoute(services), '/token')
     ..addRoute(StatusRoute(services), '/')
     ..addRoute(InfoRoute(services), '/info')
+    ..addRoute(GpsRoute(services), '/gps')
     ..addRoute(SmsRoute(services), '/sms')
     ..addRoute(SmsDeleteRoute(services), '/sms/delete/:id')
     ..addRoute(SmsCleanupRoute(services), '/sms/cleanup/')

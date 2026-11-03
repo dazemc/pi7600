@@ -23,6 +23,7 @@ void main() {
           '/token',
           '/',
           '/info',
+          '/gps',
           '/sms',
           '/sms/delete/{id}',
           '/sms/cleanup/',
@@ -78,6 +79,7 @@ void main() {
 
       expect(html, contains('data-method="GET"'));
       expect(html, contains('data-method="DELETE"'));
+      expect(html, contains('data-path="/gps"'));
       expect(html, contains('data-path="/sms/delete/{id}"'));
       expect(html, contains('data-auth="admin"'));
       expect(html, contains('class="method method-get"'));

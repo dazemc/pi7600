@@ -82,6 +82,29 @@ Future<void> _handle(HttpRequest request) async {
       });
       return;
     }
+    if (path == '/gps' && request.method == 'GET') {
+      if (!_authorized(
+        request.headers.value(HttpHeaders.authorizationHeader),
+      )) {
+        request.response.statusCode = HttpStatus.unauthorized;
+        await _json(request.response, {'detail': 'Not authenticated'});
+        return;
+      }
+      await _json(request.response, {
+        'raw':
+            '+CGPSINFO: 1234.5678,N,12345.6789,W,031126,120000.00,12.3,0.5,90.0',
+        'latitude': 12.57613,
+        'longitude': -123.761315,
+        'date': '031126',
+        'time': '120000.00',
+        'altitude': 12.3,
+        'speed_knots': 0.5,
+        'course_degrees': 90.0,
+        'maps_url':
+            'https://www.google.com/maps/search/?api=1&query=12.57613,-123.761315',
+      });
+      return;
+    }
     if (path == '/healthz') {
       await _json(request.response, {'status': 'ok'});
       return;

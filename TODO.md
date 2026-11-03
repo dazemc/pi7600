@@ -182,18 +182,22 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
 
 ## Features
 
-- [ ] **Google Maps links for GPS coordinates.**
+- [x] **Google Maps links for GPS coordinates.**
   - Add a `maps_url` field or docs link for valid coordinates.
   - Decide whether this belongs on `/`, a GPS endpoint, or the docs page.
   - Handle no-fix and malformed `+CGPSINFO` values without generating links.
+  - Added `GET /gps`, `GpsFix`, and a clickable Google Maps link in the docs
+    result panel.
 
 - [ ] **Phone endpoints.**
   - Expose the library's `Phone` helpers: dial, hang up, and active calls.
   - Decide on auth level and rate limiting before exposing call control.
 
-- [ ] **GPS endpoints.**
+- [x] **GPS endpoints.**
   - Start/stop the GPS session and return the current position separately from
     the aggregate status response.
+  - `GET /gps` returns the raw response, parsed fix, and Maps URL. Explicit
+    start/stop routes remain future work.
 
 - [ ] **Camera snapshot endpoint.**
   - Return the latest JPEG as a single HTTP response in addition to

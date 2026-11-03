@@ -184,6 +184,7 @@ All routes except `/token`, `/healthz`, `/readyz`, `/docs`, `/docs/*`, and
 | `POST` | `/token` | Issue a JWT |
 | `GET` | `/` | Modem/network/GPS status |
 | `GET` | `/info` | Hostname, kernel, date, architecture |
+| `GET` | `/gps` | Current GPS fix and Google Maps link |
 | `GET` | `/sms` | Sync messages from the SIM and return the database rows |
 | `POST` | `/sms` | Send an SMS |
 | `DELETE` | `/sms/delete/{message_id}` | Delete by database `id` |

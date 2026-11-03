@@ -356,6 +356,7 @@ class _EndpointCardState extends State<_EndpointCard> {
   bool _open = false;
   String? _resultStatus;
   String _resultText = '';
+  String? _resultMapsUrl;
   int? _resultCode;
   bool _executing = false;
 
@@ -466,12 +467,29 @@ class _EndpointCardState extends State<_EndpointCard> {
 
   void _showResult(int? status, String text, [int? elapsed]) {
     if (!mounted) return;
+    String? mapsUrl;
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is Map && decoded['maps_url'] is String) {
+        final uri = Uri.tryParse(decoded['maps_url'] as String);
+        if (uri != null &&
+            uri.scheme == 'https' &&
+            (uri.host == 'www.google.com' ||
+                uri.host.endsWith('.google.com'))) {
+          mapsUrl = uri.toString();
+        }
+      }
+    } on Object {
+      // Non-JSON and error responses are shown as-is.
+    }
+
     setState(() {
       _resultCode = status;
       _resultStatus = status == null
           ? 'Request failed'
           : 'HTTP $status${elapsed == null ? '' : ' - $elapsed ms'}';
       _resultText = text;
+      _resultMapsUrl = mapsUrl;
     });
   }
 
@@ -604,6 +622,17 @@ class _EndpointCardState extends State<_EndpointCard> {
                 Component.text(_resultStatus ?? ''),
               ], classes: 'result-status $_resultClass'),
               pre([Component.text(_resultText)], classes: 'result'),
+              if (_resultMapsUrl != null)
+                div([
+                  a(
+                    [Component.text('Open in Google Maps')],
+                    href: _resultMapsUrl!,
+                    attributes: const {
+                      'target': '_blank',
+                      'rel': 'noopener noreferrer',
+                    },
+                  ),
+                ], classes: 'result-link'),
             ],
             classes: 'result-wrap',
             attributes: _resultStatus == null ? const {'hidden': ''} : const {},
