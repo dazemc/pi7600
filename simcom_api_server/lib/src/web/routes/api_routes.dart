@@ -276,7 +276,41 @@ class SmsRoute extends Route {
       '/sms GET: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
     );
-    final messages = await services.smsService(session).listMessages();
+
+    final query = request.url.queryParameters;
+    final limitRaw = query['limit'];
+    final offsetRaw = query['offset'];
+    final searchRaw = query['q'];
+
+    int? limit;
+    if (limitRaw != null && limitRaw.isNotEmpty) {
+      limit = int.tryParse(limitRaw);
+      if (limit == null || limit < 1 || limit > 500) {
+        return errorResponse(422, 'limit must be between 1 and 500');
+      }
+    }
+
+    var offset = 0;
+    if (offsetRaw != null && offsetRaw.isNotEmpty) {
+      final parsed = int.tryParse(offsetRaw);
+      if (parsed == null || parsed < 0) {
+        return errorResponse(422, 'offset must be 0 or greater');
+      }
+      offset = parsed;
+    }
+
+    String? search;
+    if (searchRaw != null) {
+      final trimmed = searchRaw.trim();
+      if (trimmed.length > 200) {
+        return errorResponse(422, 'q must be at most 200 characters');
+      }
+      if (trimmed.isNotEmpty) search = trimmed;
+    }
+
+    final messages = await services
+        .smsService(session)
+        .listMessages(limit: limit, offset: offset, search: search);
     return jsonResponse(messages.map(messageToJson).toList(growable: false));
   }
 

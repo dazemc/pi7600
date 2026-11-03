@@ -189,7 +189,7 @@ All routes except `/token`, `/healthz`, `/readyz`, `/docs`, `/docs/*`, and
 | `POST` | `/phone/call` | Place a voice call (**admin only**) |
 | `POST` | `/phone/hangup` | Hang up the active call (**admin only**) |
 | `GET` | `/phone/calls` | List active calls (**admin only**) |
-| `GET` | `/sms` | Sync messages from the SIM and return the database rows |
+| `GET` | `/sms` | Sync messages from the SIM and return the database rows (`limit`, `offset`, `q` optional) |
 | `POST` | `/sms` | Send an SMS |
 | `POST` | `/sms/retry/{message_id}` | Retry an unsent outgoing message |
 | `DELETE` | `/sms/delete/{message_id}` | Delete by database `id` |

@@ -10,7 +10,29 @@ class FakeMessageStore implements MessageStore {
   int _nextId = 1;
 
   @override
-  Future<List<Message>> findAll() async => List.of(rows);
+  Future<List<Message>> findAll({
+    int? limit,
+    int? offset,
+    String? search,
+  }) async {
+    final term = search?.trim().toLowerCase();
+    var result = rows.where((row) {
+      if (term == null || term.isEmpty) return true;
+      return row.messageContents.toLowerCase().contains(term) ||
+          (row.messageOriginatingAddress?.toLowerCase().contains(term) ??
+              false) ||
+          (row.messageDestinationAddress?.toLowerCase().contains(term) ??
+              false);
+    }).toList();
+
+    final start = offset ?? 0;
+    if (start >= result.length) return [];
+    result = result.sublist(start);
+    if (limit != null && result.length > limit) {
+      result = result.sublist(0, limit);
+    }
+    return result;
+  }
 
   @override
   Future<Message?> findById(int id) async {
@@ -152,6 +174,32 @@ void main() {
     await service.listMessages();
 
     expect(store.rows, hasLength(1));
+  });
+
+  test('listMessages paginates stored rows', () async {
+    sms.inbox = [
+      incoming(contents: 'One'),
+      incoming(contents: 'Two'),
+      incoming(contents: 'Three'),
+    ];
+
+    final page = await service.listMessages(limit: 1, offset: 1);
+
+    expect(page, hasLength(1));
+    expect(page.single.messageContents, 'Two');
+  });
+
+  test('listMessages searches contents and addresses', () async {
+    sms.inbox = [
+      incoming(contents: 'Invoice 42'),
+      incoming(contents: 'Hello'),
+    ];
+
+    final found = await service.listMessages(search: 'invoice');
+    final byAddress = await service.listMessages(search: '6416');
+
+    expect(found.single.messageContents, 'Invoice 42');
+    expect(byAddress, hasLength(2));
   });
 
   test('createMessage updates inSimMemory for an existing row', () async {

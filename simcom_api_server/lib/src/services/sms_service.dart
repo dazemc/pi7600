@@ -26,8 +26,15 @@ class SmsService {
   final Sms sms;
   final MessageStore store;
 
-  /// Fetch messages from the modem, persist new ones, and return all rows.
-  Future<List<Message>> listMessages() async {
+  /// Fetch messages from the modem, persist new ones, and return stored rows.
+  ///
+  /// [limit], [offset], and [search] are applied to the database query after
+  /// any newly received messages have been persisted.
+  Future<List<Message>> listMessages({
+    int? limit,
+    int? offset,
+    String? search,
+  }) async {
     final parsed = await sms.receiveMessages();
     for (final message in parsed) {
       try {
@@ -39,7 +46,7 @@ class SmsService {
         );
       }
     }
-    return store.findAll();
+    return store.findAll(limit: limit, offset: offset, search: search);
   }
 
   /// Persist a decoded message, sending outgoing messages when needed.

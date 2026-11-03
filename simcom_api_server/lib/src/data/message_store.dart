@@ -3,7 +3,11 @@ import 'package:serverpod/serverpod.dart' hide Message;
 
 /// Persistence operations for SMS messages.
 abstract interface class MessageStore {
-  Future<List<Message>> findAll();
+  Future<List<Message>> findAll({
+    int? limit,
+    int? offset,
+    String? search,
+  });
 
   Future<Message?> findById(int id);
 
@@ -30,10 +34,19 @@ class SessionMessageStore implements MessageStore {
   final DatabaseSession session;
 
   @override
-  Future<List<Message>> findAll() {
+  Future<List<Message>> findAll({int? limit, int? offset, String? search}) {
+    final term = search?.trim();
     return Message.db.find(
       session,
+      where: term == null || term.isEmpty
+          ? null
+          : (table) =>
+                table.messageContents.ilike('%$term%') |
+                table.messageOriginatingAddress.ilike('%$term%') |
+                table.messageDestinationAddress.ilike('%$term%'),
       orderBy: (table) => table.id,
+      limit: limit,
+      offset: offset,
     );
   }
 

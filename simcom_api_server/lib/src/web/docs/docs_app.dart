@@ -350,6 +350,7 @@ class _EndpointCardState extends State<_EndpointCard> {
   final GlobalNodeKey<web.HTMLDetailsElement> _detailsKey = GlobalNodeKey();
 
   late final Map<String, String> _pathValues;
+  late final Map<String, String> _queryValues;
   late String _jsonBody;
   late final Map<String, String> _formValues;
 
@@ -365,6 +366,10 @@ class _EndpointCardState extends State<_EndpointCard> {
     super.initState();
     _pathValues = {
       for (final parameter in component.endpoint.pathParameters)
+        parameter.name: parameter.example,
+    };
+    _queryValues = {
+      for (final parameter in component.endpoint.queryParameters)
         parameter.name: parameter.example,
     };
     _jsonBody = component.endpoint.jsonBody ?? '';
@@ -425,12 +430,24 @@ class _EndpointCardState extends State<_EndpointCard> {
       );
     }
 
+    final query = <String, String>{};
+    for (final parameter in endpoint.queryParameters) {
+      final value = (_queryValues[parameter.name] ?? '').trim();
+      if (value.isNotEmpty) query[parameter.name] = value;
+    }
+    var uri = Uri.base.resolve(path);
+    if (query.isNotEmpty) {
+      uri = uri.replace(
+        queryParameters: {...uri.queryParameters, ...query},
+      );
+    }
+
     final stopwatch = Stopwatch()..start();
     setState(() => _executing = true);
 
     final client = http.Client();
     try {
-      final request = http.Request(endpoint.method, Uri.base.resolve(path));
+      final request = http.Request(endpoint.method, uri);
       request.headers.addAll(headers);
       if (body != null) request.body = body;
 
@@ -550,6 +567,37 @@ class _EndpointCardState extends State<_EndpointCard> {
                         setState(() => _pathValues[parameter.name] = value),
                     attributes: {
                       'data-param': parameter.name,
+                      'placeholder': parameter.example,
+                      'autocomplete': 'off',
+                    },
+                  ),
+                ]),
+            ]),
+          ],
+          if (endpoint.queryParameters.isNotEmpty) ...[
+            h4(classes: 'section-title', [
+              Component.text('Query parameters'),
+            ]),
+            div(classes: 'field-grid', [
+              for (final parameter in endpoint.queryParameters)
+                div(classes: 'field', [
+                  label([
+                    Component.text(parameter.name),
+                    span([
+                      Component.text(' ${parameter.type}'),
+                    ], classes: 'hint'),
+                    if (parameter.description.isNotEmpty)
+                      span([
+                        Component.text(' - ${parameter.description}'),
+                      ], classes: 'hint'),
+                  ]),
+                  input<String>(
+                    type: InputType.text,
+                    value: _queryValues[parameter.name] ?? parameter.example,
+                    onInput: (value) =>
+                        setState(() => _queryValues[parameter.name] = value),
+                    attributes: {
+                      'data-query': parameter.name,
                       'placeholder': parameter.example,
                       'autocomplete': 'off',
                     },

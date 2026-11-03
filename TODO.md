@@ -209,9 +209,11 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Add a retry path for stored-but-unsent messages.
   - Added `POST /sms/retry/{id}`; already-sent rows are returned unchanged.
 
-- [ ] **SMS pagination and search.**
+- [x] **SMS pagination and search.**
   - Add optional pagination/search without breaking the existing list contract
     where possible.
+  - `GET /sms` accepts optional `limit` (1-500), `offset`, and `q`; the
+    existing response shape is unchanged when none are supplied.
 
 - [x] **Metrics endpoint.**
   - Expose request counts, latency, modem state, camera state, and process

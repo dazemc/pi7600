@@ -40,6 +40,13 @@ void main() {
 
       final sms = paths['/sms'] as Map<String, Object?>;
       expect(sms.keys, containsAll(['get', 'post']));
+      final smsGet = sms['get'] as Map<String, Object?>;
+      final smsParameters = (smsGet['parameters'] as List<Object?>)
+          .cast<Map<String, Object?>>();
+      expect(
+        smsParameters.map((parameter) => parameter['name']),
+        containsAll(['limit', 'offset', 'q']),
+      );
 
       final delete = paths['/sms/delete/{id}'] as Map<String, Object?>;
       final deleteOperation = delete['delete'] as Map<String, Object?>;
@@ -89,6 +96,7 @@ void main() {
       expect(html, contains('data-auth="admin"'));
       expect(html, contains('class="method method-get"'));
       expect(html, contains('data-param="id"'));
+      expect(html, contains('data-query="limit"'));
       expect(html, contains('data-json'));
       expect(html, contains('data-form="username"'));
       expect(html, contains('Execute'));

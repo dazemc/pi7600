@@ -33,6 +33,21 @@ class ApiPathParameter {
   final String example;
 }
 
+/// An optional query parameter such as `?limit=50`.
+class ApiQueryParameter {
+  const ApiQueryParameter({
+    required this.name,
+    this.type = 'string',
+    this.description = '',
+    this.example = '',
+  });
+
+  final String name;
+  final String type;
+  final String description;
+  final String example;
+}
+
 /// A form field used by `application/x-www-form-urlencoded` endpoints.
 class ApiFormField {
   const ApiFormField({
@@ -61,6 +76,7 @@ class ApiEndpoint {
     this.jsonBody,
     this.formFields = const [],
     this.pathParameters = const [],
+    this.queryParameters = const [],
     this.responses = const {},
     this.operationId,
   });
@@ -77,6 +93,7 @@ class ApiEndpoint {
   final String? jsonBody;
   final List<ApiFormField> formFields;
   final List<ApiPathParameter> pathParameters;
+  final List<ApiQueryParameter> queryParameters;
 
   /// Response status code to description.
   final Map<String, String> responses;
@@ -217,10 +234,33 @@ const apiEndpoints = <ApiEndpoint>[
     method: 'GET',
     path: '/sms',
     summary: 'List stored SMS messages',
+    description:
+        'Returns messages ordered by database id. Optional `limit`, `offset`, '
+        'and `q` query parameters page and search the stored rows.',
     auth: ApiAuth.user,
+    queryParameters: [
+      ApiQueryParameter(
+        name: 'limit',
+        type: 'integer',
+        description: 'Maximum rows to return (1-500).',
+        example: '50',
+      ),
+      ApiQueryParameter(
+        name: 'offset',
+        type: 'integer',
+        description: 'Rows to skip before returning results.',
+        example: '0',
+      ),
+      ApiQueryParameter(
+        name: 'q',
+        description: 'Search message contents and addresses.',
+        example: 'invoice',
+      ),
+    ],
     responses: {
       '200': 'Messages ordered by database id',
       '401': 'Authentication required',
+      '422': 'Invalid pagination or search parameters',
     },
   ),
   ApiEndpoint(
@@ -379,13 +419,22 @@ Map<String, Object?> buildOpenApiDocument() {
             'bearerAuth': <String>[],
           },
         ],
-      if (endpoint.pathParameters.isNotEmpty)
+      if (endpoint.pathParameters.isNotEmpty ||
+          endpoint.queryParameters.isNotEmpty)
         'parameters': [
           for (final parameter in endpoint.pathParameters)
             {
               'name': parameter.name,
               'in': 'path',
               'required': true,
+              'description': parameter.description,
+              'schema': {'type': parameter.type},
+            },
+          for (final parameter in endpoint.queryParameters)
+            {
+              'name': parameter.name,
+              'in': 'query',
+              'required': false,
               'description': parameter.description,
               'schema': {'type': parameter.type},
             },
