@@ -1,0 +1,10 @@
+name: simcom_api_client
+description: Generated Serverpod protocol client for the simcom_api service.
+
+environment:
+  sdk: '^3.12.2'
+
+resolution: workspace
+
+dependencies:
+  serverpod_client: 4.1.0

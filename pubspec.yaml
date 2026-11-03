@@ -5,8 +5,8 @@ environment:
   sdk: '^3.12.2'
 
 workspace:
-  - pi7600_client
-  - pi7600_server
+  - simcom_api_client
+  - simcom_api_server
 
 # Local patch: allow RFC 6455 close codes 1008 (policy violation) and 1011
 # (internal error), which the published `relic_io` rejects. The Pi7600

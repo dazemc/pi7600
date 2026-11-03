@@ -14,12 +14,12 @@ on the Dart VM with PostgreSQL. There is no Python runtime.
 
 | Path | Purpose |
 | --- | --- |
-| `pi7600_server/` | Serverpod server, camera/V4L2 capture, REST and WebSocket routes |
-| `pi7600_client/` | Generated Serverpod protocol client package (not a Flutter app) |
+| `simcom_api_server/` | Serverpod server, camera/V4L2 capture, REST and WebSocket routes |
+| `simcom_api_client/` | Generated Serverpod protocol client package (not a Flutter app) |
 | `simcom_modem/` | Git submodule: standalone Dart `simcom_modem` library |
-| `pi7600_server/lib/src/camera/` | V4L2 capture, JPEG broadcaster, recognition interface |
-| `pi7600_server/lib/src/web/` | REST routes and WebSocket upgrade handlers |
-| `pi7600_server/migrations/` | PostgreSQL schema migrations |
+| `simcom_api_server/lib/src/camera/` | V4L2 capture, JPEG broadcaster, recognition interface |
+| `simcom_api_server/lib/src/web/` | REST routes and WebSocket upgrade handlers |
+| `simcom_api_server/migrations/` | PostgreSQL schema migrations |
 | `third_party/relic_io/` | Vendored `relic_io` with RFC 6455 close-code support for 1008/1011 |
 | `deploy/` | systemd unit and environment example |
 | `scripts/` | Helper scripts (`setup.sh`, model downloads) |
@@ -50,14 +50,14 @@ git submodule update --init --recursive
 dart pub get
 
 # JWT signing keys. The development server resolves these relative to
-# pi7600_server/, so create them there.
-mkdir -p pi7600_server/.keys
+# simcom_api_server/, so create them there.
+mkdir -p simcom_api_server/.keys
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
-  -out pi7600_server/.keys/private.pem
-openssl rsa -pubout -in pi7600_server/.keys/private.pem \
-  -out pi7600_server/.keys/public.pem
+  -out simcom_api_server/.keys/private.pem
+openssl rsa -pubout -in simcom_api_server/.keys/private.pem \
+  -out simcom_api_server/.keys/public.pem
 
-cd pi7600_server
+cd simcom_api_server
 
 # Build the interactive /docs client. This compiles the Jaspr browser app to
 # web/docs/app.js; the generated file is not committed.
@@ -72,7 +72,7 @@ The development server listens on `http://localhost:8082`. Leave it running and
 create an API user in another terminal:
 
 ```bash
-cd pi7600_server
+cd simcom_api_server
 dart run bin/create_user.dart --username alice --admin
 ```
 
@@ -101,8 +101,8 @@ library repository's `master` branch.
 
 Pi7600 settings are read from `PI7600_*` environment variables or from a `.env`
 file in the server working directory. Serverpod settings live in
-`pi7600_server/config/<runMode>.yaml`; the database password comes from
-`SERVERPOD_DATABASE_PASSWORD` or `pi7600_server/config/passwords.yaml`.
+`simcom_api_server/config/<runMode>.yaml`; the database password comes from
+`SERVERPOD_DATABASE_PASSWORD` or `simcom_api_server/config/passwords.yaml`.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -218,7 +218,7 @@ The interactive app is written in Dart with Jaspr. Its browser entrypoint is
 `lib/src/web/docs/docs_app.client.dart`; compile it with:
 
 ```bash
-cd pi7600_server
+cd simcom_api_server
 dart run tool/build_docs_client.dart
 ```
 
@@ -287,11 +287,11 @@ query and returns `503` when the database is unavailable.
 ## Database and migrations
 
 The schema is managed by Serverpod migrations under
-`pi7600_server/migrations/`. `--apply-migrations` applies pending migrations at
+`simcom_api_server/migrations/`. `--apply-migrations` applies pending migrations at
 startup. To create a migration after changing a model:
 
 ```bash
-cd pi7600_server
+cd simcom_api_server
 serverpod create-migration
 ```
 
@@ -301,7 +301,7 @@ serverpod create-migration
 against the embedded development database while the server is running:
 
 ```bash
-cd pi7600_server
+cd simcom_api_server
 dart run bin/create_user.dart --username alice --admin
 ```
 
@@ -315,7 +315,7 @@ machine:
 
 ```bash
 git submodule update --init --recursive
-cd pi7600_server
+cd simcom_api_server
 dart pub get
 dart run tool/build_docs_client.dart
 dart build cli --target bin/main.dart \
@@ -327,7 +327,7 @@ mkdir -p build/pi/bundle/web/docs
 cp web/docs/app.js build/pi/bundle/web/docs/app.js
 ```
 
-The bundle is written to `pi7600_server/build/pi/bundle/`. It contains
+The bundle is written to `simcom_api_server/build/pi/bundle/`. It contains
 `bin/main`, the runtime libraries, and `web/docs/app.js`.
 
 1. Install runtime dependencies on the Pi:
@@ -364,6 +364,16 @@ The bundle is written to `pi7600_server/build/pi/bundle/`. It contains
    sudo chown -R pi7600:pi7600 /opt/pi7600
    ```
 
+   Existing installations only: the Serverpod module name changed from
+   `pi7600` to `simcom_api`. Before starting the renamed service, run the
+   one-time update from the repository checkout on the Pi:
+
+   ```bash
+   sudo -u postgres psql -d pi7600 -f scripts/rename_migration_module.sql
+   ```
+
+   Fresh databases do not need this step.
+
 5. Generate keys in `/etc/pi7600/keys`, copy
    `deploy/pi7600.env.example` to `/etc/pi7600/pi7600.env`, and set the database
    password, `LIBSERIALPORT_PATH=libserialport.so.0`, and any host-specific
@@ -386,11 +396,11 @@ are migrated automatically.
 ```bash
 git submodule update --init --recursive
 dart pub get
-dart format pi7600_server pi7600_client simcom_modem
-dart analyze pi7600_server
-dart analyze pi7600_client
+dart format simcom_api_server simcom_api_client simcom_modem
+dart analyze simcom_api_server
+dart analyze simcom_api_client
 dart analyze simcom_modem
-cd pi7600_server && dart test
+cd simcom_api_server && dart test
 cd simcom_modem && dart test
 ```
 

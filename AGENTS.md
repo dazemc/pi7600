@@ -16,9 +16,9 @@ There is no Python runtime, SQLAlchemy, Alembic, or OpenCV dependency anymore.
 
 The repository is split:
 
-- **`pi7600_server/`:** Serverpod server, camera/V4L2 capture, REST and
+- **`simcom_api_server/`:** Serverpod server, camera/V4L2 capture, REST and
   WebSocket routes, models, migrations, and tests.
-- **`pi7600_client/`:** generated Serverpod protocol client package. It is not a
+- **`simcom_api_client/`:** generated Serverpod protocol client package. It is not a
   Flutter app and has no UI.
 - **`simcom_modem/`:** git submodule containing the standalone `simcom_modem`
   Dart library: AT commands, serial transport, settings, SMS/PDU, GPS, and
@@ -37,14 +37,14 @@ modem, and a V4L2 camera.
 git submodule update --init --recursive
 dart pub get
 
-# Development JWT keys, resolved relative to pi7600_server/.
-mkdir -p pi7600_server/.keys
+# Development JWT keys, resolved relative to simcom_api_server/.
+mkdir -p simcom_api_server/.keys
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
-  -out pi7600_server/.keys/private.pem
-openssl rsa -pubout -in pi7600_server/.keys/private.pem \
-  -out pi7600_server/.keys/public.pem
+  -out simcom_api_server/.keys/private.pem
+openssl rsa -pubout -in simcom_api_server/.keys/private.pem \
+  -out simcom_api_server/.keys/public.pem
 
-cd pi7600_server
+cd simcom_api_server
 dart run bin/main.dart --apply-migrations   # embedded PostgreSQL, port 8082
 dart run bin/create_user.dart --username alice --admin
 ```
@@ -52,38 +52,38 @@ dart run bin/create_user.dart --username alice --admin
 Common commands:
 
 ```bash
-dart format pi7600_server pi7600_client simcom_modem
-dart analyze pi7600_server
-dart analyze pi7600_client
+dart format simcom_api_server simcom_api_client simcom_modem
+dart analyze simcom_api_server
+dart analyze simcom_api_client
 dart analyze simcom_modem
-cd pi7600_server && dart test
+cd simcom_api_server && dart test
 cd simcom_modem && dart test
-cd pi7600_server && dart run tool/build_docs_client.dart
-cd pi7600_server && serverpod create-migration
+cd simcom_api_server && dart run tool/build_docs_client.dart
+cd simcom_api_server && serverpod create-migration
 ```
 
 ## Repository map
 
 | Path | Purpose |
 | --- | --- |
-| `pi7600_server/bin/main.dart` | Server entry point |
-| `pi7600_server/bin/create_user.dart` | Create API users in PostgreSQL |
-| `pi7600_server/lib/server.dart` | Serverpod construction and startup |
-| `pi7600_server/lib/src/bootstrap.dart` | Route and middleware registration |
-| `pi7600_server/lib/src/app_services.dart` | Process-wide services and async startup |
-| `pi7600_server/lib/src/config/app_config.dart` | `PI7600_*` environment configuration |
-| `pi7600_server/lib/src/auth/` | JWT (RS256) and bcrypt helpers |
-| `pi7600_server/lib/src/data/` | Session-bound user/message stores |
-| `pi7600_server/lib/src/models/` | Serverpod model definitions (`*.spy.yaml`) |
-| `pi7600_server/lib/src/generated/` | Generated Serverpod models and repositories |
+| `simcom_api_server/bin/main.dart` | Server entry point |
+| `simcom_api_server/bin/create_user.dart` | Create API users in PostgreSQL |
+| `simcom_api_server/lib/server.dart` | Serverpod construction and startup |
+| `simcom_api_server/lib/src/bootstrap.dart` | Route and middleware registration |
+| `simcom_api_server/lib/src/app_services.dart` | Process-wide services and async startup |
+| `simcom_api_server/lib/src/config/app_config.dart` | `PI7600_*` environment configuration |
+| `simcom_api_server/lib/src/auth/` | JWT (RS256) and bcrypt helpers |
+| `simcom_api_server/lib/src/data/` | Session-bound user/message stores |
+| `simcom_api_server/lib/src/models/` | Serverpod model definitions (`*.spy.yaml`) |
+| `simcom_api_server/lib/src/generated/` | Generated Serverpod models and repositories |
 | `simcom_modem/` | Submodule: `simcom_modem` Dart library (`At`, serial transport, settings, SMS/PDU, GPS, phone) |
-| `pi7600_server/lib/src/camera/` | V4L2 capture, video broadcaster, recognition interface |
-| `pi7600_server/lib/src/services/` | SMS/status business logic and service status Bloc |
-| `pi7600_server/lib/src/web/` | REST/WebSocket routes, `/readyz` middleware, and the Jaspr `/docs` explorer |
-| `pi7600_server/lib/src/web/docs/` | Shared endpoint catalog, OpenAPI generator, Jaspr docs app, and client entrypoint |
-| `pi7600_server/tool/build_docs_client.dart` | Compile the Jaspr docs client to `web/docs/app.js` |
-| `pi7600_server/migrations/` | PostgreSQL migrations |
-| `pi7600_server/test/` | Hardware-free tests and fake serial transport |
+| `simcom_api_server/lib/src/camera/` | V4L2 capture, video broadcaster, recognition interface |
+| `simcom_api_server/lib/src/services/` | SMS/status business logic and service status Bloc |
+| `simcom_api_server/lib/src/web/` | REST/WebSocket routes, `/readyz` middleware, and the Jaspr `/docs` explorer |
+| `simcom_api_server/lib/src/web/docs/` | Shared endpoint catalog, OpenAPI generator, Jaspr docs app, and client entrypoint |
+| `simcom_api_server/tool/build_docs_client.dart` | Compile the Jaspr docs client to `web/docs/app.js` |
+| `simcom_api_server/migrations/` | PostgreSQL migrations |
+| `simcom_api_server/test/` | Hardware-free tests and fake serial transport |
 | `deploy/` | systemd unit and environment example |
 | `scripts/` | `setup.sh` and model download helper |
 | `docs/` | Roadmap and SIM7600 AT command manual |
@@ -111,7 +111,7 @@ cd pi7600_server && serverpod create-migration
   schema with `PI7600_DOCS_ENABLED=false`.
 - **Database:** PostgreSQL through Serverpod's database layer. Schema changes
   are Serverpod migrations, not `create_all`. The development config launches
-  an embedded PostgreSQL under `pi7600_server/.serverpod/`.
+  an embedded PostgreSQL under `simcom_api_server/.serverpod/`.
 - **Auth:** `POST /token` issues a 30-minute RS256 JWT via
   `dart_jsonwebtoken`. HTTP routes validate the bearer token and load the user
   from PostgreSQL. `/at` additionally requires `is_admin`. WebSockets accept a
@@ -173,7 +173,10 @@ cd pi7600_server && serverpod create-migration
    primary key; `Message.messageIndex` is the SIM index. The delete endpoint
    takes the database id and uses `messageIndex` internally.
 8. **Migrations matter.** `create_all` is not used. Add a Serverpod migration
-   for schema changes and apply it with `--apply-migrations`.
+   for schema changes and apply it with `--apply-migrations`. The Serverpod
+   module name is `simcom_api`; existing databases created under the old
+   `pi7600` module must run `scripts/rename_migration_module.sql` once before
+   starting the renamed service.
 9. **Hardware-dependent code.** A full run requires `/dev/ttyUSB2` and a V4L2
    camera. Tests must use `package:simcom_modem/testing.dart` (`FakeTransport`) and
    fake stores; do not assume hardware is present in CI.
@@ -191,7 +194,7 @@ cd pi7600_server && serverpod create-migration
 ## Testing
 
 ```bash
-cd pi7600_server && dart test
+cd simcom_api_server && dart test
 cd simcom_modem && dart test
 ```
 
@@ -213,11 +216,11 @@ library.
 
 ## Definition of done
 
-- `dart format --output=none --set-exit-if-changed pi7600_server pi7600_client simcom_modem`
+- `dart format --output=none --set-exit-if-changed simcom_api_server simcom_api_client simcom_modem`
   passes.
-- `dart analyze pi7600_server`, `dart analyze pi7600_client`, and
+- `dart analyze simcom_api_server`, `dart analyze simcom_api_client`, and
   `dart analyze simcom_modem` pass.
-- `cd pi7600_server && dart test` and `cd simcom_modem && dart test` pass
+- `cd simcom_api_server && dart test` and `cd simcom_modem && dart test` pass
   without hardware.
 - New behavior is covered by tests in the package that owns it.
 - `README.md` is updated for user-visible changes.
