@@ -84,6 +84,29 @@ async def run_async_subprocess(cmd: list[str], timeout_seconds: float = 5.0) -> 
     return stdout.decode(errors="ignore") if stdout else stderr.decode(errors="ignore")
 
 
+async def run_ping(interface: str, target: str, timeout_seconds: float = 5.0) -> bool:
+    """Return True when a single ping through ``interface`` succeeds."""
+    process = await asyncio.create_subprocess_exec(
+        "ping",
+        "-I",
+        interface,
+        "-c",
+        "1",
+        "-W",
+        "2",
+        target,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        await asyncio.wait_for(process.wait(), timeout=timeout_seconds)
+    except TimeoutError:
+        process.kill()
+        await process.wait()
+        return False
+    return process.returncode == 0
+
+
 def get_modem(request: Request) -> ModemSettings:
     return request.app.state.modem
 
@@ -96,12 +119,12 @@ def get_gps(request: Request) -> GPS:
     return request.app.state.gps
 
 
-def get_video_manager(request: Request) -> VideoStreamManager:
-    return request.app.state.video_manager
+def get_video_manager(websocket: WebSocket) -> VideoStreamManager:
+    return websocket.app.state.video_manager
 
 
-def get_video_capture(request: Request) -> VideoCaptureThread | None:
-    return request.app.state.video_capture
+def get_video_capture(websocket: WebSocket) -> VideoCaptureThread | None:
+    return websocket.app.state.video_capture
 
 
 def get_face_recognition(request: Request) -> FacialRecognition:
@@ -276,12 +299,8 @@ def create_app() -> FastAPI:
     ) -> StatusResponse:
         logger.info("/ GET: Accessed by %s", user.user_name)
         gps_task = asyncio.create_task(gps.get_gps_position())
-        data_task = asyncio.create_task(
-            run_async_subprocess(["ping", "-I", "usb0", "-c", "1", "1.1.1.1"])
-        )
-        dns_task = asyncio.create_task(
-            run_async_subprocess(["ping", "-I", "usb0", "-c", "1", "www.google.com"])
-        )
+        data_task = asyncio.create_task(run_ping("usb0", "1.1.1.1"))
+        dns_task = asyncio.create_task(run_ping("usb0", "www.google.com"))
 
         at_check = await modem.send_at("AT", "OK", TIMEOUT)
         at = _response_line(at_check, 2) if _at_ok(at_check) else "ERROR"
@@ -316,10 +335,8 @@ def create_app() -> FastAPI:
                     break
 
         gpsinfo = await gps_task or "ERROR"
-        data_check = await data_task
-        dns_check = await dns_task
-        data = "ERROR" if "unreachable" in data_check.lower() else "OK"
-        dns = "ERROR" if "unreachable" in dns_check.lower() else "OK"
+        data = "OK" if await data_task else "ERROR"
+        dns = "OK" if await dns_task else "ERROR"
 
         return StatusResponse(
             at=at,

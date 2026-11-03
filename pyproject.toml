@@ -54,3 +54,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["."]
+filterwarnings = [
+    # Starlette's WebSocket TestClient currently warns about httpx vs httpx2.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]

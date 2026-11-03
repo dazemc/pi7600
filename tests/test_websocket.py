@@ -1,11 +1,16 @@
 import asyncio
 import json
+from types import SimpleNamespace
 
 import pytest
+from fastapi import WebSocketDisconnect
+from starlette.testclient import TestClient
 
 import Auth
+import main
 from Auth import authenticate_websocket
 from Camera import VideoStreamManager
+from Database import get_db
 from Utils import create_jwt
 
 
@@ -136,3 +141,23 @@ async def test_video_manager_stop_closes_connections():
     await manager.stop()
     assert socket.closed is True
     assert manager.connections == []
+
+
+def test_video_route_closes_without_camera(app, monkeypatch):
+    async def fake_auth(websocket, db, auth_timeout):
+        await websocket.accept()
+        return SimpleNamespace(user_name="tester")
+
+    async def fake_db():
+        yield None
+
+    monkeypatch.setattr(main, "authenticate_websocket", fake_auth)
+    app.dependency_overrides[get_db] = fake_db
+    app.state.video_manager = VideoStreamManager()
+    app.state.video_capture = None
+
+    client = TestClient(app)
+    with pytest.raises(WebSocketDisconnect) as exc:
+        with client.websocket_connect("/wss/video") as websocket:
+            websocket.receive_bytes()
+    assert exc.value.code == 1011

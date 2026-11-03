@@ -10,6 +10,7 @@ Group=pi7600
 SupplementaryGroups=dialout video
 WorkingDirectory=/opt/pi7600
 EnvironmentFile=/etc/pi7600/pi7600.env
+ExecStartPre=/usr/bin/mkdir -p /opt/pi7600/.log
 ExecStartPre=/usr/local/bin/uv run alembic upgrade head
 ExecStart=/usr/local/bin/uv run uvicorn main:app --host 0.0.0.0 --port 8000 --log-config log.yaml
 Restart=on-failure
@@ -27,6 +28,9 @@ ProtectKernelModules=true
 ProtectControlGroups=true
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 LockPersonality=true
+# Allow the status endpoint's `ping` subprocess to open ICMP sockets.
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
 
 [Install]
 WantedBy=multi-user.target
