@@ -39,5 +39,7 @@ maxRequestSize: 524288 # The maximum size of requests allowed in bytes
 
 sessionLogs:
   persistentEnabled: false
-  consoleEnabled: true
+  # Per-request Serverpod logs are costly on a Pi's SD card. Application logs
+  # remain available through PI7600_LOG_LEVEL and journald.
+  consoleEnabled: false
   consoleLogFormat: text

@@ -97,13 +97,31 @@ class StatusService {
   final List<String> pingTargets;
   final int modemTimeout;
 
+  // Hostname, kernel release, and architecture do not change during a normal
+  // process lifetime. Cache them instead of spawning three processes per
+  // `/info` request. The date is still read live so the API keeps its format.
+  String? _hostname;
+  Future<String>? _uname;
+  Future<String>? _arch;
+
+  // `/` is often polled by dashboards. A short cache avoids spawning two ping
+  // processes for every request while keeping the result reasonably fresh.
+  static const Duration _pingCacheTtl = Duration(seconds: 5);
+  Future<bool>? _dataPing;
+  Future<bool>? _dnsPing;
+  DateTime? _dataPingAt;
+  DateTime? _dnsPingAt;
+  bool? _dataPingValue;
+  bool? _dnsPingValue;
+
   Future<StatusResult> status() async {
     final gpsFuture = gps.getGpsPosition();
-    final dataFuture = _ping(pingInterface, pingTargets.first);
-    final dnsFuture = _ping(
-      pingInterface,
-      pingTargets.length > 1 ? pingTargets[1] : pingTargets.first,
-    );
+    final dataTarget = pingTargets.first;
+    final dnsTarget = pingTargets.length > 1
+        ? pingTargets[1]
+        : pingTargets.first;
+    final dataFuture = _cachedPing(dataTarget, data: true);
+    final dnsFuture = _cachedPing(dnsTarget, data: false);
 
     final atCheck = await modem.sendAt('AT', 'OK', modemTimeout);
     final at = _atOk(atCheck) ? _responseLine(atCheck, 2) : 'ERROR';
@@ -163,17 +181,23 @@ class StatusService {
   }
 
   Future<InfoResult> info() async {
-    final results = await Future.wait([
-      _run(['hostname']),
-      _run(['uname', '-r']),
-      _run(['date']),
-      _run(['arch']),
-    ]);
+    final hostname = _hostname ??= Platform.localHostname;
+    final uname = _uname ??= _run(['uname', '-r']);
+    final arch = _arch ??= _run(['arch']);
+    final date = _run(['date']);
+
+    final results = await Future.wait([uname, date, arch]);
+    final unameValue = results[0].trim();
+    final archValue = results[2].trim();
+    // Retry on a transient command failure instead of caching the error.
+    if (unameValue.startsWith('ERROR')) _uname = null;
+    if (archValue.startsWith('ERROR')) _arch = null;
+
     return InfoResult(
-      hostname: results[0].trim(),
-      uname: results[1].trim(),
-      date: results[2].trim(),
-      arch: results[3].trim(),
+      hostname: hostname.trim(),
+      uname: unameValue,
+      date: results[1].trim(),
+      arch: archValue,
     );
   }
 
@@ -185,6 +209,39 @@ class StatusService {
     final lines = splitResponseLines(response);
     if (lines.length <= index) return 'ERROR';
     return lines[index];
+  }
+
+  Future<bool> _cachedPing(String target, {required bool data}) {
+    final now = DateTime.now();
+    final cachedAt = data ? _dataPingAt : _dnsPingAt;
+    final cachedValue = data ? _dataPingValue : _dnsPingValue;
+    if (cachedValue != null &&
+        cachedAt != null &&
+        now.difference(cachedAt) < _pingCacheTtl) {
+      return Future.value(cachedValue);
+    }
+
+    final inFlight = data ? _dataPing : _dnsPing;
+    if (inFlight != null) return inFlight;
+
+    final future = _ping(pingInterface, target).then((value) {
+      if (data) {
+        _dataPingValue = value;
+        _dataPingAt = DateTime.now();
+        _dataPing = null;
+      } else {
+        _dnsPingValue = value;
+        _dnsPingAt = DateTime.now();
+        _dnsPing = null;
+      }
+      return value;
+    });
+    if (data) {
+      _dataPing = future;
+    } else {
+      _dnsPing = future;
+    }
+    return future;
   }
 
   static Future<bool> _ping(String interface, String target) async {

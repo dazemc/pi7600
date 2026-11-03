@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
 import 'package:simcom_api_server/src/app_services.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
+import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/web/http.dart';
 import 'package:serverpod/serverpod.dart' hide Message;
 
@@ -46,7 +46,7 @@ class TokenRoute extends Route {
     final auth = services.authService(session);
     final user = await auth.authenticatePassword(username, password);
     if (user == null) {
-      developer.log(
+      AppLog.warning(
         'Failed login for $username',
         name: 'pi7600.auth',
       );
@@ -74,7 +74,7 @@ class StatusRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
-    developer.log(
+    AppLog.info(
       '/ GET: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
     );
@@ -93,7 +93,7 @@ class InfoRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
-    developer.log(
+    AppLog.info(
       '/info GET: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
     );
@@ -123,7 +123,7 @@ class SmsRoute extends Route {
   Future<Result> _list(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
-    developer.log(
+    AppLog.info(
       '/sms GET: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
     );
@@ -134,7 +134,7 @@ class SmsRoute extends Route {
   Future<Result> _create(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
-    developer.log(
+    AppLog.info(
       '/sms POST: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
     );
@@ -170,7 +170,7 @@ class SmsDeleteRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
-    developer.log(
+    AppLog.info(
       '/sms/delete DELETE: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
     );
@@ -206,7 +206,7 @@ class SmsCleanupRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
-    developer.log(
+    AppLog.info(
       '/sms/cleanup DELETE: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
     );
@@ -229,9 +229,8 @@ class AtRoute extends Route {
     final body = await readJsonObject(request);
     final command = body?['cmd'] is String ? body!['cmd'] as String : 'AT';
 
-    developer.log(
+    AppLog.audit(
       'AT audit: user=${auth.user!.userName} cmd=$command',
-      name: 'pi7600.at',
     );
     final response = await services.modem.sendRaw(
       command,
@@ -240,9 +239,8 @@ class AtRoute extends Route {
     final preview = response.length > 500
         ? response.substring(0, 500)
         : response;
-    developer.log(
+    AppLog.audit(
       'AT audit: user=${auth.user!.userName} cmd=$command response=$preview',
-      name: 'pi7600.at',
     );
     return jsonResponse(response, status: 202);
   }

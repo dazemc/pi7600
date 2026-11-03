@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer' as developer;
 
 import 'package:simcom_api_server/src/app_services.dart';
+import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/generated/user.dart';
 import 'package:serverpod/serverpod.dart';
 // ignore: implementation_imports
@@ -55,7 +55,7 @@ Future<_WebSocketAuthResult> _authenticate(
     }
     return _WebSocketAuthResult.success(user, events);
   } on Object catch (error) {
-    developer.log(
+    AppLog.warning(
       'WebSocket authentication failed: $error',
       name: 'pi7600.websocket',
     );
@@ -86,7 +86,7 @@ class EchoWebSocketRoute extends Route {
       if (auth.failed) return;
 
       final user = auth.user!;
-      developer.log(
+      AppLog.info(
         'WebSocket authenticated for ${user.userName}',
         name: 'pi7600.websocket',
       );
@@ -94,8 +94,9 @@ class EchoWebSocketRoute extends Route {
         while (await auth.events.moveNext()) {
           final event = auth.events.current;
           if (event is TextDataReceived) {
-            developer.log(
-              '/wss message from ${user.userName}: ${event.text}',
+            AppLog.debug(
+              '/wss message from ${user.userName}: '
+              '${event.text.length} chars',
               name: 'pi7600.websocket',
             );
             socket.trySendText('Message received: ${event.text}');
@@ -131,7 +132,7 @@ class VideoWebSocketRoute extends Route {
       }
 
       services.broadcaster.add(socket);
-      developer.log(
+      AppLog.info(
         'Video stream authenticated for ${user.userName}',
         name: 'pi7600.websocket',
       );
@@ -142,7 +143,7 @@ class VideoWebSocketRoute extends Route {
       } finally {
         services.broadcaster.remove(socket);
         await auth.events.cancel();
-        developer.log(
+        AppLog.info(
           'Video stream disconnected for ${user.userName}',
           name: 'pi7600.websocket',
         );

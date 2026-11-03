@@ -14,7 +14,7 @@ class AuthService {
   Future<User?> authenticatePassword(String username, String password) async {
     final user = await users.findByUsername(username);
     if (user == null || user.isDisabled) return null;
-    if (!verifyPassword(password, user.userPassword)) return null;
+    if (!await verifyPasswordAsync(password, user.userPassword)) return null;
     return user;
   }
 

@@ -40,3 +40,6 @@ fields:
   isSent:
     type: bool?
     column: is_sent
+indexes:
+  messages_fingerprint_idx:
+    fields: messageType, messageContents, messageDate, messageTime

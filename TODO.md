@@ -13,20 +13,21 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
 
 ## Performance
 
-- [ ] **Move bcrypt off the main isolate.**
+- [x] **Move bcrypt off the main isolate.**
   - `TokenRoute` currently awaits `hashlib` bcrypt on the event loop.
   - Use a long-lived worker isolate (or `Isolate.run`) so a 6–9 second login
     does not block `/healthz`, `/docs`, `/info`, or WebSockets.
   - Keep the pure-Dart verifier as the fallback.
 
-- [ ] **Use native bcrypt through `libcrypt` FFI.**
+- [x] **Use native bcrypt through `libcrypt` FFI.**
   - Replace pure-Dart bcrypt verification with `crypt_rn`/`crypt_r` from
     `libcrypt` where available.
   - Keep `hashlib` as a fallback for systems without `libcrypt`.
   - Test on x86 and ARM64; target login latency well under 2 seconds on the Pi.
   - Do not reduce the bcrypt cost.
+  - x86 verified locally; ARM64/Pi validation still pending deployment.
 
-- [ ] **Cache static `/info` values.**
+- [x] **Cache static `/info` values.**
   - `StatusService.info()` spawns `hostname`, `uname -r`, `date`, and `arch`
     processes on every request.
   - Use `Platform.localHostname` for hostname and cache `uname`/`arch` at
@@ -34,7 +35,7 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Keep `date` current, or format it in Dart without a subprocess.
   - Target: at most one process spawn per `/info` request.
 
-- [ ] **Add an SMS fingerprint index.**
+- [x] **Add an SMS fingerprint index.**
   - `SessionMessageStore.findByFingerprint` queries `message_type`,
     `message_contents`, `message_date`, and `message_time` with no index.
   - Add a non-unique composite index through a Serverpod migration.
@@ -49,18 +50,20 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     disabled-user invalidation story.
   - Measure before adding cache complexity.
 
-- [ ] **Cache or reduce status ping subprocesses.**
+- [x] **Cache or reduce status ping subprocesses.**
   - `StatusService.status()` launches two `ping` processes per request.
   - Add a short TTL cache for `data`/`dns` results (5–10 seconds) or use a
     persistent network monitor.
   - Document the freshness trade-off.
 
-- [ ] **Optimize docs asset delivery.**
+- [x] **Optimize docs asset delivery.**
   - Serve a gzipped `web/docs/app.js` and `style.css`.
   - Add `ETag`/`If-None-Match` and cache headers.
   - Keep the bundle build artifact out of git.
+  - Implemented gzip + `Vary: Accept-Encoding` + a 5-minute cache window;
+    ETag revalidation is still a possible follow-up.
 
-- [ ] **Implement `PI7600_LOG_LEVEL` and reduce production session logging.**
+- [x] **Implement `PI7600_LOG_LEVEL` and reduce production session logging.**
   - `AppConfig.logLevel` is parsed but unused.
   - Add a small logger filter for debug/info/warn/error.
   - Disable per-request console session logs in production unless explicitly

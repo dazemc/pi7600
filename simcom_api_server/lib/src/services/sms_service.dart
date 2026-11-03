@@ -1,8 +1,7 @@
-import 'dart:developer' as developer;
-
 import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/data/message_store.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
+import 'package:simcom_api_server/src/util/app_log.dart';
 
 class SmsDeliveryException implements Exception {
   SmsDeliveryException(this.message);
@@ -30,7 +29,7 @@ class SmsService {
       try {
         await createMessage(message);
       } on Object catch (error) {
-        developer.log(
+        AppLog.warning(
           'Unable to persist SMS message: $error',
           name: 'pi7600.sms',
         );
@@ -141,7 +140,7 @@ class SmsService {
         if (index != null) {
           final deleted = await sms.deleteMessage(index);
           if (!deleted) {
-            developer.log(
+            AppLog.warning(
               'Unable to delete modem message ${message.messageIndex}',
               name: 'pi7600.sms',
             );

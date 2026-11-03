@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:simcom_api_server/src/app_services.dart';
 import 'package:simcom_api_server/src/config/app_config.dart';
+import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/web/routes/api_routes.dart';
 import 'package:simcom_api_server/src/web/routes/docs_routes.dart';
 import 'package:simcom_api_server/src/web/routes/readyz.dart';
@@ -11,6 +12,7 @@ import 'package:serverpod/serverpod.dart';
 /// Wire the Pi7600 services and routes into a [Serverpod] instance.
 void configureServer(Serverpod pod) {
   final services = AppServices.create(AppConfig.fromEnvironment());
+  AppLog.configure(services.config.logLevel);
 
   // Startup is asynchronous because the modem, camera, and recognition
   // backends touch hardware. Routes that need them await [AppServices.ready].

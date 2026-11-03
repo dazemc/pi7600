@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
 import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/auth/auth_service.dart';
@@ -13,6 +12,7 @@ import 'package:simcom_api_server/src/data/user_store.dart';
 import 'package:simcom_api_server/src/services/service_status.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/services/status_service.dart';
+import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:serverpod/serverpod.dart';
 
 /// Process-wide dependencies shared by the REST and WebSocket routes.
@@ -128,13 +128,13 @@ class AppServices {
     try {
       await modem.initialize();
       serviceStatus.modemStarted();
-      developer.log(
+      AppLog.info(
         'Modem initialized on ${config.atCom}',
         name: 'pi7600.modem',
       );
     } on Object catch (error, stackTrace) {
       serviceStatus.modemFailed(error);
-      developer.log(
+      AppLog.warning(
         'Modem unavailable: $error',
         name: 'pi7600.modem',
         error: error,
@@ -146,14 +146,14 @@ class AppServices {
       await camera.start();
       broadcaster.attach(camera.frames);
       serviceStatus.cameraStarted();
-      developer.log(
+      AppLog.info(
         'Camera streaming from ${camera.devicePath} '
         '(${camera.frameWidth}x${camera.frameHeight} ${camera.frameFormat})',
         name: 'pi7600.camera',
       );
     } on Object catch (error, stackTrace) {
       serviceStatus.cameraFailed(error);
-      developer.log(
+      AppLog.warning(
         'Camera unavailable: $error',
         name: 'pi7600.camera',
         error: error,
@@ -170,14 +170,14 @@ class AppServices {
       }
     } on Object catch (error) {
       serviceStatus.recognitionFailed(error);
-      developer.log(
+      AppLog.warning(
         'Facial recognition unavailable: $error',
         name: 'pi7600.recognition',
       );
     }
 
     serviceStatus.ready();
-    developer.log('Pi7600 services ready', name: 'pi7600');
+    AppLog.info('Pi7600 services ready', name: 'pi7600');
     if (!_ready.isCompleted) _ready.complete();
   }
 
@@ -189,12 +189,12 @@ class AppServices {
       await broadcaster.stop();
       await camera.stop();
     } on Object catch (error) {
-      developer.log('Error stopping camera: $error', name: 'pi7600.camera');
+      AppLog.error('Error stopping camera: $error', name: 'pi7600.camera');
     }
     try {
       await modem.close();
     } on Object catch (error) {
-      developer.log('Error closing modem: $error', name: 'pi7600.modem');
+      AppLog.error('Error closing modem: $error', name: 'pi7600.modem');
     }
     serviceStatus.stopped();
     await serviceStatus.close();

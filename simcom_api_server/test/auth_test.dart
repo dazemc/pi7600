@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:hashlib/hashlib.dart';
+import 'package:simcom_api_server/src/auth/auth_service.dart';
 import 'package:simcom_api_server/src/auth/jwt_service.dart';
 import 'package:simcom_api_server/src/auth/password.dart';
+import 'package:simcom_api_server/src/data/user_store.dart';
+import 'package:simcom_api_server/src/generated/user.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -90,4 +93,42 @@ void main() {
       );
     });
   });
+
+  group('AuthService', () {
+    late JwtService jwt;
+
+    setUp(() {
+      jwt = JwtService(
+        privateKeyPath: 'test/fixtures/private.pem',
+        publicKeyPath: 'test/fixtures/public.pem',
+        issuer: 'pi.test',
+        expireMinutes: 30,
+      );
+    });
+
+    test('verifies passwords off the main isolate', () async {
+      final hash = bcrypt(utf8.encode('secret'));
+      final user = User(
+        id: 1,
+        userName: 'alice',
+        userPassword: hash,
+      );
+      final auth = AuthService(jwt: jwt, users: _FakeUserStore(user));
+
+      expect(await auth.authenticatePassword('alice', 'secret'), same(user));
+      expect(await auth.authenticatePassword('alice', 'wrong'), isNull);
+      expect(await auth.authenticatePassword('bob', 'secret'), isNull);
+    });
+  });
+}
+
+class _FakeUserStore implements UserStore {
+  _FakeUserStore(this.user);
+
+  final User? user;
+
+  @override
+  Future<User?> findByUsername(String username) async {
+    return user?.userName == username ? user : null;
+  }
 }

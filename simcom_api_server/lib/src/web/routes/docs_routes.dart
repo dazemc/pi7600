@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer' as developer;
+
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:simcom_api_server/src/web/docs/api_catalog.dart';
 import 'package:simcom_api_server/src/web/docs/docs_client.dart';
 import 'package:simcom_api_server/src/web/docs/docs_page.dart';
+import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:serverpod/serverpod.dart';
 
 /// Shared 404 for every docs route when `PI7600_DOCS_ENABLED=false`.
@@ -14,6 +16,26 @@ Response _docsDisabled() {
     404,
     body: Body.fromString('Not found', mimeType: MimeType.plainText),
   );
+}
+
+bool _acceptsGzip(Request request) {
+  final values = request.headers[HttpHeaders.acceptEncodingHeader];
+  if (values == null) return false;
+  return values.any((value) => value.toLowerCase().contains('gzip'));
+}
+
+Headers _assetHeaders({required bool gzipped}) {
+  return Headers.build((headers) {
+    headers[HttpHeaders.varyHeader] = ['Accept-Encoding'];
+    headers[HttpHeaders.cacheControlHeader] = ['public, max-age=300'];
+    if (gzipped) {
+      headers[HttpHeaders.contentEncodingHeader] = ['gzip'];
+    }
+  });
+}
+
+Uint8List _gzip(Uint8List data) {
+  return Uint8List.fromList(gzip.encode(data));
 }
 
 /// `GET /docs`
@@ -26,6 +48,7 @@ class DocsRoute extends Route {
   final bool enabled;
 
   static Future<Uint8List>? _cachedPage;
+  Uint8List? _gzippedPage;
 
   Future<Uint8List> _page() async {
     final cached = _cachedPage;
@@ -46,9 +69,12 @@ class DocsRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     if (!enabled) return _docsDisabled();
     final body = await _page();
+    final gzipped = _acceptsGzip(request);
+    final payload = gzipped ? (_gzippedPage ??= _gzip(body)) : body;
     return Response(
       200,
-      body: Body.fromData(body, mimeType: MimeType.html),
+      body: Body.fromData(payload, mimeType: MimeType.html),
+      headers: _assetHeaders(gzipped: gzipped),
     );
   }
 }
@@ -60,13 +86,19 @@ class DocsStyleRoute extends Route {
   final bool enabled;
 
   static final Uint8List _body = Uint8List.fromList(utf8.encode(docsCss));
+  static final Uint8List _gzippedBody = _gzip(_body);
 
   @override
   FutureOr<Result> handleCall(Session session, Request request) {
     if (!enabled) return _docsDisabled();
+    final gzipped = _acceptsGzip(request);
     return Response(
       200,
-      body: Body.fromData(_body, mimeType: MimeType.css),
+      body: Body.fromData(
+        gzipped ? _gzippedBody : _body,
+        mimeType: MimeType.css,
+      ),
+      headers: _assetHeaders(gzipped: gzipped),
     );
   }
 }
@@ -87,6 +119,7 @@ class DocsScriptRoute extends Route {
   final Future<Uint8List?> Function() _loader;
 
   Future<Uint8List?>? _cached;
+  Uint8List? _gzipped;
   bool _reportedMissing = false;
 
   Future<Uint8List?> _bundle() async {
@@ -111,7 +144,7 @@ class DocsScriptRoute extends Route {
     } on Object catch (error, stackTrace) {
       if (!_reportedMissing) {
         _reportedMissing = true;
-        developer.log(
+        AppLog.warning(
           'Could not read the docs client bundle: $error',
           name: 'pi7600.docs',
           error: error,
@@ -125,7 +158,7 @@ class DocsScriptRoute extends Route {
     if (body == null) {
       if (!_reportedMissing) {
         _reportedMissing = true;
-        developer.log(
+        AppLog.warning(
           'Docs client bundle not found. Run '
           '`dart run tool/build_docs_client.dart` in simcom_api_server.',
           name: 'pi7600.docs',
@@ -141,9 +174,12 @@ class DocsScriptRoute extends Route {
       );
     }
 
+    final gzipped = _acceptsGzip(request);
+    final payload = gzipped ? (_gzipped ??= _gzip(body)) : body;
     return Response(
       200,
-      body: Body.fromData(body, mimeType: MimeType.javascript),
+      body: Body.fromData(payload, mimeType: MimeType.javascript),
+      headers: _assetHeaders(gzipped: gzipped),
     );
   }
 }
