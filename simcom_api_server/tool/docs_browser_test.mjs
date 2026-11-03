@@ -244,6 +244,25 @@ async function main() {
       'GPS result did not include a Google Maps link',
     );
 
+    const snapshot = await execute('/camera/snapshot');
+    assert(
+      snapshot.status.startsWith('HTTP 200'),
+      `expected 200 from /camera/snapshot, got ${snapshot.status}`,
+    );
+    assert(
+      snapshot.body.includes('Binary response'),
+      'snapshot response was not treated as binary',
+    );
+    const snapshotLink = await evaluate(`(function () {
+      const card = document.querySelector('.endpoint[data-path="/camera/snapshot"]');
+      const link = card.querySelector('.result-link a[download]');
+      return link ? link.href : '';
+    })()`);
+    assert(
+      snapshotLink.startsWith('data:image/jpeg;base64,'),
+      'snapshot result did not include a JPEG download link',
+    );
+
     await evaluate(`document.getElementById('logout').click()`);
     const loggedOut = await waitFor(
       `({

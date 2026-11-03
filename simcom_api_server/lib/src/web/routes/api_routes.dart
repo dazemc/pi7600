@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:simcom_api_server/src/app_services.dart';
 import 'package:simcom_modem/simcom_modem.dart';
@@ -143,6 +144,42 @@ class GpsRoute extends Route {
         'maps_url': null,
       },
     });
+  }
+}
+
+/// `GET /camera/snapshot`
+class CameraSnapshotRoute extends Route {
+  CameraSnapshotRoute(this.services) : super(methods: {Method.get});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
+
+    if (!await services.ensureCameraStarted()) {
+      return errorResponse(503, 'Camera unavailable');
+    }
+    services.cameraUsedTransiently();
+
+    final frame = await services.camera.waitForFrame();
+    if (frame == null) {
+      return errorResponse(503, 'No camera frame available');
+    }
+
+    AppLog.info(
+      '/camera/snapshot GET: Accessed by ${auth.user!.userName}',
+      name: 'pi7600',
+    );
+    return Response(
+      200,
+      body: Body.fromData(frame, mimeType: MimeType('image', 'jpeg')),
+      headers: Headers.build((headers) {
+        headers[HttpHeaders.cacheControlHeader] = ['no-store'];
+      }),
+    );
   }
 }
 

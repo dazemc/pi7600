@@ -201,9 +201,13 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - `GET /gps` returns the raw response, parsed fix, and Maps URL. Explicit
     start/stop routes remain future work.
 
-- [ ] **Camera snapshot endpoint.**
+- [x] **Camera snapshot endpoint.**
   - Return the latest JPEG as a single HTTP response in addition to
     `/wss/video`.
+  - Added `GET /camera/snapshot`; it starts capture on demand, waits briefly
+    for a frame, and returns 503 when no camera is available. The docs page
+    detects binary responses and offers a download link. Hardware capture
+    remains unverified on the Pi.
 
 - [x] **SMS retry.**
   - Add a retry path for stored-but-unsent messages.

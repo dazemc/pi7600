@@ -223,7 +223,15 @@ class AppServices {
   void videoClientDisconnected() {
     if (_videoClients > 0) _videoClients--;
     if (_videoClients > 0) return;
+    _scheduleCameraIdleStop();
+  }
 
+  /// Schedule capture to stop after a snapshot when no video clients remain.
+  void cameraUsedTransiently() {
+    if (_videoClients == 0) _scheduleCameraIdleStop();
+  }
+
+  void _scheduleCameraIdleStop() {
     _cameraIdleTimer?.cancel();
     _cameraIdleTimer = Timer(const Duration(seconds: 30), () {
       _cameraIdleTimer = null;

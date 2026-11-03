@@ -45,6 +45,25 @@ class CameraCapture {
 
   Uint8List? get latestFrame => _latestFrame;
 
+  /// Return the latest frame, waiting up to [timeout] for a new one.
+  ///
+  /// Returns `null` when capture produces no frame in time or the stream has
+  /// already been closed.
+  Future<Uint8List?> waitForFrame({
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    final current = _latestFrame;
+    if (current != null) return current;
+
+    try {
+      return await _frames.stream.first.timeout(timeout);
+    } on TimeoutException {
+      return null;
+    } on StateError {
+      return null;
+    }
+  }
+
   bool get isRunning => _running;
 
   Object? get error => _error;

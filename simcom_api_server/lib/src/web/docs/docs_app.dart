@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:jaspr/dom.dart';
@@ -358,6 +359,8 @@ class _EndpointCardState extends State<_EndpointCard> {
   String? _resultStatus;
   String _resultText = '';
   String? _resultMapsUrl;
+  String? _resultDownloadUrl;
+  String? _resultDownloadName;
   int? _resultCode;
   bool _executing = false;
 
@@ -460,6 +463,16 @@ class _EndpointCardState extends State<_EndpointCard> {
         component.onUnauthorized();
       }
 
+      if (endpoint.binaryResponse) {
+        _showBinaryResult(
+          response.statusCode,
+          response.bodyBytes,
+          response.headers['content-type'],
+          stopwatch.elapsedMilliseconds,
+        );
+        return;
+      }
+
       var pretty = response.body;
       try {
         pretty = const JsonEncoder.withIndent('  ').convert(
@@ -507,6 +520,37 @@ class _EndpointCardState extends State<_EndpointCard> {
           : 'HTTP $status${elapsed == null ? '' : ' - $elapsed ms'}';
       _resultText = text;
       _resultMapsUrl = mapsUrl;
+      _resultDownloadUrl = null;
+      _resultDownloadName = null;
+    });
+  }
+
+  void _showBinaryResult(
+    int? status,
+    Uint8List bytes,
+    String? contentType,
+    int? elapsed,
+  ) {
+    if (!mounted) return;
+
+    final type = contentType?.split(';').first.trim().isNotEmpty == true
+        ? contentType!.split(';').first.trim()
+        : 'application/octet-stream';
+    final extension = switch (type) {
+      'image/jpeg' => 'jpg',
+      'image/png' => 'png',
+      _ => 'bin',
+    };
+
+    setState(() {
+      _resultCode = status;
+      _resultStatus = status == null
+          ? 'Request failed'
+          : 'HTTP $status${elapsed == null ? '' : ' - $elapsed ms'}';
+      _resultText = 'Binary response (${bytes.length} bytes, $type)';
+      _resultMapsUrl = null;
+      _resultDownloadUrl = 'data:$type;base64,${base64Encode(bytes)}';
+      _resultDownloadName = 'response.$extension';
     });
   }
 
@@ -677,6 +721,17 @@ class _EndpointCardState extends State<_EndpointCard> {
                     href: _resultMapsUrl!,
                     attributes: const {
                       'target': '_blank',
+                      'rel': 'noopener noreferrer',
+                    },
+                  ),
+                ], classes: 'result-link'),
+              if (_resultDownloadUrl != null)
+                div([
+                  a(
+                    [Component.text('Download response')],
+                    href: _resultDownloadUrl!,
+                    attributes: {
+                      'download': _resultDownloadName ?? 'response.bin',
                       'rel': 'noopener noreferrer',
                     },
                   ),

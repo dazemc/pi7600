@@ -24,6 +24,7 @@ void main() {
           '/',
           '/info',
           '/gps',
+          '/camera/snapshot',
           '/metrics',
           '/phone/call',
           '/phone/hangup',
@@ -53,6 +54,15 @@ void main() {
       final parameters = deleteOperation['parameters'] as List<Object?>;
       expect(parameters, hasLength(1));
       expect((parameters.single as Map<String, Object?>)['name'], 'id');
+
+      final snapshot = paths['/camera/snapshot'] as Map<String, Object?>;
+      final snapshotGet = snapshot['get'] as Map<String, Object?>;
+      final responses = snapshotGet['responses'] as Map<String, Object?>;
+      final ok = responses['200'] as Map<String, Object?>;
+      expect(
+        (ok['content'] as Map<String, Object?>).keys,
+        contains('image/jpeg'),
+      );
     });
 
     test('marks public and protected endpoints with the right security', () {
@@ -92,6 +102,7 @@ void main() {
       expect(html, contains('data-method="GET"'));
       expect(html, contains('data-method="DELETE"'));
       expect(html, contains('data-path="/gps"'));
+      expect(html, contains('data-path="/camera/snapshot"'));
       expect(html, contains('data-path="/sms/delete/{id}"'));
       expect(html, contains('data-auth="admin"'));
       expect(html, contains('class="method method-get"'));

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:image/image.dart' as img;
 import 'package:simcom_api_server/src/web/docs/docs_client.dart';
 import 'package:simcom_api_server/src/web/docs/docs_page.dart';
 
@@ -103,6 +104,18 @@ Future<void> _handle(HttpRequest request) async {
         'maps_url':
             'https://www.google.com/maps/search/?api=1&query=12.57613,-123.761315',
       });
+      return;
+    }
+    if (path == '/camera/snapshot' && request.method == 'GET') {
+      if (!_authorized(
+        request.headers.value(HttpHeaders.authorizationHeader),
+      )) {
+        request.response.statusCode = HttpStatus.unauthorized;
+        await _json(request.response, {'detail': 'Not authenticated'});
+        return;
+      }
+      final jpeg = img.encodeJpg(img.Image(width: 2, height: 2));
+      await _bytes(request.response, jpeg, ContentType('image', 'jpeg'));
       return;
     }
     if (path == '/healthz') {

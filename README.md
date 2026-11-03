@@ -185,6 +185,7 @@ All routes except `/token`, `/healthz`, `/readyz`, `/docs`, `/docs/*`, and
 | `GET` | `/` | Modem/network/GPS status |
 | `GET` | `/info` | Hostname, kernel, date, architecture |
 | `GET` | `/gps` | Current GPS fix and Google Maps link |
+| `GET` | `/camera/snapshot` | Latest camera frame as JPEG |
 | `GET` | `/metrics` | Prometheus service metrics (bearer token) |
 | `POST` | `/phone/call` | Place a voice call (**admin only**) |
 | `POST` | `/phone/hangup` | Hang up the active call (**admin only**) |

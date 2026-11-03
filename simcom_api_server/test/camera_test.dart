@@ -5,6 +5,26 @@ import 'package:simcom_api_server/src/camera/camera_capture.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('waitForFrame returns null when capture is not running', () async {
+    final camera = CameraCapture(
+      candidatePaths: const ['/dev/null'],
+      width: 2,
+      height: 2,
+      fps: 1,
+    );
+
+    try {
+      expect(
+        await camera.waitForFrame(
+          timeout: const Duration(milliseconds: 20),
+        ),
+        isNull,
+      );
+    } finally {
+      await camera.dispose();
+    }
+  });
+
   test('converts a YUYV frame to a decodable JPEG', () {
     const width = 2;
     const height = 2;

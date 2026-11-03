@@ -78,6 +78,8 @@ class ApiEndpoint {
     this.pathParameters = const [],
     this.queryParameters = const [],
     this.responses = const {},
+    this.binaryResponse = false,
+    this.binaryContentType = 'application/octet-stream',
     this.operationId,
   });
 
@@ -97,6 +99,10 @@ class ApiEndpoint {
 
   /// Response status code to description.
   final Map<String, String> responses;
+
+  /// Whether the successful response is raw bytes rather than JSON text.
+  final bool binaryResponse;
+  final String binaryContentType;
   final String? operationId;
 
   String get id => operationId ?? _deriveOperationId();
@@ -172,6 +178,23 @@ const apiEndpoints = <ApiEndpoint>[
     responses: {
       '200': 'GPS fix or null coordinate fields',
       '401': 'Authentication required',
+    },
+  ),
+  ApiEndpoint(
+    method: 'GET',
+    path: '/camera/snapshot',
+    summary: 'Latest camera JPEG frame',
+    description:
+        'Returns the most recent captured frame as `image/jpeg`. Capture starts '
+        'on demand when needed and stops again after an idle period when no '
+        'video clients are connected.',
+    auth: ApiAuth.user,
+    binaryResponse: true,
+    binaryContentType: 'image/jpeg',
+    responses: {
+      '200': 'JPEG image',
+      '401': 'Authentication required',
+      '503': 'Camera unavailable or no frame arrived',
     },
   ),
   ApiEndpoint(
@@ -409,7 +432,15 @@ Map<String, Object?> buildOpenApiDocument() {
       if (endpoint.description.isNotEmpty) 'description': endpoint.description,
       'responses': {
         for (final response in endpoint.responses.entries)
-          response.key: {'description': response.value},
+          response.key: {
+            'description': response.value,
+            if (endpoint.binaryResponse && response.key == '200')
+              'content': {
+                endpoint.binaryContentType: {
+                  'schema': {'type': 'string', 'format': 'binary'},
+                },
+              },
+          },
       },
       if (endpoint.auth == ApiAuth.none)
         'security': <Object?>[]
