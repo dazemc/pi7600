@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/auth/auth_service.dart';
 import 'package:simcom_api_server/src/auth/jwt_service.dart';
+import 'package:simcom_api_server/src/auth/login_rate_limiter.dart';
 import 'package:simcom_api_server/src/camera/camera_capture.dart';
 import 'package:simcom_api_server/src/camera/recognition.dart';
 import 'package:simcom_api_server/src/camera/video_broadcaster.dart';
@@ -20,6 +21,7 @@ class AppServices {
   AppServices({
     required this.config,
     required this.jwt,
+    required this.loginLimiter,
     required this.at,
     required this.modem,
     required this.sms,
@@ -55,6 +57,11 @@ class AppServices {
         issuer: config.jwtIssuer,
         expireMinutes: config.jwtExpireMinutes,
       ),
+      loginLimiter: LoginRateLimiter(
+        maxAttempts: config.loginMaxAttempts,
+        window: config.loginWindow,
+        blockDuration: config.loginBlockDuration,
+      ),
       at: at,
       modem: modem,
       sms: sms,
@@ -85,6 +92,7 @@ class AppServices {
 
   final AppConfig config;
   final JwtService jwt;
+  final LoginRateLimiter loginLimiter;
   final At at;
   final ModemSettings modem;
   final Sms sms;

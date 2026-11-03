@@ -31,6 +31,15 @@ Map<String, Object?> messageToJson(Message message) {
   };
 }
 
+Response _tooManyAttempts(Duration retryAfter) {
+  final seconds = retryAfter.inSeconds.clamp(1, 86400);
+  return errorResponse(
+    429,
+    'Too many failed login attempts',
+    extraHeaders: {'Retry-After': '$seconds'},
+  );
+}
+
 /// `POST /token`
 class TokenRoute extends Route {
   TokenRoute(this.services) : super(methods: {Method.post});
@@ -52,13 +61,26 @@ class TokenRoute extends Route {
       return errorResponse(422, 'Missing username or password');
     }
 
+    final limiter = services.loginLimiter;
+    final userKey = 'user:${username.trim().toLowerCase()}';
+    final addressKey = 'ip:${request.connectionInfo.remote.address.toString()}';
+    final blockedFor =
+        limiter.retryAfter(userKey) ?? limiter.retryAfter(addressKey);
+    if (blockedFor != null) {
+      return _tooManyAttempts(blockedFor);
+    }
+
     final auth = services.authService(session);
     final user = await auth.authenticatePassword(username, password);
     if (user == null) {
+      final userBlock = limiter.recordFailure(userKey);
+      final addressBlock = limiter.recordFailure(addressKey);
+      final block = userBlock ?? addressBlock;
       AppLog.warning(
         'Failed login for $username',
         name: 'pi7600.auth',
       );
+      if (block != null) return _tooManyAttempts(block);
       return errorResponse(
         401,
         'Incorrect username or password',
@@ -66,6 +88,8 @@ class TokenRoute extends Route {
       );
     }
 
+    limiter.reset(userKey);
+    limiter.reset(addressKey);
     return jsonResponse({
       'access_token': services.jwt.createToken(user.userName),
       'token_type': 'bearer',

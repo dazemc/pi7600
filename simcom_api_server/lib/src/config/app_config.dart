@@ -24,6 +24,9 @@ class AppConfig {
     required this.jwtIssuer,
     required this.jwtExpireMinutes,
     required this.websocketAuthTimeout,
+    required this.loginMaxAttempts,
+    required this.loginWindow,
+    required this.loginBlockDuration,
     required this.logLevel,
     required this.pingInterface,
     required this.pingTargets,
@@ -49,6 +52,12 @@ class AppConfig {
   final String jwtIssuer;
   final int jwtExpireMinutes;
   final double websocketAuthTimeout;
+
+  /// Failed logins allowed per username or client address inside
+  /// [loginWindow] before that key is blocked for [loginBlockDuration].
+  final int loginMaxAttempts;
+  final Duration loginWindow;
+  final Duration loginBlockDuration;
   final String logLevel;
   final String pingInterface;
   final List<String> pingTargets;
@@ -106,6 +115,16 @@ class AppConfig {
       jwtIssuer: string('JWT_ISSUER', 'pi.daazed.dev'),
       jwtExpireMinutes: integer('JWT_EXPIRE_MINUTES', 30),
       websocketAuthTimeout: decimal('WEBSOCKET_AUTH_TIMEOUT', 5.0),
+      loginMaxAttempts: integer(
+        'LOGIN_MAX_ATTEMPTS',
+        5,
+      ).clamp(1, 100).toInt(),
+      loginWindow: Duration(
+        seconds: integer('LOGIN_WINDOW_SECONDS', 300).clamp(1, 86400).toInt(),
+      ),
+      loginBlockDuration: Duration(
+        seconds: integer('LOGIN_BLOCK_SECONDS', 300).clamp(1, 86400).toInt(),
+      ),
       logLevel: string('LOG_LEVEL', 'INFO'),
       pingInterface: string('PING_INTERFACE', 'usb0'),
       pingTargets: targets.isEmpty ? const ['1.1.1.1'] : targets,

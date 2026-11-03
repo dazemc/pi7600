@@ -119,6 +119,10 @@ file in the server working directory. Serverpod settings live in
 | `PI7600_JWT_ISSUER` | `pi.daazed.dev` | JWT issuer claim |
 | `PI7600_JWT_EXPIRE_MINUTES` | `30` | Access token lifetime |
 | `PI7600_WEBSOCKET_AUTH_TIMEOUT` | `5` | Seconds to wait for the auth message |
+| `PI7600_LOGIN_MAX_ATTEMPTS` | `5` | Failed logins per username or client address before throttling |
+| `PI7600_LOGIN_WINDOW_SECONDS` | `300` | Window used to count failed logins |
+| `PI7600_LOGIN_BLOCK_SECONDS` | `300` | How long a throttled key stays blocked |
+| `PI7600_LOG_LEVEL` | `INFO` | Minimum application log level (`debug`, `info`, `warn`, `error`) |
 | `PI7600_PING_INTERFACE` | `usb0` | Interface used for `data`/`dns` checks |
 | `PI7600_PING_TARGETS` | `1.1.1.1,www.google.com` | Ping targets for `data` and `dns` |
 | `PI7600_DOCS_ENABLED` | `true` | Serve the interactive `/docs` page and `/openapi.json` |

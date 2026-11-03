@@ -128,7 +128,8 @@ const apiEndpoints = <ApiEndpoint>[
     description:
         'Send `username` and `password` as an '
         '`application/x-www-form-urlencoded` body. The returned token is valid '
-        'for the configured JWT lifetime (30 minutes by default).',
+        'for the configured JWT lifetime (30 minutes by default). Repeated '
+        'failed logins are throttled per username and client address.',
     formFields: [
       ApiFormField(name: 'username', example: 'alice'),
       ApiFormField(
@@ -141,6 +142,7 @@ const apiEndpoints = <ApiEndpoint>[
       '200': 'A bearer token',
       '401': 'Incorrect username or password',
       '422': 'Missing username or password',
+      '429': 'Too many failed attempts; see `Retry-After`',
     },
   ),
   ApiEndpoint(

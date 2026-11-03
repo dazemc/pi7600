@@ -19,12 +19,16 @@ Response errorResponse(
   int status,
   Object? detail, {
   bool authenticate = false,
+  Map<String, String>? extraHeaders,
 }) {
-  final headers = authenticate
-      ? Headers.build(
-          (headers) => headers[Headers.wwwAuthenticateHeader] = ['Bearer'],
-        )
-      : null;
+  final headers = Headers.build((builder) {
+    if (authenticate) {
+      builder[Headers.wwwAuthenticateHeader] = ['Bearer'];
+    }
+    extraHeaders?.forEach((key, value) {
+      builder[key] = [value];
+    });
+  });
   return Response(
     status,
     body: Body.fromString(
