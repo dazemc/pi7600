@@ -33,7 +33,9 @@ database:
   name: simcom_api
   user: simcom_api
   requireSsl: false
-  #maxConnectionCount: 10 # Defaults to 10, a negative or null value removes the limit
+  # The Pi has limited RAM and low database concurrency; four pooled
+  # connections are enough and avoid holding ten idle PostgreSQL backends.
+  maxConnectionCount: 4
 
 maxRequestSize: 524288 # The maximum size of requests allowed in bytes
 
