@@ -401,6 +401,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.9.1"
+  pi7600:
+    dependency: transitive
+    description:
+      path: pi7600
+      relative: true
+    source: path
+    version: "0.1.0"
   platform:
     dependency: transitive
     description:

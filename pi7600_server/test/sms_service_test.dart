@@ -1,11 +1,8 @@
+import 'package:pi7600/pi7600.dart';
+import 'package:pi7600/testing.dart';
 import 'package:pi7600_server/src/data/message_store.dart';
 import 'package:pi7600_server/src/generated/message.dart';
-import 'package:pi7600_server/src/modem/at.dart';
-import 'package:pi7600_server/src/modem/pdu.dart';
-import 'package:pi7600_server/src/modem/settings.dart';
-import 'package:pi7600_server/src/modem/sms.dart';
 import 'package:pi7600_server/src/services/sms_service.dart';
-import 'support/fake_transport.dart';
 import 'package:test/test.dart';
 
 class FakeMessageStore implements MessageStore {

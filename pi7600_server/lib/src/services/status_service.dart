@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:pi7600_server/src/modem/gps.dart';
-import 'package:pi7600_server/src/modem/settings.dart';
+import 'package:pi7600/pi7600.dart';
 
 final _lineBreak = RegExp(r'\r\n|[\n\v\f\r\x1c-\x1e\x85\u2028\u2029]');
 

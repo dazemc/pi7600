@@ -16,10 +16,13 @@ There is no Python runtime, SQLAlchemy, Alembic, or OpenCV dependency anymore.
 
 The repository is split:
 
-- **`pi7600_server/`:** Serverpod server, modem library, camera/V4L2 capture,
-  REST and WebSocket routes, models, migrations, and tests.
+- **`pi7600_server/`:** Serverpod server, camera/V4L2 capture, REST and
+  WebSocket routes, models, migrations, and tests.
 - **`pi7600_client/`:** generated Serverpod protocol client package. It is not a
   Flutter app and has no UI.
+- **`pi7600/`:** git submodule containing the standalone Dart modem library
+  (`pi7600-lib`): AT commands, serial transport, settings, SMS/PDU, GPS, and
+  phone control.
 - **`third_party/relic_io/`:** vendored `relic_io` with a patch that allows RFC
   6455 close codes `1008` and `1011`.
 
@@ -31,6 +34,7 @@ the unversioned `.so` symlink), a SIM7600
 modem, and a V4L2 camera.
 
 ```bash
+git submodule update --init --recursive
 dart pub get
 
 # Development JWT keys, resolved relative to pi7600_server/.
@@ -48,10 +52,12 @@ dart run bin/create_user.dart --username alice --admin
 Common commands:
 
 ```bash
-dart format pi7600_server pi7600_client
+dart format pi7600_server pi7600_client pi7600
 dart analyze pi7600_server
 dart analyze pi7600_client
+dart analyze pi7600
 cd pi7600_server && dart test
+cd pi7600 && dart test
 cd pi7600_server && dart run tool/build_docs_client.dart
 cd pi7600_server && serverpod create-migration
 ```
@@ -70,7 +76,7 @@ cd pi7600_server && serverpod create-migration
 | `pi7600_server/lib/src/data/` | Session-bound user/message stores |
 | `pi7600_server/lib/src/models/` | Serverpod model definitions (`*.spy.yaml`) |
 | `pi7600_server/lib/src/generated/` | Generated Serverpod models and repositories |
-| `pi7600_server/lib/src/modem/` | `At`, stream-based serial transport, settings, SMS/PDU, GPS, phone |
+| `pi7600/` | Submodule: Dart modem library (`At`, serial transport, settings, SMS/PDU, GPS, phone) |
 | `pi7600_server/lib/src/camera/` | V4L2 capture, video broadcaster, recognition interface |
 | `pi7600_server/lib/src/services/` | SMS/status business logic and service status Bloc |
 | `pi7600_server/lib/src/web/` | REST/WebSocket routes, `/readyz` middleware, and the Jaspr `/docs` explorer |
@@ -111,6 +117,10 @@ cd pi7600_server && serverpod create-migration
   from PostgreSQL. `/at` additionally requires `is_admin`. WebSockets accept a
   first JSON message `{"type": "auth", "token": "<jwt>"}` within
   `PI7600_WEBSOCKET_AUTH_TIMEOUT` and close with `1008` on failure.
+- **Modem library:** the standalone `pi7600` Dart package lives in the `pi7600`
+  submodule and is consumed through a path dependency. It owns `At`,
+  `SerialTransport`/`LibSerialPortTransport`, `ModemSettings`, `Sms`/`SmsParser`,
+  `Gps`, and `Phone`.
 - **Modem I/O:** all commands go through `At.sendAt` / `At.sendRaw` over
   `/dev/ttyUSB2`. `LibSerialPortTransport` uses `SerialPortReader` in an
   isolate and publishes chunks on a broadcast stream; `At` subscribes to that
@@ -165,8 +175,8 @@ cd pi7600_server && serverpod create-migration
 8. **Migrations matter.** `create_all` is not used. Add a Serverpod migration
    for schema changes and apply it with `--apply-migrations`.
 9. **Hardware-dependent code.** A full run requires `/dev/ttyUSB2` and a V4L2
-   camera. Tests must use `test/support/fake_transport.dart` and fake stores;
-   do not assume hardware is present in CI.
+   camera. Tests must use `package:pi7600/testing.dart` (`FakeTransport`) and
+   fake stores; do not assume hardware is present in CI.
 10. **`/at` is privileged.** Keep it admin-only and audited; do not log
     credentials or secrets.
 11. **WebSocket close codes need the vendored patch.** The published
@@ -182,25 +192,34 @@ cd pi7600_server && serverpod create-migration
 
 ```bash
 cd pi7600_server && dart test
+cd pi7600 && dart test
 ```
 
-The suite is hardware-free and covers PDU parsing, AT timeout/error handling,
-JWT/bcrypt auth, SMS persistence/deletion, and the `/docs` catalog/page. The
-docs test also runs `dart compile js` on the Jaspr client entrypoint, so a
-client build failure fails the suite. Add tests for new behavior and keep them
-runnable without a modem, camera, or database.
+The service suite is hardware-free and covers JWT/bcrypt auth, SMS
+persistence/deletion, status parsing, and the `/docs` catalog/page. The docs
+test also runs `dart compile js` on the Jaspr client entrypoint, so a client
+build failure fails the suite.
 
-CI (`.github/workflows/ci.yml`) installs the stable Dart SDK and
-`libserialport0`, then runs `dart format --set-exit-if-changed`,
-`dart analyze`, and `dart test`.
+The modem library suite is also hardware-free and covers AT timeout/error
+handling, stream subscription/reopen behavior, and PDU parsing. It uses
+`package:pi7600/testing.dart` instead of a real serial port. Add tests for new
+behavior in the package that owns it and keep everything runnable without a
+modem, camera, or database.
+
+CI (`.github/workflows/ci.yml`) checks out submodules, installs the stable Dart
+SDK and `libserialport0`, then runs `dart format --set-exit-if-changed`,
+`dart analyze`, `dart test` for the service, and `dart test` for the modem
+library.
 
 ## Definition of done
 
-- `dart format --output=none --set-exit-if-changed pi7600_server pi7600_client`
+- `dart format --output=none --set-exit-if-changed pi7600_server pi7600_client pi7600`
   passes.
-- `dart analyze pi7600_server` and `dart analyze pi7600_client` pass.
-- `cd pi7600_server && dart test` passes without hardware.
-- New behavior is covered by tests.
+- `dart analyze pi7600_server`, `dart analyze pi7600_client`, and
+  `dart analyze pi7600` pass.
+- `cd pi7600_server && dart test` and `cd pi7600 && dart test` pass without
+  hardware.
+- New behavior is covered by tests in the package that owns it.
 - `README.md` is updated for user-visible changes.
 - Generated files are regenerated from models, not hand-edited.
 - No secrets, databases, caches, biometric data, or generated artifacts are

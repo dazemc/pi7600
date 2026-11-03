@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: dart-lang/setup-dart@v1
         with:
@@ -24,7 +26,7 @@ jobs:
       - name: Check formatting
         run: >-
           dart format --output=none --set-exit-if-changed
-          pi7600_server pi7600_client
+          pi7600_server pi7600_client pi7600
 
       - name: Analyze server
         run: dart analyze pi7600_server
@@ -32,10 +34,22 @@ jobs:
       - name: Analyze client
         run: dart analyze pi7600_client
 
+      - name: Install modem library dependencies
+        working-directory: pi7600
+        run: dart pub get
+
+      - name: Analyze modem library
+        working-directory: pi7600
+        run: dart analyze
+
   test:
     runs-on: ubuntu-latest
+    env:
+      LIBSERIALPORT_PATH: libserialport.so.0
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: dart-lang/setup-dart@v1
         with:
@@ -47,6 +61,14 @@ jobs:
       - name: Install dependencies
         run: dart pub get
 
-      - name: Run hardware-free tests
+      - name: Run service tests
         working-directory: pi7600_server
+        run: dart test
+
+      - name: Install modem library dependencies
+        working-directory: pi7600
+        run: dart pub get
+
+      - name: Run modem library tests
+        working-directory: pi7600
         run: dart test

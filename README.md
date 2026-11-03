@@ -14,9 +14,9 @@ on the Dart VM with PostgreSQL. There is no Python runtime.
 
 | Path | Purpose |
 | --- | --- |
-| `pi7600_server/` | Serverpod server, modem library, camera/V4L2 capture, REST and WebSocket routes |
+| `pi7600_server/` | Serverpod server, camera/V4L2 capture, REST and WebSocket routes |
 | `pi7600_client/` | Generated Serverpod protocol client package (not a Flutter app) |
-| `pi7600_server/lib/src/modem/` | AT client, stream-based serial transport, settings, SMS/PDU, GPS, phone |
+| `pi7600/` | Git submodule: standalone Dart modem library (`pi7600-lib`) |
 | `pi7600_server/lib/src/camera/` | V4L2 capture, JPEG broadcaster, recognition interface |
 | `pi7600_server/lib/src/web/` | REST routes and WebSocket upgrade handlers |
 | `pi7600_server/migrations/` | PostgreSQL schema migrations |
@@ -46,6 +46,7 @@ the script before running it.
 ## Quick start (development)
 
 ```bash
+git submodule update --init --recursive
 dart pub get
 
 # JWT signing keys. The development server resolves these relative to
@@ -78,6 +79,23 @@ dart run bin/create_user.dart --username alice --admin
 Without a modem or camera the process still starts; hardware failures are
 logged, reflected in the service status Bloc, and surfaced as `ERROR` values in
 the API rather than aborting the process.
+
+### Modem library
+
+The modem stack is the standalone Dart package in the `pi7600/` submodule
+([`pi7600-lib`](https://github.com/dazemc/pi7600-lib)). The server consumes it
+through a path dependency:
+
+```yaml
+dependencies:
+  pi7600:
+    path: ../pi7600
+```
+
+It contains `At`, `LibSerialPortTransport`, `ModemSettings`, `Sms`/`SmsParser`,
+`Gps`, and `Phone`. See `pi7600/README.md` for direct usage and the
+hardware-free test helpers. The legacy Python implementation remains on the
+library repository's `master` branch.
 
 ## Configuration
 
@@ -296,6 +314,7 @@ The Pi runs a cross-compiled native executable. Build it on a development
 machine:
 
 ```bash
+git submodule update --init --recursive
 cd pi7600_server
 dart pub get
 dart run tool/build_docs_client.dart
@@ -365,15 +384,19 @@ are migrated automatically.
 ## Development
 
 ```bash
+git submodule update --init --recursive
 dart pub get
-dart format pi7600_server pi7600_client
+dart format pi7600_server pi7600_client pi7600
 dart analyze pi7600_server
 dart analyze pi7600_client
+dart analyze pi7600
 cd pi7600_server && dart test
+cd pi7600 && dart test
 ```
 
-Tests use fake serial transports and in-memory stores, so they do not require a
-modem, camera, or database. CI runs the same commands on the stable Dart SDK.
+Tests use `FakeTransport` from `package:pi7600/testing.dart` and in-memory
+stores, so they do not require a modem, camera, or database. CI checks out
+submodules and runs the same commands on the stable Dart SDK.
 
 See `docs/roadmap.md` for SQLCipher/PostgreSQL encryption notes, TOTP, and
 face-recognition follow-up work.

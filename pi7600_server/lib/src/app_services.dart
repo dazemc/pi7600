@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:pi7600/pi7600.dart';
 import 'package:pi7600_server/src/auth/auth_service.dart';
 import 'package:pi7600_server/src/auth/jwt_service.dart';
 import 'package:pi7600_server/src/camera/camera_capture.dart';
@@ -9,12 +10,6 @@ import 'package:pi7600_server/src/camera/video_broadcaster.dart';
 import 'package:pi7600_server/src/config/app_config.dart';
 import 'package:pi7600_server/src/data/message_store.dart';
 import 'package:pi7600_server/src/data/user_store.dart';
-import 'package:pi7600_server/src/modem/at.dart';
-import 'package:pi7600_server/src/modem/gps.dart';
-import 'package:pi7600_server/src/modem/phone.dart';
-import 'package:pi7600_server/src/modem/serial_transport.dart';
-import 'package:pi7600_server/src/modem/settings.dart';
-import 'package:pi7600_server/src/modem/sms.dart';
 import 'package:pi7600_server/src/services/service_status.dart';
 import 'package:pi7600_server/src/services/sms_service.dart';
 import 'package:pi7600_server/src/services/status_service.dart';
