@@ -116,6 +116,31 @@ class SmsService {
     );
   }
 
+  /// Send a stored, unsent outgoing message again.
+  ///
+  /// Returns `null` when the row does not exist. Already-sent rows are returned
+  /// unchanged. Non-outgoing or otherwise non-retryable rows throw
+  /// [SmsDeliveryException].
+  Future<Message?> retryMessage(int id) async {
+    final message = await store.findById(id);
+    if (message == null) return null;
+    if (message.isSent == true) return message;
+    if (message.messageType != 'SENT' || message.isSent != false) {
+      throw SmsDeliveryException(message);
+    }
+
+    final destination = message.messageDestinationAddress;
+    if (destination == null) {
+      throw SmsDeliveryException(message);
+    }
+    final sent = await sms.sendMessage(destination, message.messageContents);
+    if (!sent) {
+      throw SmsDeliveryException(message);
+    }
+    message.isSent = true;
+    return store.update(message);
+  }
+
   /// Delete a message by database id. Returns `false` when it does not exist.
   Future<bool> deleteMessage(int id) async {
     final message = await store.findById(id);

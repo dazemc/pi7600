@@ -205,14 +205,20 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Return the latest JPEG as a single HTTP response in addition to
     `/wss/video`.
 
-- [ ] **SMS pagination, search, and retry.**
+- [x] **SMS retry.**
+  - Add a retry path for stored-but-unsent messages.
+  - Added `POST /sms/retry/{id}`; already-sent rows are returned unchanged.
+
+- [ ] **SMS pagination and search.**
   - Add optional pagination/search without breaking the existing list contract
     where possible.
-  - Add a retry path for stored-but-unsent messages.
 
-- [ ] **Metrics endpoint.**
+- [x] **Metrics endpoint.**
   - Expose request counts, latency, modem state, camera state, and process
     metrics in Prometheus format.
+  - Added `/metrics` with modem/camera/recognition state, video client count,
+    lifecycle phase, and RSS metrics. Request latency counters remain a
+    follow-up.
 
 - [ ] **Login rate limiting and TOTP.**
   - Add per-user/IP throttling for failed logins.

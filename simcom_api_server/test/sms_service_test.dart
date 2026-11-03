@@ -103,6 +103,19 @@ void main() {
     service = SmsService(sms: sms, store: store);
   });
 
+  Message outgoing({bool isSent = false}) {
+    return Message(
+      messageType: 'SENT',
+      messageDestinationAddress: '+31612345678',
+      messageDate: '2026-01-02',
+      messageTime: '03:04:05',
+      messageContents: 'Retry me',
+      isPartial: false,
+      inSimMemory: false,
+      isSent: isSent,
+    );
+  }
+
   ParsedMessage incoming({
     String type = 'REC READ',
     String contents = 'Hello',
@@ -191,6 +204,41 @@ void main() {
 
     expect(
       () => service.sendMessage(number: '+31612345678', text: 'Hi'),
+      throwsA(isA<SmsDeliveryException>()),
+    );
+  });
+
+  test('retryMessage sends a stored unsent message', () async {
+    final stored = await store.insert(outgoing());
+
+    final retried = await service.retryMessage(stored.id!);
+
+    expect(retried, isNotNull);
+    expect(retried!.isSent, isTrue);
+    expect(sms.sent, hasLength(1));
+    expect(sms.sent.single.$1, '+31612345678');
+  });
+
+  test('retryMessage does not resend an already-sent row', () async {
+    final stored = await store.insert(outgoing(isSent: true));
+
+    final retried = await service.retryMessage(stored.id!);
+
+    expect(retried, isNotNull);
+    expect(retried!.isSent, isTrue);
+    expect(sms.sent, isEmpty);
+  });
+
+  test('retryMessage returns null for an unknown id', () async {
+    expect(await service.retryMessage(99), isNull);
+  });
+
+  test('retryMessage reports modem failures', () async {
+    final stored = await store.insert(outgoing());
+    sms.sendSucceeds = false;
+
+    await expectLater(
+      service.retryMessage(stored.id!),
       throwsA(isA<SmsDeliveryException>()),
     );
   });

@@ -158,6 +158,20 @@ const apiEndpoints = <ApiEndpoint>[
     },
   ),
   ApiEndpoint(
+    method: 'GET',
+    path: '/metrics',
+    summary: 'Prometheus service metrics',
+    description:
+        'Returns modem, camera, recognition, video-client, process memory, and '
+        'lifecycle-phase metrics in Prometheus text format. Requires a bearer '
+        'token.',
+    auth: ApiAuth.user,
+    responses: {
+      '200': 'Prometheus text exposition',
+      '401': 'Authentication required',
+    },
+  ),
+  ApiEndpoint(
     method: 'POST',
     path: '/phone/call',
     summary: 'Place a voice call (admin only)',
@@ -223,6 +237,29 @@ const apiEndpoints = <ApiEndpoint>[
       '401': 'Authentication required',
       '422': '`number` and `msg` are required',
       '502': 'Message stored but the modem could not send it',
+    },
+  ),
+  ApiEndpoint(
+    method: 'POST',
+    path: '/sms/retry/{id}',
+    summary: 'Retry an unsent outgoing message',
+    description:
+        'Resends a stored `SENT` message whose `is_sent` flag is false. '
+        'Already-sent rows are returned unchanged.',
+    auth: ApiAuth.user,
+    pathParameters: [
+      ApiPathParameter(
+        name: 'id',
+        description: 'PostgreSQL message id',
+        example: '1',
+      ),
+    ],
+    responses: {
+      '202': 'Message sent',
+      '401': 'Authentication required',
+      '404': 'Message not found',
+      '422': 'Invalid message id',
+      '502': 'The modem rejected the message',
     },
   ),
   ApiEndpoint(

@@ -7,6 +7,7 @@ import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/web/at_audit.dart';
 import 'package:simcom_api_server/src/web/http.dart';
+import 'package:simcom_api_server/src/web/metrics.dart';
 import 'package:serverpod/serverpod.dart' hide Message;
 
 /// Serialize a message with the snake_case keys used by the Python API.
@@ -145,6 +146,32 @@ class GpsRoute extends Route {
   }
 }
 
+/// `GET /metrics`
+class MetricsRoute extends Route {
+  MetricsRoute(this.services) : super(methods: {Method.get});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+
+    final status = services.serviceStatus.state;
+    final body = buildMetrics(
+      modemReady: status.modemReady,
+      cameraRunning: services.camera.isRunning,
+      recognitionReady: status.recognitionReady,
+      videoClients: services.broadcaster.clientCount,
+      phase: status.phase.name,
+    );
+    return Response(
+      200,
+      body: Body.fromString(body, mimeType: MimeType.plainText),
+    );
+  }
+}
+
 /// `POST /phone/call`
 class PhoneCallRoute extends Route {
   PhoneCallRoute(this.services) : super(methods: {Method.post});
@@ -279,6 +306,40 @@ class SmsRoute extends Route {
         502,
         'Message was stored but the modem could not send it',
       );
+    }
+  }
+}
+
+/// `POST /sms/retry/:id`
+class SmsRetryRoute extends Route {
+  SmsRetryRoute(this.services) : super(methods: {Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
+    AppLog.info(
+      '/sms/retry POST: Accessed by ${auth.user!.userName}',
+      name: 'pi7600',
+    );
+
+    final rawId = request.rawPathParameters[#id];
+    final id = rawId == null ? null : int.tryParse(rawId);
+    if (id == null) {
+      return errorResponse(422, 'Invalid message id');
+    }
+
+    try {
+      final message = await services.smsService(session).retryMessage(id);
+      if (message == null) {
+        return errorResponse(404, 'Message $id not found');
+      }
+      return jsonResponse(messageToJson(message), status: 202);
+    } on SmsDeliveryException {
+      return errorResponse(502, 'Message could not be sent');
     }
   }
 }
