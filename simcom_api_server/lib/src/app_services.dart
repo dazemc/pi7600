@@ -16,6 +16,7 @@ import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/services/status_service.dart';
 import 'package:simcom_api_server/src/services/user_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
+import 'package:simcom_api_server/src/web/metrics.dart';
 import 'package:simcom_modem/simcom_modem.dart';
 import 'package:serverpod/serverpod.dart';
 
@@ -107,6 +108,7 @@ class AppServices {
   final VideoBroadcaster broadcaster;
   final FacialRecognition recognition;
   final ServiceStatusCubit serviceStatus;
+  final RequestMetrics requestMetrics = RequestMetrics();
 
   final Completer<void> _ready = Completer<void>();
   bool _started = false;

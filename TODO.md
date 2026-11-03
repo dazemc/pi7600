@@ -61,8 +61,8 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Serve a gzipped `web/docs/app.js` and `style.css`.
   - Add `ETag`/`If-None-Match` and cache headers.
   - Keep the bundle build artifact out of git.
-  - Implemented gzip + `Vary: Accept-Encoding` + a 5-minute cache window;
-    ETag revalidation is still a possible follow-up.
+  - Implemented gzip + `Vary: Accept-Encoding` + a 5-minute cache window,
+    plus `ETag`/`If-None-Match` revalidation for the page and every asset.
 
 - [x] **Implement `SIMCOM_API_LOG_LEVEL` and reduce production session logging.**
   - `AppConfig.logLevel` is parsed but unused.
@@ -157,11 +157,12 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Test broadcaster client removal when `trySendBytes` fails.
   - Test frame pacing with a fake device/clock where practical.
 
-- [ ] **Route-level tests.**
+- [x] **Route-level tests.**
   - Exercise token, status, SMS, and `/at` handlers with fake services.
   - Cover auth failure, admin failure, validation errors, and startup readiness.
-  - Deferred: full route tests need a Serverpod session/DB fixture; current
-    service/auth/helper tests cover the underlying logic.
+  - Added a fake session/database harness and route tests for token/refresh/
+    logout, TOTP, users, audit, metrics, health, and docs ETags. Hardware-backed
+    status/SMS/`/at` paths are covered by the production endpoint smoke test.
 
 - [x] **Browser docs test in CI.**
   - Automate login, logout, unauthenticated execute, and authenticated execute.
@@ -223,8 +224,8 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Expose request counts, latency, modem state, camera state, and process
     metrics in Prometheus format.
   - Added `/metrics` with modem/camera/recognition state, video client count,
-    lifecycle phase, and RSS metrics. Request latency counters remain a
-    follow-up.
+    lifecycle phase, RSS metrics, request counts, and request-duration
+    summaries.
 
 - [x] **Login rate limiting.**
   - Add per-user/IP throttling for failed logins.

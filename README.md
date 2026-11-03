@@ -404,6 +404,16 @@ The bundle is written to `simcom_api_server/build/pi/bundle/`. It contains
    sudo systemctl enable --now postgresql
    ```
 
+On systems where the modem's `ttyUSB` numbering changes after a USB reset,
+install the optional udev rule and point `SIMCOM_API_AT_COM` at
+`/dev/simcom-at`:
+
+```bash
+sudo cp deploy/99-simcom-at.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=tty
+```
+
 2. Create the database and role:
 
    ```bash

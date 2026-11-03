@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:simcom_api_server/src/web/docs/api_catalog.dart';
 import 'package:simcom_api_server/src/web/docs/docs_client.dart';
 import 'package:simcom_api_server/src/web/docs/docs_page.dart';
+import 'package:hashlib/hashlib.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:serverpod/serverpod.dart';
 
@@ -24,14 +25,26 @@ bool _acceptsGzip(Request request) {
   return values.any((value) => value.toLowerCase().contains('gzip'));
 }
 
-Headers _assetHeaders({required bool gzipped}) {
+Headers _assetHeaders({required bool gzipped, required String etag}) {
   return Headers.build((headers) {
     headers[HttpHeaders.varyHeader] = ['Accept-Encoding'];
     headers[HttpHeaders.cacheControlHeader] = ['public, max-age=300'];
+    headers[HttpHeaders.etagHeader] = [etag];
     if (gzipped) {
       headers[HttpHeaders.contentEncodingHeader] = ['gzip'];
     }
   });
+}
+
+String _etag(Uint8List data) => '"${sha1.hex(data)}"';
+
+bool _isNotModified(Request request, String etag) {
+  final values = request.headers[HttpHeaders.ifNoneMatchHeader];
+  if (values == null) return false;
+  return values
+      .expand((value) => value.split(','))
+      .map((value) => value.trim())
+      .any((value) => value == etag);
 }
 
 Uint8List _gzip(Uint8List data) {
@@ -71,10 +84,17 @@ class DocsRoute extends Route {
     final body = await _page();
     final gzipped = _acceptsGzip(request);
     final payload = gzipped ? (_gzippedPage ??= _gzip(body)) : body;
+    final etag = _etag(payload);
+    if (_isNotModified(request, etag)) {
+      return Response(
+        304,
+        headers: _assetHeaders(gzipped: gzipped, etag: etag),
+      );
+    }
     return Response(
       200,
       body: Body.fromData(payload, mimeType: MimeType.html),
-      headers: _assetHeaders(gzipped: gzipped),
+      headers: _assetHeaders(gzipped: gzipped, etag: etag),
     );
   }
 }
@@ -87,18 +107,27 @@ class DocsStyleRoute extends Route {
 
   static final Uint8List _body = Uint8List.fromList(utf8.encode(docsCss));
   static final Uint8List _gzippedBody = _gzip(_body);
+  static final String _etagValue = _etag(_body);
+  static final String _gzippedEtagValue = _etag(_gzippedBody);
 
   @override
   FutureOr<Result> handleCall(Session session, Request request) {
     if (!enabled) return _docsDisabled();
     final gzipped = _acceptsGzip(request);
+    final etag = gzipped ? _gzippedEtagValue : _etagValue;
+    if (_isNotModified(request, etag)) {
+      return Response(
+        304,
+        headers: _assetHeaders(gzipped: gzipped, etag: etag),
+      );
+    }
     return Response(
       200,
       body: Body.fromData(
         gzipped ? _gzippedBody : _body,
         mimeType: MimeType.css,
       ),
-      headers: _assetHeaders(gzipped: gzipped),
+      headers: _assetHeaders(gzipped: gzipped, etag: etag),
     );
   }
 }
@@ -120,6 +149,8 @@ class DocsScriptRoute extends Route {
 
   Future<Uint8List?>? _cached;
   Uint8List? _gzipped;
+  String? _etagValue;
+  String? _gzippedEtagValue;
   bool _reportedMissing = false;
 
   Future<Uint8List?> _bundle() async {
@@ -176,10 +207,19 @@ class DocsScriptRoute extends Route {
 
     final gzipped = _acceptsGzip(request);
     final payload = gzipped ? (_gzipped ??= _gzip(body)) : body;
+    final etag = gzipped
+        ? (_gzippedEtagValue ??= _etag(payload))
+        : (_etagValue ??= _etag(payload));
+    if (_isNotModified(request, etag)) {
+      return Response(
+        304,
+        headers: _assetHeaders(gzipped: gzipped, etag: etag),
+      );
+    }
     return Response(
       200,
       body: Body.fromData(payload, mimeType: MimeType.javascript),
-      headers: _assetHeaders(gzipped: gzipped),
+      headers: _assetHeaders(gzipped: gzipped, etag: etag),
     );
   }
 }
@@ -193,13 +233,21 @@ class OpenApiRoute extends Route {
   static final Uint8List _body = Uint8List.fromList(
     utf8.encode(buildOpenApiJson()),
   );
+  static final String _etagValue = _etag(_body);
 
   @override
   FutureOr<Result> handleCall(Session session, Request request) {
     if (!enabled) return _docsDisabled();
+    if (_isNotModified(request, _etagValue)) {
+      return Response(
+        304,
+        headers: _assetHeaders(gzipped: false, etag: _etagValue),
+      );
+    }
     return Response(
       200,
       body: Body.fromData(_body, mimeType: MimeType.json),
+      headers: _assetHeaders(gzipped: false, etag: _etagValue),
     );
   }
 }

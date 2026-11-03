@@ -6,6 +6,7 @@ import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/web/routes/api_routes.dart';
 import 'package:simcom_api_server/src/web/routes/docs_routes.dart';
 import 'package:simcom_api_server/src/web/routes/readyz.dart';
+import 'package:simcom_api_server/src/web/metrics.dart';
 import 'package:simcom_api_server/src/web/routes/websockets.dart';
 import 'package:serverpod/serverpod.dart';
 
@@ -53,6 +54,8 @@ void configureServer(Serverpod pod) {
     ..addRoute(OpenApiRoute(services.config.docsEnabled), '/openapi.json')
     ..addRoute(EchoWebSocketRoute(services), '/wss')
     ..addRoute(VideoWebSocketRoute(services), '/wss/video');
+
+  web.addMiddleware(requestMetricsMiddleware(services.requestMetrics), '/');
 
   // Serverpod registers GET /readyz itself, so the Simcom API response is produced
   // by middleware instead of a conflicting route.

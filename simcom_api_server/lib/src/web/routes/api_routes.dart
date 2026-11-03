@@ -759,6 +759,7 @@ class MetricsRoute extends Route {
       recognitionReady: status.recognitionReady,
       videoClients: services.broadcaster.clientCount,
       phase: status.phase.name,
+      requests: services.requestMetrics,
     );
     return Response(
       200,
