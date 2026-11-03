@@ -59,6 +59,8 @@ dart analyze simcom_modem
 cd simcom_api_server && dart test
 cd simcom_modem && dart test
 cd simcom_api_server && dart run tool/build_docs_client.dart
+cd simcom_api_server && dart run tool/build_release.dart
+cd simcom_api_server && dart run tool/benchmark.dart
 cd simcom_api_server && serverpod create-migration
 ```
 
@@ -82,6 +84,8 @@ cd simcom_api_server && serverpod create-migration
 | `simcom_api_server/lib/src/web/` | REST/WebSocket routes, `/readyz` middleware, and the Jaspr `/docs` explorer |
 | `simcom_api_server/lib/src/web/docs/` | Shared endpoint catalog, OpenAPI generator, Jaspr docs app, and client entrypoint |
 | `simcom_api_server/tool/build_docs_client.dart` | Compile the Jaspr docs client to `web/docs/app.js` |
+| `simcom_api_server/tool/build_release.dart` | Build the docs client and native bundle together |
+| `simcom_api_server/tool/benchmark.dart` | Hardware-free AT/SMS/bcrypt/JWT/camera benchmarks |
 | `simcom_api_server/migrations/` | PostgreSQL migrations |
 | `simcom_api_server/test/` | Hardware-free tests and fake serial transport |
 | `deploy/` | systemd unit and environment example |

@@ -222,7 +222,7 @@ Future<void> _cameraIsolate(List<Object?> args) async {
 
       final jpeg = frame.isJpeg
           ? frame.bytes
-          : _yuyvToJpeg(
+          : yuyvToJpeg(
               frame.bytes,
               frame.width,
               frame.height,
@@ -249,7 +249,9 @@ Future<void> _cameraIsolate(List<Object?> args) async {
 }
 
 /// Convert a YUYV (YUV 4:2:2) frame to a JPEG image.
-Uint8List _yuyvToJpeg(
+///
+/// Public so the conversion can be tested without a V4L2 device.
+Uint8List yuyvToJpeg(
   Uint8List data,
   int width,
   int height,

@@ -2,32 +2,31 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:simcom_api_server/src/app_services.dart';
-import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/generated/user.dart';
+import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:serverpod/serverpod.dart';
-// ignore: implementation_imports
-import 'package:serverpod/src/server/serverpod.dart'
-    show ServerpodInternalMethods;
 
-class _WebSocketAuthResult {
-  _WebSocketAuthResult.success(this.user, this.events) : failed = false;
+/// Result of the shared `/wss` and `/wss/video` authentication handshake.
+class WebSocketAuthResult {
+  WebSocketAuthResult.success(this.user, this.events) : failed = false;
 
-  _WebSocketAuthResult.failed(this.events) : user = null, failed = true;
+  WebSocketAuthResult.failed(this.events) : user = null, failed = true;
 
   final User? user;
   final StreamIterator<WebSocketEvent> events;
   final bool failed;
 }
 
-Future<_WebSocketAuthResult> _authenticate(
-  RelicWebSocket socket,
-  AppServices services,
-) async {
+/// Authenticate a WebSocket from its first JSON message.
+///
+/// This is public so it can be exercised without a live Serverpod session.
+Future<WebSocketAuthResult> authenticateWebSocket(
+  RelicWebSocket socket, {
+  required Duration timeout,
+  required Future<User?> Function(String token) authenticateToken,
+}) async {
   final events = StreamIterator<WebSocketEvent>(socket.events);
   try {
-    final timeout = Duration(
-      milliseconds: (services.config.websocketAuthTimeout * 1000).round(),
-    );
     final hasEvent = await events.moveNext().timeout(timeout);
     if (!hasEvent) {
       throw TimeoutException('No authentication message received');
@@ -47,13 +46,11 @@ Future<_WebSocketAuthResult> _authenticate(
       throw const FormatException('Missing token');
     }
 
-    final user = await services
-        .authService(Serverpod.instance.internalSession)
-        .authenticateToken(token);
+    final user = await authenticateToken(token);
     if (user == null || user.isDisabled) {
       throw const FormatException('User is unavailable');
     }
-    return _WebSocketAuthResult.success(user, events);
+    return WebSocketAuthResult.success(user, events);
   } on Object catch (error) {
     AppLog.warning(
       'WebSocket authentication failed: $error',
@@ -61,7 +58,7 @@ Future<_WebSocketAuthResult> _authenticate(
     );
     await events.cancel();
     await _close(socket, 1008);
-    return _WebSocketAuthResult.failed(events);
+    return WebSocketAuthResult.failed(events);
   }
 }
 
@@ -82,7 +79,13 @@ class EchoWebSocketRoute extends Route {
   @override
   FutureOr<Result> handleCall(Session session, Request request) {
     return WebSocketUpgrade((socket) async {
-      final auth = await _authenticate(socket, services);
+      final auth = await authenticateWebSocket(
+        socket,
+        timeout: Duration(
+          milliseconds: (services.config.websocketAuthTimeout * 1000).round(),
+        ),
+        authenticateToken: services.authService(session).authenticateToken,
+      );
       if (auth.failed) return;
 
       final user = auth.user!;
@@ -120,7 +123,13 @@ class VideoWebSocketRoute extends Route {
   @override
   FutureOr<Result> handleCall(Session session, Request request) {
     return WebSocketUpgrade((socket) async {
-      final auth = await _authenticate(socket, services);
+      final auth = await authenticateWebSocket(
+        socket,
+        timeout: Duration(
+          milliseconds: (services.config.websocketAuthTimeout * 1000).round(),
+        ),
+        authenticateToken: services.authService(session).authenticateToken,
+      );
       if (auth.failed) return;
 
       final user = auth.user!;

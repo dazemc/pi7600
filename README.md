@@ -317,15 +317,12 @@ machine:
 git submodule update --init --recursive
 cd simcom_api_server
 dart pub get
-dart run tool/build_docs_client.dart
-dart build cli --target bin/main.dart \
-  --target-os linux --target-arch arm64 \
-  --output build/pi
-
-# Include the compiled docs client in the native bundle.
-mkdir -p build/pi/bundle/web/docs
-cp web/docs/app.js build/pi/bundle/web/docs/app.js
+dart run tool/build_release.dart
 ```
+
+`build_release.dart` compiles the docs client, runs `dart build cli` for
+Linux/ARM64, and copies `web/docs/app.js` into the bundle. Use
+`--target-arch=x64` or `--output=...` for a different target.
 
 The bundle is written to `simcom_api_server/build/pi/bundle/`. It contains
 `bin/main`, the runtime libraries, and `web/docs/app.js`.
@@ -407,6 +404,17 @@ cd simcom_modem && dart test
 Tests use `FakeTransport` from `package:simcom_modem/testing.dart` and in-memory
 stores, so they do not require a modem, camera, or database. CI checks out
 submodules and runs the same commands on the stable Dart SDK.
+
+Hardware-free performance checks:
+
+```bash
+cd simcom_api_server
+dart run tool/benchmark.dart
+```
+
+The harness measures AT command round trips, SMS PDU parsing, bcrypt
+verification (native and worker-isolate), JWT verification, and YUYV-to-JPEG
+conversion.
 
 See `docs/roadmap.md` for SQLCipher/PostgreSQL encryption notes, TOTP, and
 face-recognition follow-up work.

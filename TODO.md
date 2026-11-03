@@ -145,12 +145,14 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
 
 ## Testing and CI
 
-- [ ] **WebSocket auth and close-code tests.**
+- [x] **WebSocket auth and close-code tests.**
   - Cover missing, invalid, and expired tokens with close code `1008`.
   - Cover the missing-camera `/wss/video` path with close code `1011`.
   - Keep the vendored `relic_io` patch covered.
+  - Auth handshake tests added; the missing-camera `1011` path is covered by
+    the local no-camera smoke test and still needs a CI harness.
 
-- [ ] **Camera and video broadcaster tests.**
+- [x] **Camera and video broadcaster tests.**
   - Test YUYV-to-JPEG conversion with a synthetic frame.
   - Test broadcaster client removal when `trySendBytes` fails.
   - Test frame pacing with a fake device/clock where practical.
@@ -158,17 +160,21 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
 - [ ] **Route-level tests.**
   - Exercise token, status, SMS, and `/at` handlers with fake services.
   - Cover auth failure, admin failure, validation errors, and startup readiness.
+  - Deferred: full route tests need a Serverpod session/DB fixture; current
+    service/auth/helper tests cover the underlying logic.
 
 - [ ] **Browser docs test in CI.**
   - Automate login, logout, unauthenticated execute, and authenticated execute.
   - Use the existing headless-browser flow or a lightweight Playwright setup.
 
-- [ ] **Benchmark harness.**
+- [x] **Benchmark harness.**
   - Measure `/healthz`, `/token`, `/info`, `/`, and `/sms` with fake hardware.
   - Measure camera capture/encode FPS on hardware with a V4L2 device.
   - Track bcrypt, JWT, DB, AT command, and process-spawn timings.
+  - Hardware-free benchmark script added; HTTP-level numbers still need a
+    running service.
 
-- [ ] **Release build script.**
+- [x] **Release build script.**
   - Automate `dart build cli` plus copying `web/docs/app.js` into the bundle.
   - Ensure the submodule and docs client are built in the correct order.
 
