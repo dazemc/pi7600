@@ -20,4 +20,29 @@ void main() {
       expect(splitResponseLines('a\r\nb\n'), ['a', 'b']);
     });
   });
+
+  group('responseValue', () {
+    test('finds values even when the modem adds blank lines', () {
+      expect(
+        responseValue('AT\r\r\n\r\nOK\r\n', '+CSQ:'),
+        'ERROR',
+      );
+      expect(
+        responseValue('AT+CSQ\r\r\n\r\n+CSQ: 18,99\r\nOK\r\n', '+CSQ:'),
+        '+CSQ: 18,99',
+      );
+      expect(
+        responseValue('AT+CREG?\r\r\n\r\n+CREG: 0,2\r\nOK\r\n', '+CREG:'),
+        '+CREG: 0,2',
+      );
+      expect(
+        responseValue('AT+COPS?\r\r\n\r\n+COPS: 0\r\nOK\r\n', '+COPS:'),
+        '+COPS: 0',
+      );
+    });
+
+    test('returns ERROR when the value line is absent', () {
+      expect(responseValue('OK\r\n', '+CSQ:'), 'ERROR');
+    });
+  });
 }

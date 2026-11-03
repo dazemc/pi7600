@@ -18,6 +18,18 @@ List<String> splitResponseLines(String response) {
   return lines;
 }
 
+/// Return the first non-empty line starting with [prefix], or `ERROR`.
+///
+/// Modem responses sometimes contain extra blank lines, so fixed line indexes
+/// are not reliable for extracting `+CSQ:`, `+CREG:`, and similar values.
+String responseValue(String response, String prefix) {
+  for (final line in splitResponseLines(response)) {
+    final trimmed = line.trim();
+    if (trimmed.startsWith(prefix)) return trimmed;
+  }
+  return 'ERROR';
+}
+
 class StatusResult {
   const StatusResult({
     required this.at,
@@ -124,28 +136,35 @@ class StatusService {
     final dnsFuture = _cachedPing(dnsTarget, data: false);
 
     final atCheck = await modem.sendAt('AT', 'OK', modemTimeout);
-    final at = _atOk(atCheck) ? _responseLine(atCheck, 2) : 'ERROR';
+    final at = _atOk(atCheck) ? 'OK' : 'ERROR';
 
     final cnumCheck = await modem.sendAt('AT+CNUM', '+CNUM:', modemTimeout);
     var cnum = 'ERROR';
     if (_atOk(cnumCheck)) {
-      final parts = _responseLine(cnumCheck, 2).split(',');
+      final cnumLine = responseValue(cnumCheck, '+CNUM:');
+      final parts = cnumLine.split(',');
       if (parts.length > 1) {
         cnum = parts[1].replaceAll('"', '');
       }
     }
 
     final csqCheck = await modem.sendAt('AT+CSQ', 'OK', modemTimeout);
-    final csq = _atOk(csqCheck) ? _responseLine(csqCheck, 2) : 'ERROR';
+    final csq = _atOk(csqCheck) ? responseValue(csqCheck, '+CSQ:') : 'ERROR';
 
     final cpinCheck = await modem.sendAt('AT+CPIN?', 'READY', modemTimeout);
-    final cpin = _atOk(cpinCheck) ? _responseLine(cpinCheck, 2) : 'ERROR';
+    final cpin = _atOk(cpinCheck)
+        ? responseValue(cpinCheck, '+CPIN:')
+        : 'ERROR';
 
     final cregCheck = await modem.sendAt('AT+CREG?', 'OK', modemTimeout);
-    final creg = _atOk(cregCheck) ? _responseLine(cregCheck, 2) : 'ERROR';
+    final creg = _atOk(cregCheck)
+        ? responseValue(cregCheck, '+CREG:')
+        : 'ERROR';
 
     final copsCheck = await modem.sendAt('AT+COPS?', 'OK', modemTimeout);
-    final cops = _atOk(copsCheck) ? _responseLine(copsCheck, 2) : 'ERROR';
+    final cops = _atOk(copsCheck)
+        ? responseValue(copsCheck, '+COPS:')
+        : 'ERROR';
 
     final apnCheck = await modem.sendAt('AT+CGDCONT?', 'OK', modemTimeout);
     var apn = 'ERROR';
@@ -203,12 +222,6 @@ class StatusService {
 
   static bool _atOk(String response) {
     return response.isNotEmpty && !response.contains('ERROR');
-  }
-
-  static String _responseLine(String response, int index) {
-    final lines = splitResponseLines(response);
-    if (lines.length <= index) return 'ERROR';
-    return lines[index];
   }
 
   Future<bool> _cachedPing(String target, {required bool data}) {
