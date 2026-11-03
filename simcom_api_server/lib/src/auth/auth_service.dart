@@ -51,17 +51,32 @@ class AuthService {
 
   /// Validate a JWT and load the matching, enabled user.
   Future<User?> authenticateToken(String token) async {
+    return _authenticateClaims(jwt.verifyTokenClaims(token));
+  }
+
+  /// Validate a refresh token and load the matching, enabled user.
+  Future<User?> authenticateRefreshToken(String token) async {
+    return _authenticateClaims(jwt.verifyRefreshToken(token));
+  }
+
+  Future<User?> _authenticateClaims(TokenClaims claims) async {
     final stopwatch = Stopwatch()..start();
-    final username = jwt.verifyToken(token);
-    final jwtMs = stopwatch.elapsedMilliseconds;
-    final user = await users.findByUsername(username);
+    final user = await users.findByUsername(claims.subject);
     AppLog.debug(
-      'token auth: jwt=${jwtMs}ms '
-      'lookup=${stopwatch.elapsedMilliseconds - jwtMs}ms',
+      'token auth: lookup=${stopwatch.elapsedMilliseconds}ms '
+      'refresh=${claims.isRefresh}',
       name: 'pi7600.auth',
     );
     if (user == null || user.isDisabled) return null;
+    if (claims.version != user.tokenVersion) return null;
     return user;
+  }
+
+  /// Invalidate every access and refresh token issued for [user].
+  Future<User> revokeTokens(User user) async {
+    user.tokenVersion++;
+    AppLog.audit('Revoked tokens for ${user.userName}');
+    return users.update(user);
   }
 
   /// Start TOTP enrollment for [user].

@@ -240,9 +240,12 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     recovery codes are single-use SHA-256 hashes and TOTP management attempts
     share the login limiter.
 
-- [ ] **Token revocation and refresh.**
+- [x] **Token revocation and refresh.**
   - Current logout only clears browser storage; add a server-side revocation
     path or short-lived access tokens with refresh.
+  - Added per-user token versions, `POST /logout`, refresh tokens, and
+    `POST /token/refresh`. Logout revokes every outstanding token for the user;
+    the docs page now calls the server on logout.
 
 - [ ] **User management API.**
   - Create, list, disable, and promote users without the CLI.

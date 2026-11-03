@@ -21,6 +21,8 @@ void main() {
         paths.keys,
         containsAll([
           '/token',
+          '/token/refresh',
+          '/logout',
           '/totp',
           '/totp/setup',
           '/totp/enable',
@@ -115,6 +117,7 @@ void main() {
       expect(html, contains('data-json'));
       expect(html, contains('data-form="username"'));
       expect(html, contains('data-form="otp"'));
+      expect(html, contains('data-form="refresh_token"'));
       expect(html, contains('Execute'));
 
       expect(html, contains('id="login-form"'));

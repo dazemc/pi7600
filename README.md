@@ -118,6 +118,7 @@ file in the server working directory. Serverpod settings live in
 | `PI7600_JWT_PUBLIC_KEY_PATH` | `.keys/public.pem` | JWT verification key |
 | `PI7600_JWT_ISSUER` | `pi.daazed.dev` | JWT issuer claim |
 | `PI7600_JWT_EXPIRE_MINUTES` | `30` | Access token lifetime |
+| `PI7600_JWT_REFRESH_DAYS` | `7` | Refresh token lifetime |
 | `PI7600_WEBSOCKET_AUTH_TIMEOUT` | `5` | Seconds to wait for the auth message |
 | `PI7600_LOGIN_MAX_ATTEMPTS` | `5` | Failed logins per username or client address before throttling |
 | `PI7600_LOGIN_WINDOW_SECONDS` | `300` | Window used to count failed logins |
@@ -142,11 +143,21 @@ curl -X POST http://localhost:8082/token \
 ```
 
 ```json
-{"access_token": "...", "token_type": "bearer"}
+{
+  "access_token": "...",
+  "refresh_token": "...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}
 ```
 
-Send the token as `Authorization: Bearer <token>` on HTTP requests. Invalid,
-expired, and disabled-user tokens return `401` with `WWW-Authenticate: Bearer`.
+Send the access token as `Authorization: Bearer <token>` on HTTP requests.
+Invalid, expired, revoked, and disabled-user tokens return `401` with
+`WWW-Authenticate: Bearer`. Access tokens expire after
+`PI7600_JWT_EXPIRE_MINUTES`; exchange the refresh token at
+`POST /token/refresh` for a new pair. `POST /logout` increments the user's
+token version, revoking every outstanding access and refresh token for that
+user.
 
 Repeated failed logins are throttled per username and client address. After
 `PI7600_LOGIN_MAX_ATTEMPTS` failures inside `PI7600_LOGIN_WINDOW_SECONDS`, the
@@ -203,12 +214,14 @@ Future<void> main() async {
 
 ## API
 
-All routes except `/token`, `/healthz`, `/readyz`, `/docs`, `/docs/*`, and
-`/openapi.json` require a bearer token.
+All routes except `/token`, `/token/refresh`, `/healthz`, `/readyz`, `/docs`,
+`/docs/*`, and `/openapi.json` require a bearer token.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/token` | Issue a JWT (optional `otp` when TOTP is enabled) |
+| `POST` | `/token` | Issue access and refresh tokens (optional `otp` when TOTP is enabled) |
+| `POST` | `/token/refresh` | Exchange a refresh token for a new pair |
+| `POST` | `/logout` | Revoke all tokens for the current user |
 | `GET` | `/totp` | TOTP status for the current user |
 | `POST` | `/totp/setup` | Start TOTP enrollment |
 | `POST` | `/totp/enable` | Enable TOTP with the first code |

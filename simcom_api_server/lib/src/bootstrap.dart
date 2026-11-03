@@ -23,6 +23,8 @@ void configureServer(Serverpod pod) {
 
   web
     ..addRoute(TokenRoute(services), '/token')
+    ..addRoute(TokenRefreshRoute(services), '/token/refresh')
+    ..addRoute(LogoutRoute(services), '/logout')
     ..addRoute(TotpStatusRoute(services), '/totp')
     ..addRoute(TotpSetupRoute(services), '/totp/setup')
     ..addRoute(TotpEnableRoute(services), '/totp/enable')

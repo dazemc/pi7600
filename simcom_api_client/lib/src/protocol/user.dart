@@ -25,9 +25,11 @@ abstract class User
     this.totpSecret,
     bool? totpEnabled,
     this.totpRecoveryCodes,
+    int? tokenVersion,
   }) : isDisabled = isDisabled ?? false,
        isAdmin = isAdmin ?? false,
-       totpEnabled = totpEnabled ?? false;
+       totpEnabled = totpEnabled ?? false,
+       tokenVersion = tokenVersion ?? 0;
 
   factory User({
     int? id,
@@ -40,6 +42,7 @@ abstract class User
     String? totpSecret,
     bool? totpEnabled,
     String? totpRecoveryCodes,
+    int? tokenVersion,
   }) = _UserImpl;
 
   factory User.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -60,6 +63,7 @@ abstract class User
           ? null
           : _isc.BoolJsonExtension.fromJson(jsonSerialization['totpEnabled']),
       totpRecoveryCodes: jsonSerialization['totpRecoveryCodes'] as String?,
+      tokenVersion: jsonSerialization['tokenVersion'] as int?,
     );
   }
 
@@ -86,6 +90,8 @@ abstract class User
 
   String? totpRecoveryCodes;
 
+  int tokenVersion;
+
   /// Returns a shallow copy of this [User]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
@@ -100,6 +106,7 @@ abstract class User
     String? totpSecret,
     bool? totpEnabled,
     String? totpRecoveryCodes,
+    int? tokenVersion,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -115,6 +122,7 @@ abstract class User
       if (totpSecret != null) 'totpSecret': totpSecret,
       'totpEnabled': totpEnabled,
       if (totpRecoveryCodes != null) 'totpRecoveryCodes': totpRecoveryCodes,
+      'tokenVersion': tokenVersion,
     };
   }
 
@@ -132,6 +140,7 @@ abstract class User
       if (totpSecret != null) 'totpSecret': totpSecret,
       'totpEnabled': totpEnabled,
       if (totpRecoveryCodes != null) 'totpRecoveryCodes': totpRecoveryCodes,
+      'tokenVersion': tokenVersion,
     };
   }
 
@@ -155,6 +164,7 @@ class _UserImpl extends User {
     String? totpSecret,
     bool? totpEnabled,
     String? totpRecoveryCodes,
+    int? tokenVersion,
   }) : super._(
          id: id,
          userName: userName,
@@ -166,6 +176,7 @@ class _UserImpl extends User {
          totpSecret: totpSecret,
          totpEnabled: totpEnabled,
          totpRecoveryCodes: totpRecoveryCodes,
+         tokenVersion: tokenVersion,
        );
 
   /// Returns a shallow copy of this [User]
@@ -183,6 +194,7 @@ class _UserImpl extends User {
     Object? totpSecret = _Undefined,
     bool? totpEnabled,
     Object? totpRecoveryCodes = _Undefined,
+    int? tokenVersion,
   }) {
     return User(
       id: id is int? ? id : this.id,
@@ -197,6 +209,7 @@ class _UserImpl extends User {
       totpRecoveryCodes: totpRecoveryCodes is String?
           ? totpRecoveryCodes
           : this.totpRecoveryCodes,
+      tokenVersion: tokenVersion ?? this.tokenVersion,
     );
   }
 }

@@ -23,6 +23,7 @@ class AppConfig {
     required this.jwtPublicKeyPath,
     required this.jwtIssuer,
     required this.jwtExpireMinutes,
+    required this.jwtRefreshDays,
     required this.websocketAuthTimeout,
     required this.loginMaxAttempts,
     required this.loginWindow,
@@ -51,6 +52,7 @@ class AppConfig {
   final String jwtPublicKeyPath;
   final String jwtIssuer;
   final int jwtExpireMinutes;
+  final int jwtRefreshDays;
   final double websocketAuthTimeout;
 
   /// Failed logins allowed per username or client address inside
@@ -114,6 +116,10 @@ class AppConfig {
       jwtPublicKeyPath: string('JWT_PUBLIC_KEY_PATH', '.keys/public.pem'),
       jwtIssuer: string('JWT_ISSUER', 'pi.daazed.dev'),
       jwtExpireMinutes: integer('JWT_EXPIRE_MINUTES', 30),
+      jwtRefreshDays: integer(
+        'JWT_REFRESH_DAYS',
+        7,
+      ).clamp(1, 365).toInt(),
       websocketAuthTimeout: decimal('WEBSOCKET_AUTH_TIMEOUT', 5.0),
       loginMaxAttempts: integer(
         'LOGIN_MAX_ATTEMPTS',

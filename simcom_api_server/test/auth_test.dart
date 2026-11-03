@@ -80,6 +80,30 @@ void main() {
       expect(() => jwt.verifyToken(tampered), throwsA(isA<TokenException>()));
     });
 
+    test('round-trips the token version', () {
+      final token = jwt.createToken('alice', version: 7);
+      final claims = jwt.verifyTokenClaims(token);
+
+      expect(claims.subject, 'alice');
+      expect(claims.version, 7);
+      expect(claims.isRefresh, isFalse);
+    });
+
+    test('separates access and refresh tokens', () {
+      final access = jwt.createToken('alice');
+      final refresh = jwt.createRefreshToken('alice');
+
+      expect(jwt.verifyRefreshToken(refresh).isRefresh, isTrue);
+      expect(
+        () => jwt.verifyToken(refresh),
+        throwsA(isA<TokenException>()),
+      );
+      expect(
+        () => jwt.verifyRefreshToken(access),
+        throwsA(isA<TokenException>()),
+      );
+    });
+
     test('rejects a token with a non-RS256 header', () {
       final token = jwt.createToken('alice');
       final parts = token.split('.');
@@ -137,6 +161,30 @@ void main() {
       expect(await auth.authenticatePassword('alice', 'secret'), same(user));
       expect(await auth.authenticatePassword('alice', 'wrong'), isNull);
       expect(await auth.authenticatePassword('bob', 'secret'), isNull);
+    });
+
+    test('rejects tokens from an older token version', () async {
+      final user = User(
+        id: 1,
+        userName: 'alice',
+        userPassword: 'hash',
+        tokenVersion: 2,
+      );
+      final auth = AuthService(jwt: jwt, users: _FakeUserStore(user));
+
+      final oldToken = jwt.createToken('alice', version: 1);
+      final current = jwt.createToken('alice', version: 2);
+      final refresh = jwt.createRefreshToken('alice', version: 2);
+
+      expect(await auth.authenticateToken(oldToken), isNull);
+      expect(await auth.authenticateToken(current), same(user));
+      expect(await auth.authenticateRefreshToken(refresh), same(user));
+
+      await auth.revokeTokens(user);
+
+      expect(user.tokenVersion, 3);
+      expect(await auth.authenticateToken(current), isNull);
+      expect(await auth.authenticateRefreshToken(refresh), isNull);
     });
 
     test('sets up and enables TOTP', () async {

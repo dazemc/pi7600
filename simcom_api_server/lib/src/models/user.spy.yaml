@@ -35,3 +35,8 @@ fields:
   totpRecoveryCodes:
     type: String?
     column: totp_recovery_codes
+  tokenVersion:
+    type: int
+    column: token_version
+    defaultModel: '0'
+    defaultPersist: '0'

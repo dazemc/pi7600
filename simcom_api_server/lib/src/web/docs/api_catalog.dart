@@ -127,9 +127,10 @@ const apiEndpoints = <ApiEndpoint>[
     summary: 'Exchange credentials for a JWT',
     description:
         'Send `username` and `password` as an '
-        '`application/x-www-form-urlencoded` body. The returned token is valid '
-        'for the configured JWT lifetime (30 minutes by default). Repeated '
-        'failed logins are throttled per username and client address.',
+        '`application/x-www-form-urlencoded` body. Returns a short-lived '
+        'access token (30 minutes by default), a refresh token (7 days by '
+        'default), and the access-token lifetime in seconds. Repeated failed '
+        'logins are throttled per username and client address.',
     formFields: [
       ApiFormField(name: 'username', example: 'alice'),
       ApiFormField(
@@ -145,10 +146,43 @@ const apiEndpoints = <ApiEndpoint>[
       ),
     ],
     responses: {
-      '200': 'A bearer token',
+      '200': 'Access token, refresh token, token type, and `expires_in`',
       '401': 'Incorrect credentials or missing TOTP code',
       '422': 'Missing username or password',
       '429': 'Too many failed attempts; see `Retry-After`',
+    },
+  ),
+  ApiEndpoint(
+    method: 'POST',
+    path: '/token/refresh',
+    summary: 'Exchange a refresh token for new tokens',
+    description:
+        'Send `refresh_token` as an `application/x-www-form-urlencoded` body. '
+        'The user must still be enabled and the token version must match; '
+        'logout invalidates all outstanding tokens.',
+    formFields: [
+      ApiFormField(
+        name: 'refresh_token',
+        description: 'Refresh token returned by `/token`',
+      ),
+    ],
+    responses: {
+      '200': 'New access and refresh tokens',
+      '401': 'Invalid, expired, or revoked refresh token',
+      '422': 'Missing refresh token',
+    },
+  ),
+  ApiEndpoint(
+    method: 'POST',
+    path: '/logout',
+    summary: 'Revoke all tokens for the current user',
+    description:
+        'Increments the user token version, invalidating every access and '
+        'refresh token issued before this call. The bearer token is required.',
+    auth: ApiAuth.user,
+    responses: {
+      '200': 'Tokens revoked',
+      '401': 'Authentication required',
     },
   ),
   ApiEndpoint(

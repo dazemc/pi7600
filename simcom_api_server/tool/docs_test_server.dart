@@ -10,6 +10,8 @@ import 'package:simcom_api_server/src/web/docs/docs_page.dart';
 ///
 /// It serves the real `/docs` page and compiled client, plus fake `/token` and
 /// `/info` endpoints. No PostgreSQL, modem, or camera is required.
+var _logoutCount = 0;
+
 Future<void> main() async {
   final port =
       int.tryParse(Platform.environment['DOCS_TEST_PORT'] ?? '') ?? 8099;
@@ -57,7 +59,9 @@ Future<void> _handle(HttpRequest request) async {
       if (form['username'] == 'alice' && form['password'] == 'secret') {
         await _json(request.response, {
           'access_token': _tokenFor('alice'),
+          'refresh_token': _tokenFor('alice', type: 'refresh'),
           'token_type': 'bearer',
+          'expires_in': 1800,
         });
         return;
       }
@@ -106,6 +110,22 @@ Future<void> _handle(HttpRequest request) async {
       });
       return;
     }
+    if (path == '/logout' && request.method == 'POST') {
+      if (!_authorized(
+        request.headers.value(HttpHeaders.authorizationHeader),
+      )) {
+        request.response.statusCode = HttpStatus.unauthorized;
+        await _json(request.response, {'detail': 'Not authenticated'});
+        return;
+      }
+      _logoutCount++;
+      await _json(request.response, {'detail': 'Logged out'});
+      return;
+    }
+    if (path == '/test/logout-count' && request.method == 'GET') {
+      await _json(request.response, {'count': _logoutCount});
+      return;
+    }
     if (path == '/camera/snapshot' && request.method == 'GET') {
       if (!_authorized(
         request.headers.value(HttpHeaders.authorizationHeader),
@@ -150,13 +170,15 @@ bool _authorized(String? header) {
   }
 }
 
-String _tokenFor(String subject) {
+String _tokenFor(String subject, {String type = 'access'}) {
   final header = _encode({'alg': 'RS256', 'typ': 'JWT'});
   final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   final payload = _encode({
     'sub': subject,
+    'ver': 0,
+    'typ': type,
     'iat': now,
-    'exp': now + 1800,
+    'exp': now + (type == 'refresh' ? 604800 : 1800),
     'iss': 'docs.test',
   });
   return '$header.$payload.signature';

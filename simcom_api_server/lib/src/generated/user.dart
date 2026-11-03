@@ -25,9 +25,11 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
     this.totpSecret,
     bool? totpEnabled,
     this.totpRecoveryCodes,
+    int? tokenVersion,
   }) : isDisabled = isDisabled ?? false,
        isAdmin = isAdmin ?? false,
-       totpEnabled = totpEnabled ?? false;
+       totpEnabled = totpEnabled ?? false,
+       tokenVersion = tokenVersion ?? 0;
 
   factory User({
     int? id,
@@ -40,6 +42,7 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
     String? totpSecret,
     bool? totpEnabled,
     String? totpRecoveryCodes,
+    int? tokenVersion,
   }) = _UserImpl;
 
   factory User.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -60,6 +63,7 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
           ? null
           : _is.BoolJsonExtension.fromJson(jsonSerialization['totpEnabled']),
       totpRecoveryCodes: jsonSerialization['totpRecoveryCodes'] as String?,
+      tokenVersion: jsonSerialization['tokenVersion'] as int?,
     );
   }
 
@@ -88,6 +92,8 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
 
   String? totpRecoveryCodes;
 
+  int tokenVersion;
+
   @override
   _is.Table<int?> get table => t;
 
@@ -105,6 +111,7 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
     String? totpSecret,
     bool? totpEnabled,
     String? totpRecoveryCodes,
+    int? tokenVersion,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -120,6 +127,7 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
       if (totpSecret != null) 'totpSecret': totpSecret,
       'totpEnabled': totpEnabled,
       if (totpRecoveryCodes != null) 'totpRecoveryCodes': totpRecoveryCodes,
+      'tokenVersion': tokenVersion,
     };
   }
 
@@ -137,6 +145,7 @@ abstract class User implements _is.TableRow<int?>, _is.ProtocolSerialization {
       if (totpSecret != null) 'totpSecret': totpSecret,
       'totpEnabled': totpEnabled,
       if (totpRecoveryCodes != null) 'totpRecoveryCodes': totpRecoveryCodes,
+      'tokenVersion': tokenVersion,
     };
   }
 
@@ -182,6 +191,7 @@ class _UserImpl extends User {
     String? totpSecret,
     bool? totpEnabled,
     String? totpRecoveryCodes,
+    int? tokenVersion,
   }) : super._(
          id: id,
          userName: userName,
@@ -193,6 +203,7 @@ class _UserImpl extends User {
          totpSecret: totpSecret,
          totpEnabled: totpEnabled,
          totpRecoveryCodes: totpRecoveryCodes,
+         tokenVersion: tokenVersion,
        );
 
   /// Returns a shallow copy of this [User]
@@ -210,6 +221,7 @@ class _UserImpl extends User {
     Object? totpSecret = _Undefined,
     bool? totpEnabled,
     Object? totpRecoveryCodes = _Undefined,
+    int? tokenVersion,
   }) {
     return User(
       id: id is int? ? id : this.id,
@@ -224,6 +236,7 @@ class _UserImpl extends User {
       totpRecoveryCodes: totpRecoveryCodes is String?
           ? totpRecoveryCodes
           : this.totpRecoveryCodes,
+      tokenVersion: tokenVersion ?? this.tokenVersion,
     );
   }
 }
@@ -277,6 +290,11 @@ class UserUpdateTable extends _is.UpdateTable<UserTable> {
         table.totpRecoveryCodes,
         value,
       );
+
+  _is.ColumnValue<int, int> tokenVersion(int value) => _is.ColumnValue(
+    table.tokenVersion,
+    value,
+  );
 }
 
 class UserTable extends _is.Table<int?> {
@@ -330,6 +348,12 @@ class UserTable extends _is.Table<int?> {
       this,
       fieldName: 'totpRecoveryCodes',
     );
+    tokenVersion = _is.ColumnInt(
+      'token_version',
+      this,
+      hasDefault: true,
+      fieldName: 'tokenVersion',
+    );
   }
 
   late final UserUpdateTable updateTable;
@@ -352,6 +376,8 @@ class UserTable extends _is.Table<int?> {
 
   late final _is.ColumnString totpRecoveryCodes;
 
+  late final _is.ColumnInt tokenVersion;
+
   @override
   List<_is.Column> get columns => [
     id,
@@ -364,6 +390,7 @@ class UserTable extends _is.Table<int?> {
     totpSecret,
     totpEnabled,
     totpRecoveryCodes,
+    tokenVersion,
   ];
 }
 

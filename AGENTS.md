@@ -123,9 +123,11 @@ cd simcom_api_server && serverpod create-migration
   from PostgreSQL. `/at` additionally requires `is_admin`. WebSockets accept a
   first JSON message `{"type": "auth", "token": "<jwt>"}` within
   `PI7600_WEBSOCKET_AUTH_TIMEOUT` and close with `1008` on failure. Failed
-  logins are throttled per username and client address. Users can enable TOTP
-  through `/totp/setup` and `/totp/enable`; `/token` then requires `otp`, and
-  recovery codes are single-use.
+  logins are throttled per username and client address. Access tokens carry a
+  per-user token version; `POST /logout` increments it and revokes all
+  outstanding access and refresh tokens. Users can enable TOTP through
+  `/totp/setup` and `/totp/enable`; `/token` then requires `otp`, and recovery
+  codes are single-use.
 - **Modem library:** the standalone `simcom_modem` Dart package lives in the
   `simcom_modem` submodule and is consumed through a path dependency. It owns
   `At`, `SerialTransport`/`LibSerialPortTransport`, `ModemSettings`,

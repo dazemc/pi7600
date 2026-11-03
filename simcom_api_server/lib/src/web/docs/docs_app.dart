@@ -161,7 +161,19 @@ class _DocsAppState extends State<DocsApp> {
     }
   }
 
-  void _logout() {
+  Future<void> _logout() async {
+    final token = _token;
+    if (token != null && token.isNotEmpty) {
+      try {
+        await http.post(
+          Uri.base.resolve('/logout'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+      } on Object {
+        // Clearing the local token still signs this browser out.
+      }
+    }
+    if (!mounted) return;
     _storeToken(null);
     setState(() {
       _token = null;

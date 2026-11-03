@@ -273,6 +273,13 @@ async function main() {
     );
     assert(loggedOut.loginVisible, 'login form not visible after logout');
     assert(!loggedOut.hasToken, 'token still stored after logout');
+    const logoutCount = await (
+      await fetch('http://127.0.0.1:8099/test/logout-count')
+    ).json();
+    assert(
+      logoutCount.count === 1,
+      'docs logout did not call the server logout endpoint',
+    );
 
     await send('Target.closeTarget', { targetId });
     ws.close();

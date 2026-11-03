@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:simcom_api_server/src/app_services.dart';
+import 'package:simcom_api_server/src/auth/jwt_service.dart';
 import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
+import 'package:simcom_api_server/src/generated/user.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/web/at_audit.dart';
@@ -120,11 +122,77 @@ class TokenRoute extends Route {
 
     limiter.reset(userKey);
     limiter.reset(addressKey);
-    return jsonResponse({
-      'access_token': services.jwt.createToken(user.userName),
-      'token_type': 'bearer',
-    });
+    return _tokenResponse(services, user);
   }
+}
+
+/// `POST /token/refresh`
+class TokenRefreshRoute extends Route {
+  TokenRefreshRoute(this.services) : super(methods: {Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final body = await request.readAsString();
+    final Map<String, String> form;
+    try {
+      form = Uri.splitQueryString(body);
+    } on Object {
+      return errorResponse(422, 'Invalid form body');
+    }
+
+    final refreshToken = form['refresh_token'];
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return errorResponse(422, 'refresh_token is required');
+    }
+
+    try {
+      final user = await services
+          .authService(session)
+          .authenticateRefreshToken(refreshToken);
+      if (user == null) {
+        return errorResponse(401, 'Invalid or revoked refresh token');
+      }
+      AppLog.info(
+        '/token/refresh POST: Refreshed token for ${user.userName}',
+        name: 'pi7600.auth',
+      );
+      return _tokenResponse(services, user);
+    } on TokenException {
+      return errorResponse(401, 'Invalid or expired refresh token');
+    }
+  }
+}
+
+/// `POST /logout`
+class LogoutRoute extends Route {
+  LogoutRoute(this.services) : super(methods: {Method.post});
+
+  final AppServices services;
+
+  @override
+  FutureOr<Result> handleCall(Session session, Request request) async {
+    final auth = await authenticateRequest(session, request, services);
+    if (!auth.isAuthenticated) return auth.error!;
+    await services.authService(session).revokeTokens(auth.user!);
+    return jsonResponse({'detail': 'Logged out'});
+  }
+}
+
+Response _tokenResponse(AppServices services, User user) {
+  return jsonResponse({
+    'access_token': services.jwt.createToken(
+      user.userName,
+      version: user.tokenVersion,
+    ),
+    'refresh_token': services.jwt.createRefreshToken(
+      user.userName,
+      version: user.tokenVersion,
+    ),
+    'token_type': 'bearer',
+    'expires_in': services.config.jwtExpireMinutes * 60,
+  });
 }
 
 /// `GET /totp`

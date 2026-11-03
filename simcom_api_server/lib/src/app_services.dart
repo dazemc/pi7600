@@ -56,6 +56,7 @@ class AppServices {
         publicKeyPath: config.jwtPublicKeyPath,
         issuer: config.jwtIssuer,
         expireMinutes: config.jwtExpireMinutes,
+        refreshExpireDays: config.jwtRefreshDays,
       ),
       loginLimiter: LoginRateLimiter(
         maxAttempts: config.loginMaxAttempts,

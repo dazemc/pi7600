@@ -236,6 +236,13 @@ class Protocol extends _is.DatabaseSerializationManager
           isNullable: true,
           dartType: 'String?',
         ),
+        _isp.ColumnDefinition(
+          name: 'token_version',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+          columnDefault: '0',
+        ),
       ],
       foreignKeys: [],
       indexes: [
