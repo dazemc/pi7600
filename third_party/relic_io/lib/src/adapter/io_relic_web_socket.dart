@@ -174,7 +174,7 @@ class IORelicWebSocket implements RelicWebSocket {
 ///
 /// This local copy of `relic_io` allows the RFC 6455 status codes 1008
 /// (policy violation) and 1011 (internal error) in addition to the codes that
-/// `package:web_socket` permits. The Pi7600 API contract closes rejected
+/// `package:web_socket` permits. The Simcom API contract closes rejected
 /// WebSocket authentications with 1008 and a missing video capture with 1011.
 void _checkCloseCode(final int? code) {
   if (code == null ||

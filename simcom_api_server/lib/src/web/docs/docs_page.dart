@@ -267,7 +267,7 @@ button:disabled { opacity: 0.6; cursor: progress; }
 /// Render the `/docs` page to HTML bytes.
 ///
 /// Jaspr is initialized lazily because the docs page is optional and the
-/// server may run with `PI7600_DOCS_ENABLED=false`. The client entrypoint is
+/// server may run with `SIMCOM_API_DOCS_ENABLED=false`. The client entrypoint is
 /// compiled from Dart by `tool/build_docs_client.dart` and served from
 /// `/docs/app.js`.
 Future<Uint8List> renderDocsPage() async {
@@ -279,7 +279,7 @@ Future<Uint8List> renderDocsPage() async {
 
   final response = await renderComponent(
     const Document(
-      title: 'Pi7600 API docs',
+      title: 'Simcom API docs',
       lang: 'en',
       head: [link(href: '/docs/style.css', rel: 'stylesheet')],
       body: DocsApp(),

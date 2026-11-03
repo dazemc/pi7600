@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository.
 
 ## What this project is
 
-Pi7600 is a Dart service built on [Serverpod 4](https://serverpod.dev/) and
+Simcom API is a Dart service built on [Serverpod 4](https://serverpod.dev/) and
 PostgreSQL for controlling a SIM7600-series 4G HAT (Waveshare SIM7600G-H) on a
 Raspberry Pi. It exposes modem status, host info, SMS send/read/delete,
 admin-only raw AT commands, GPS, authenticated WebSocket echo, and an
@@ -73,7 +73,7 @@ cd simcom_api_server && serverpod create-migration
 | `simcom_api_server/lib/server.dart` | Serverpod construction and startup |
 | `simcom_api_server/lib/src/bootstrap.dart` | Route and middleware registration |
 | `simcom_api_server/lib/src/app_services.dart` | Process-wide services and async startup |
-| `simcom_api_server/lib/src/config/app_config.dart` | `PI7600_*` environment configuration |
+| `simcom_api_server/lib/src/config/app_config.dart` | `SIMCOM_API_*` environment configuration |
 | `simcom_api_server/lib/src/auth/` | JWT (RS256) and bcrypt helpers |
 | `simcom_api_server/lib/src/data/` | Session-bound user, message, and audit stores |
 | `simcom_api_server/lib/src/models/` | Serverpod model definitions (`*.spy.yaml`) |
@@ -98,14 +98,14 @@ cd simcom_api_server && serverpod create-migration
 ## Architecture
 
 - **Startup (`lib/server.dart` / `AppServices`):** `Serverpod` is constructed
-  with an anonymous authentication handler, because Pi7600 authenticates REST
+  with an anonymous authentication handler, because Simcom API authenticates REST
   and WebSocket requests itself. `configureServer` wires routes and starts
   `AppServices` asynchronously. Routes that need hardware await
   `AppServices.ready`. Failures are logged and recorded in
   `ServiceStatusCubit` instead of aborting the process.
 - **REST and WebSockets:** custom Relic routes are registered on
   `pod.webServer`. In production the web server port is `8000`; the Serverpod
-  API/Insights ports are unused by the Pi7600 contract.
+  API/Insights ports are unused by the Simcom API contract.
 - **Docs:** `GET /docs` is a server-rendered Jaspr page built from
   `lib/src/web/docs/api_catalog.dart`; `GET /openapi.json` is generated from
   the same catalog. The interactive parts are the same Jaspr component tree
@@ -114,7 +114,7 @@ cd simcom_api_server && serverpod create-migration
   requests from the browser, so normal bearer/admin checks still apply. The
   compiled bundle is a build artifact (not committed); if it is missing,
   `/docs/app.js` returns `503` and the page is read-only. Disable the page and
-  schema with `PI7600_DOCS_ENABLED=false`.
+  schema with `SIMCOM_API_DOCS_ENABLED=false`.
 - **Database:** PostgreSQL through Serverpod's database layer. Schema changes
   are Serverpod migrations, not `create_all`. The development config launches
   an embedded PostgreSQL under `simcom_api_server/.serverpod/`.
@@ -122,7 +122,7 @@ cd simcom_api_server && serverpod create-migration
   `dart_jsonwebtoken`. HTTP routes validate the bearer token and load the user
   from PostgreSQL. `/at` additionally requires `is_admin`. WebSockets accept a
   first JSON message `{"type": "auth", "token": "<jwt>"}` within
-  `PI7600_WEBSOCKET_AUTH_TIMEOUT` and close with `1008` on failure. Failed
+  `SIMCOM_API_WEBSOCKET_AUTH_TIMEOUT` and close with `1008` on failure. Failed
   logins are throttled per username and client address. Access tokens carry a
   per-user token version; `POST /logout` increments it and revokes all
   outstanding access and refresh tokens. Users can enable TOTP through
@@ -173,7 +173,7 @@ cd simcom_api_server && serverpod create-migration
    them to the Serverpod API server.
 3. **Serverpod auth hook.** Serverpod initializes an authentication handler for
    every web session. Keep the anonymous handler in `lib/server.dart` unless
-   Pi7600 switches to Serverpod's auth modules.
+   Simcom API switches to Serverpod's auth modules.
 4. **`send_at` returns truthy errors.** Timeouts and modem failures are
    returned as strings containing `ERROR`. Always use `At.isError(response)`
    or compare the expected token; never treat any non-empty string as success.
@@ -188,9 +188,7 @@ cd simcom_api_server && serverpod create-migration
    takes the database id and uses `messageIndex` internally.
 8. **Migrations matter.** `create_all` is not used. Add a Serverpod migration
    for schema changes and apply it with `--apply-migrations`. The Serverpod
-   module name is `simcom_api`; existing databases created under the old
-   `pi7600` module must run `scripts/rename_migration_module.sql` once before
-   starting the renamed service.
+   module name is `simcom_api`.
 9. **Hardware-dependent code.** A full run requires `/dev/ttyUSB2` and a V4L2
    camera. Tests must use `package:simcom_modem/testing.dart` (`FakeTransport`) and
    fake stores; do not assume hardware is present in CI.

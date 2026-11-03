@@ -1,16 +1,16 @@
 [Unit]
-Description=Pi7600 SIM7600 modem API
+Description=Simcom API (SIM7600 modem service)
 After=network-online.target postgresql.service
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi7600
-Group=pi7600
+User=simcom_api
+Group=simcom_api
 SupplementaryGroups=dialout video
-WorkingDirectory=/opt/pi7600
-EnvironmentFile=/etc/pi7600/pi7600.env
-ExecStart=/opt/pi7600/bin/main --apply-migrations
+WorkingDirectory=/opt/simcom_api
+EnvironmentFile=/etc/simcom_api/simcom_api.env
+ExecStart=/opt/simcom_api/bin/main --apply-migrations
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20
@@ -20,7 +20,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/pi7600
+ReadWritePaths=/var/lib/simcom_api
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

@@ -1,8 +1,8 @@
 import 'dart:io';
 
-/// Application configuration for the Pi7600 service.
+/// Application configuration for the Simcom API service.
 ///
-/// All settings are read from `PI7600_*` environment variables. For local
+/// All settings are read from `SIMCOM_API_*` environment variables. For local
 /// development a `.env` file in the working directory is also read; real
 /// environment variables always take precedence.
 class AppConfig {
@@ -75,8 +75,8 @@ class AppConfig {
     final env = _loadEnvironment(environment ?? Platform.environment);
 
     String string(String key, String fallback) =>
-        (env['PI7600_$key'] ?? '').trim().isNotEmpty
-        ? env['PI7600_$key']!.trim()
+        (env['SIMCOM_API_$key'] ?? '').trim().isNotEmpty
+        ? env['SIMCOM_API_$key']!.trim()
         : fallback;
 
     int integer(String key, int fallback) =>
@@ -102,7 +102,7 @@ class AppConfig {
       atBaudrate: integer('AT_BAUDRATE', 115200),
       atTimeout: integer('AT_TIMEOUT', 10),
       cameraIndex: integer('CAMERA_INDEX', -1),
-      cameraDevice: _nullIfEmpty(env['PI7600_CAMERA_DEVICE']),
+      cameraDevice: _nullIfEmpty(env['SIMCOM_API_CAMERA_DEVICE']),
       cameraFps: integer('CAMERA_FPS', 15),
       cameraWidth: integer('CAMERA_WIDTH', 640),
       cameraHeight: integer('CAMERA_HEIGHT', 480),

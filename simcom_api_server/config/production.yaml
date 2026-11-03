@@ -1,12 +1,12 @@
-# Production configuration for the Pi7600 service.
+# Production configuration for the Simcom API service.
 #
 # The service runs on a Raspberry Pi with a local PostgreSQL instance. The
 # database password is read from SERVERPOD_DATABASE_PASSWORD (or
 # config/passwords.yaml); do not commit it here.
 #
-# Pi7600's REST and WebSocket routes are registered on the web server, so
+# Simcom API's REST and WebSocket routes are registered on the web server, so
 # `webServer.port` is the port the API listens on (8000, matching the previous
-# Python service). The Serverpod API/Insights ports are unused by the Pi7600
+# service). The Serverpod API/Insights ports are unused by the Simcom API
 # contract but must remain valid.
 
 apiServer:
@@ -30,8 +30,8 @@ webServer:
 database:
   host: localhost
   port: 5432
-  name: pi7600
-  user: pi7600
+  name: simcom_api
+  user: simcom_api
   requireSsl: false
   #maxConnectionCount: 10 # Defaults to 10, a negative or null value removes the limit
 
@@ -40,6 +40,6 @@ maxRequestSize: 524288 # The maximum size of requests allowed in bytes
 sessionLogs:
   persistentEnabled: false
   # Per-request Serverpod logs are costly on a Pi's SD card. Application logs
-  # remain available through PI7600_LOG_LEVEL and journald.
+  # remain available through SIMCOM_API_LOG_LEVEL and journald.
   consoleEnabled: false
   consoleLogFormat: text

@@ -9,7 +9,7 @@ workspace:
   - simcom_api_server
 
 # Local patch: allow RFC 6455 close codes 1008 (policy violation) and 1011
-# (internal error), which the published `relic_io` rejects. The Pi7600
+# (internal error), which the published `relic_io` rejects. The Simcom API
 # WebSocket contract requires those codes for failed authentication and a
 # missing video capture. See third_party/relic_io/README.patch.md.
 dependency_overrides:

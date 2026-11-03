@@ -8,13 +8,13 @@ import 'package:serverpod/serverpod.dart' hide Endpoint;
 // ignore: implementation_imports
 import 'package:serverpod_shared/src/password_manager.dart';
 
-/// Create a Pi7600 API user in PostgreSQL.
+/// Create a Simcom API user in PostgreSQL.
 ///
 /// Usage:
 ///   dart run bin/create_user.dart --username alice --admin
 ///
 /// The password is read from the terminal, from `--password`, or from
-/// `PI7600_USER_PASSWORD`.
+/// `SIMCOM_API_USER_PASSWORD`.
 ///
 /// Database connection details come from the Serverpod configuration for the
 /// current run mode (`SERVERPOD_RUN_MODE`, default `development`). For the
@@ -34,7 +34,7 @@ Future<void> main(List<String> arguments) async {
 
   final password =
       options.password ??
-      Platform.environment['PI7600_USER_PASSWORD'] ??
+      Platform.environment['SIMCOM_API_USER_PASSWORD'] ??
       _promptPassword('Password: ');
   if (password.isEmpty) {
     stderr.writeln('Password cannot be empty.');
@@ -42,7 +42,7 @@ Future<void> main(List<String> arguments) async {
     return;
   }
   if (options.password == null &&
-      Platform.environment['PI7600_USER_PASSWORD'] == null) {
+      Platform.environment['SIMCOM_API_USER_PASSWORD'] == null) {
     final confirmation = _promptPassword('Confirm password: ');
     if (password != confirmation) {
       stderr.writeln('Passwords do not match.');

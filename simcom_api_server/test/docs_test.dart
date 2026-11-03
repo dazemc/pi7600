@@ -105,7 +105,7 @@ void main() {
       final html = utf8.decode(await renderDocsPage());
 
       expect(html, startsWith('<!DOCTYPE html>'));
-      expect(html, contains('<title>Pi7600 API docs</title>'));
+      expect(html, contains('<title>Simcom API docs</title>'));
       expect(html, contains('/docs/style.css'));
       expect(html, contains('/docs/app.js'));
 
@@ -136,14 +136,14 @@ void main() {
 
     test('loads a compiled client bundle from an explicit path', () async {
       final directory = await Directory.systemTemp.createTemp(
-        'pi7600-docs-bundle-',
+        'simcom_api-docs-bundle-',
       );
       addTearDown(() => directory.delete(recursive: true));
       final file = File(p.join(directory.path, 'app.js'));
-      await file.writeAsString('console.log("pi7600 docs");');
+      await file.writeAsString('console.log("simcom_api docs");');
 
       final bytes = await loadDocsClientBundle(path: file.path);
-      expect(utf8.decode(bytes!), contains('pi7600 docs'));
+      expect(utf8.decode(bytes!), contains('simcom_api docs'));
 
       final missing = await loadDocsClientBundle(
         path: p.join(directory.path, 'missing.js'),
@@ -165,7 +165,9 @@ void main() {
     late File bundle;
 
     setUpAll(() async {
-      tempDir = await Directory.systemTemp.createTemp('pi7600-docs-client-');
+      tempDir = await Directory.systemTemp.createTemp(
+        'simcom_api-docs-client-',
+      );
       bundle = File(p.join(tempDir.path, 'app.js'));
       final root = _packageRoot();
 
@@ -199,7 +201,7 @@ void main() {
       final js = bundle.readAsStringSync();
 
       expect(js, isNotEmpty);
-      expect(js, contains('pi7600.docs.token'));
+      expect(js, contains('simcom_api.docs.token'));
       expect(js, contains('access_token'));
       expect(js, contains('Authorization'));
       expect(js, contains('Session expired'));
@@ -215,7 +217,7 @@ void main() {
 
     test('docs can be disabled', () {
       final config = AppConfig.fromEnvironment({
-        'PI7600_DOCS_ENABLED': 'false',
+        'SIMCOM_API_DOCS_ENABLED': 'false',
       });
       expect(config.docsEnabled, isFalse);
     });
@@ -223,7 +225,7 @@ void main() {
     test('accepts common truthy values', () {
       for (final value in ['1', 'true', 'yes', 'on', 'TRUE']) {
         final config = AppConfig.fromEnvironment({
-          'PI7600_DOCS_ENABLED': value,
+          'SIMCOM_API_DOCS_ENABLED': value,
         });
         expect(config.docsEnabled, isTrue, reason: value);
       }

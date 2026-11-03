@@ -8,7 +8,7 @@ Encryption at rest is now handled by PostgreSQL or the host:
 - Enable storage encryption on the Pi (for example LUKS) or use a managed
   PostgreSQL instance with encryption at rest.
 - Keep `SERVERPOD_DATABASE_PASSWORD` out of the repository. Use the systemd
-  `EnvironmentFile` (`/etc/pi7600/pi7600.env`, mode `0600`) or a secret manager.
+  `EnvironmentFile` (`/etc/simcom_api/simcom_api.env`, mode `0600`) or a secret manager.
 - Require TLS for remote database connections with `requireSsl: true` in
   `config/production.yaml`.
 - Back up the database with `pg_dump` and keep backups encrypted; verify
@@ -64,6 +64,6 @@ pure Dart. Recognition is kept behind the `RecognitionBackend` interface:
   catalog as `/openapi.json`; its interactive client is also Dart/Jaspr,
   compiled by `tool/build_docs_client.dart`. It logs in through `POST /token`,
   and both routes are public and can be disabled with
-  `PI7600_DOCS_ENABLED=false`.
+  `SIMCOM_API_DOCS_ENABLED=false`.
 - The modem library is the standalone `simcom_modem` Dart package in the
   `simcom_modem` submodule; the service consumes it through a path dependency.

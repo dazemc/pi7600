@@ -46,7 +46,7 @@ class AuditService {
     } on Object catch (error) {
       AppLog.warning(
         'Unable to write audit event $eventType: $error',
-        name: 'pi7600.audit',
+        name: 'simcom_api.audit',
       );
     }
   }

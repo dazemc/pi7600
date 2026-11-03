@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const PAGE = 'http://127.0.0.1:8099/docs';
 const cdpPort = 9222 + Math.floor(Math.random() * 500);
-const profile = mkdtempSync(path.join(tmpdir(), 'pi7600-docs-browser-'));
+const profile = mkdtempSync(path.join(tmpdir(), 'simcom_api-docs-browser-'));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function findChrome() {
@@ -161,7 +161,7 @@ async function main() {
     const initial = await evaluate(`({
       loginVisible: !document.getElementById('login-form').hidden,
       sessionHidden: document.getElementById('session').hidden,
-      hasToken: !!localStorage.getItem('pi7600.docs.token')
+      hasToken: !!localStorage.getItem('simcom_api.docs.token')
     })`);
     assert(initial.loginVisible, 'login form is not visible');
     assert(initial.sessionHidden, 'session view is visible before login');
@@ -185,7 +185,7 @@ async function main() {
     );
     assert(wrongLogin.includes('Incorrect'), 'wrong credentials were accepted');
     assert(
-      !(await evaluate(`!!localStorage.getItem('pi7600.docs.token')`)),
+      !(await evaluate(`!!localStorage.getItem('simcom_api.docs.token')`)),
       'wrong login stored a token',
     );
 
@@ -201,7 +201,7 @@ async function main() {
     );
     assert(sessionStatus.includes('Signed in as alice'), 'login did not succeed');
     assert(
-      await evaluate(`!!localStorage.getItem('pi7600.docs.token')`),
+      await evaluate(`!!localStorage.getItem('simcom_api.docs.token')`),
       'login did not store a token',
     );
 
@@ -267,7 +267,7 @@ async function main() {
     const loggedOut = await waitFor(
       `({
         loginVisible: !document.getElementById('login-form').hidden,
-        hasToken: !!localStorage.getItem('pi7600.docs.token')
+        hasToken: !!localStorage.getItem('simcom_api.docs.token')
       })`,
       (value) => value.loginVisible && !value.hasToken,
     );

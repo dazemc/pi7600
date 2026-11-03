@@ -35,7 +35,7 @@ class AuthService {
     if (user == null || user.isDisabled) {
       AppLog.debug(
         'password auth: lookup=${lookupMs}ms result=rejected',
-        name: 'pi7600.auth',
+        name: 'simcom_api.auth',
       );
       return null;
     }
@@ -43,7 +43,7 @@ class AuthService {
     AppLog.debug(
       'password auth: lookup=${lookupMs}ms '
       'bcrypt=${stopwatch.elapsedMilliseconds - lookupMs}ms',
-      name: 'pi7600.auth',
+      name: 'simcom_api.auth',
     );
     if (!verified) return null;
     return user;
@@ -65,7 +65,7 @@ class AuthService {
     AppLog.debug(
       'token auth: lookup=${stopwatch.elapsedMilliseconds}ms '
       'refresh=${claims.isRefresh}',
-      name: 'pi7600.auth',
+      name: 'simcom_api.auth',
     );
     if (user == null || user.isDisabled) return null;
     if (claims.version != user.tokenVersion) return null;

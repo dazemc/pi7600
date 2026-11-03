@@ -9,7 +9,7 @@ import 'package:simcom_api_server/src/web/routes/readyz.dart';
 import 'package:simcom_api_server/src/web/routes/websockets.dart';
 import 'package:serverpod/serverpod.dart';
 
-/// Wire the Pi7600 services and routes into a [Serverpod] instance.
+/// Wire the Simcom API services and routes into a [Serverpod] instance.
 void configureServer(Serverpod pod) {
   final services = AppServices.create(AppConfig.fromEnvironment());
   AppLog.configure(services.config.logLevel);
@@ -17,7 +17,7 @@ void configureServer(Serverpod pod) {
   // Startup is asynchronous because the modem, camera, and recognition
   // backends touch hardware. Routes that need them await [AppServices.ready].
   unawaited(services.start());
-  pod.experimental.shutdownTasks.addTask('pi7600', services.stop);
+  pod.experimental.shutdownTasks.addTask('simcom_api', services.stop);
 
   final web = pod.webServer;
 
@@ -54,7 +54,7 @@ void configureServer(Serverpod pod) {
     ..addRoute(EchoWebSocketRoute(services), '/wss')
     ..addRoute(VideoWebSocketRoute(services), '/wss/video');
 
-  // Serverpod registers GET /readyz itself, so the Pi7600 response is produced
+  // Serverpod registers GET /readyz itself, so the Simcom API response is produced
   // by middleware instead of a conflicting route.
   web.addMiddleware(readyzMiddleware(), '/readyz');
 }

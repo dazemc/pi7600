@@ -11,12 +11,12 @@ void main() {
       phase: 'ready',
     );
 
-    expect(text, contains('pi7600_up 1'));
-    expect(text, contains('pi7600_modem_ready 1'));
-    expect(text, contains('pi7600_camera_running 0'));
-    expect(text, contains('pi7600_recognition_ready 0'));
-    expect(text, contains('pi7600_video_clients 2'));
-    expect(text, contains('pi7600_service_phase{phase="ready"} 1'));
-    expect(text, contains('# TYPE pi7600_rss_bytes gauge'));
+    expect(text, contains('simcom_api_up 1'));
+    expect(text, contains('simcom_api_modem_ready 1'));
+    expect(text, contains('simcom_api_camera_running 0'));
+    expect(text, contains('simcom_api_recognition_ready 0'));
+    expect(text, contains('simcom_api_video_clients 2'));
+    expect(text, contains('simcom_api_service_phase{phase="ready"} 1'));
+    expect(text, contains('# TYPE simcom_api_rss_bytes gauge'));
   });
 }

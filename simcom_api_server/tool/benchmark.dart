@@ -12,7 +12,7 @@ import 'package:simcom_modem/testing.dart';
 /// Run from `simcom_api_server`:
 ///   dart run tool/benchmark.dart
 Future<void> main() async {
-  stdout.writeln('Pi7600 / simcom_api benchmark');
+  stdout.writeln('simcom_api benchmark');
   stdout.writeln('');
 
   await _benchmarkAt();

@@ -63,9 +63,9 @@ void main() {
       accountName: 'alice',
     );
 
-    expect(uri, startsWith('otpauth://totp/Pi7600%3Aalice?'));
+    expect(uri, startsWith('otpauth://totp/Simcom%20API%3Aalice?'));
     expect(uri, contains('secret=JBSWY3DPEHPK3PXP'));
-    expect(uri, contains('issuer=Pi7600'));
+    expect(uri, contains('issuer=Simcom+API'));
   });
 
   test('recovery codes are unique and hash consistently', () {

@@ -64,7 +64,7 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Implemented gzip + `Vary: Accept-Encoding` + a 5-minute cache window;
     ETag revalidation is still a possible follow-up.
 
-- [x] **Implement `PI7600_LOG_LEVEL` and reduce production session logging.**
+- [x] **Implement `SIMCOM_API_LOG_LEVEL` and reduce production session logging.**
   - `AppConfig.logLevel` is parsed but unused.
   - Add a small logger filter for debug/info/warn/error.
   - Disable per-request console session logs in production unless explicitly
@@ -229,7 +229,7 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
 - [x] **Login rate limiting.**
   - Add per-user/IP throttling for failed logins.
   - In-memory limiter keyed by username and client address; returns `429` with
-    `Retry-After` after `PI7600_LOGIN_MAX_ATTEMPTS` failures. State is
+    `Retry-After` after `SIMCOM_API_LOGIN_MAX_ATTEMPTS` failures. State is
     process-local.
 
 - [x] **TOTP two-factor authentication.**
@@ -262,7 +262,7 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
     endpoints, bounded/redacted `/at` details, and a configurable retention
     window. Cleanup is manual or can be scheduled externally.
 
-- [ ] **Rename deployment artifacts.**
-  - Decide whether to rename `deploy/pi7600.service`,
-    `deploy/pi7600.env.example`, `/opt/pi7600`, and `PI7600_*` to `simcom_api`.
-  - This is a breaking operational change; plan a migration path.
+- [x] **Rename deployment artifacts.**
+  - Renamed the service unit, env file, Linux user/group, install paths, database,
+    env prefix, metrics, docs storage key, and logs to `simcom_api`.
+  - The production Pi was cut over with database/app backups retained.

@@ -54,7 +54,7 @@ Future<WebSocketAuthResult> authenticateWebSocket(
   } on Object catch (error) {
     AppLog.warning(
       'WebSocket authentication failed: $error',
-      name: 'pi7600.websocket',
+      name: 'simcom_api.websocket',
     );
     await events.cancel();
     await _close(socket, 1008);
@@ -109,7 +109,7 @@ class EchoWebSocketRoute extends Route {
           );
       AppLog.info(
         'WebSocket authenticated for ${user.userName}',
-        name: 'pi7600.websocket',
+        name: 'simcom_api.websocket',
       );
       try {
         while (await auth.events.moveNext()) {
@@ -118,7 +118,7 @@ class EchoWebSocketRoute extends Route {
             AppLog.debug(
               '/wss message from ${user.userName}: '
               '${event.text.length} chars',
-              name: 'pi7600.websocket',
+              name: 'simcom_api.websocket',
             );
             socket.trySendText('Message received: ${event.text}');
           } else if (event is CloseReceived) {
@@ -181,7 +181,7 @@ class VideoWebSocketRoute extends Route {
       services.broadcaster.add(socket);
       AppLog.info(
         'Video stream authenticated for ${user.userName}',
-        name: 'pi7600.websocket',
+        name: 'simcom_api.websocket',
       );
       try {
         while (await auth.events.moveNext()) {
@@ -193,7 +193,7 @@ class VideoWebSocketRoute extends Route {
         await auth.events.cancel();
         AppLog.info(
           'Video stream disconnected for ${user.userName}',
-          name: 'pi7600.websocket',
+          name: 'simcom_api.websocket',
         );
       }
     });

@@ -65,7 +65,7 @@ Uint8List base32Decode(String value) {
 String totpProvisioningUri({
   required String secret,
   required String accountName,
-  String issuer = 'Pi7600',
+  String issuer = 'Simcom API',
   int digits = 6,
   int period = 30,
 }) {

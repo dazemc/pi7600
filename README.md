@@ -1,6 +1,6 @@
-# Pi7600: SIM7600 modem service
+# Simcom API: SIM7600 modem service
 
-Pi7600 is a [Serverpod 4](https://serverpod.dev/) service for the
+Simcom API is a [Serverpod 4](https://serverpod.dev/) service for the
 [Waveshare SIM7600G-H 4G HAT](https://www.waveshare.com/wiki/SIM7600G-H_4G_HAT_(B))
 on a Raspberry Pi. It exposes modem status, host information, SMS
 send/read/delete, GPS, an admin-only raw AT command endpoint, and authenticated
@@ -98,40 +98,40 @@ hardware-free test helpers.
 
 ## Configuration
 
-Pi7600 settings are read from `PI7600_*` environment variables or from a `.env`
-file in the server working directory. Serverpod settings live in
+Simcom API settings are read from `SIMCOM_API_*` environment variables or
+from a `.env` file in the server working directory. Serverpod settings live in
 `simcom_api_server/config/<runMode>.yaml`; the database password comes from
 `SERVERPOD_DATABASE_PASSWORD` or `simcom_api_server/config/passwords.yaml`.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `PI7600_AT_COM` | `/dev/ttyUSB2` | Modem serial port |
-| `PI7600_AT_BAUDRATE` | `115200` | Serial speed |
-| `PI7600_AT_TIMEOUT` | `10` | Raw AT command timeout (seconds) |
-| `PI7600_CAMERA_DEVICE` | unset | Explicit V4L2 device; probes `/dev/video0`-`/dev/video31` when unset |
-| `PI7600_CAMERA_INDEX` | `-1` | Prefer `/dev/video<index>` during probing |
-| `PI7600_CAMERA_FPS` | `15` | Video stream frame rate |
-| `PI7600_CAMERA_WIDTH` | `640` | Requested capture width |
-| `PI7600_CAMERA_HEIGHT` | `480` | Requested capture height |
-| `PI7600_JWT_PRIVATE_KEY_PATH` | `.keys/private.pem` | JWT signing key |
-| `PI7600_JWT_PUBLIC_KEY_PATH` | `.keys/public.pem` | JWT verification key |
-| `PI7600_JWT_ISSUER` | `pi.daazed.dev` | JWT issuer claim |
-| `PI7600_JWT_EXPIRE_MINUTES` | `30` | Access token lifetime |
-| `PI7600_JWT_REFRESH_DAYS` | `7` | Refresh token lifetime |
-| `PI7600_WEBSOCKET_AUTH_TIMEOUT` | `5` | Seconds to wait for the auth message |
-| `PI7600_LOGIN_MAX_ATTEMPTS` | `5` | Failed logins per username or client address before throttling |
-| `PI7600_LOGIN_WINDOW_SECONDS` | `300` | Window used to count failed logins |
-| `PI7600_LOGIN_BLOCK_SECONDS` | `300` | How long a throttled key stays blocked |
-| `PI7600_AUDIT_RETENTION_DAYS` | `90` | Persistent audit-event retention |
-| `PI7600_LOG_LEVEL` | `INFO` | Minimum application log level (`debug`, `info`, `warn`, `error`) |
-| `PI7600_PING_INTERFACE` | `usb0` | Interface used for `data`/`dns` checks |
-| `PI7600_PING_TARGETS` | `1.1.1.1,www.google.com` | Ping targets for `data` and `dns` |
-| `PI7600_DOCS_ENABLED` | `true` | Serve the interactive `/docs` page and `/openapi.json` |
-| `PI7600_DOCS_CLIENT_PATH` | auto | Override the compiled `/docs/app.js` path |
+| `SIMCOM_API_AT_COM` | `/dev/ttyUSB2` | Modem serial port |
+| `SIMCOM_API_AT_BAUDRATE` | `115200` | Serial speed |
+| `SIMCOM_API_AT_TIMEOUT` | `10` | Raw AT command timeout (seconds) |
+| `SIMCOM_API_CAMERA_DEVICE` | unset | Explicit V4L2 device; probes `/dev/video0`-`/dev/video31` when unset |
+| `SIMCOM_API_CAMERA_INDEX` | `-1` | Prefer `/dev/video<index>` during probing |
+| `SIMCOM_API_CAMERA_FPS` | `15` | Video stream frame rate |
+| `SIMCOM_API_CAMERA_WIDTH` | `640` | Requested capture width |
+| `SIMCOM_API_CAMERA_HEIGHT` | `480` | Requested capture height |
+| `SIMCOM_API_JWT_PRIVATE_KEY_PATH` | `.keys/private.pem` | JWT signing key |
+| `SIMCOM_API_JWT_PUBLIC_KEY_PATH` | `.keys/public.pem` | JWT verification key |
+| `SIMCOM_API_JWT_ISSUER` | `pi.daazed.dev` | JWT issuer claim |
+| `SIMCOM_API_JWT_EXPIRE_MINUTES` | `30` | Access token lifetime |
+| `SIMCOM_API_JWT_REFRESH_DAYS` | `7` | Refresh token lifetime |
+| `SIMCOM_API_WEBSOCKET_AUTH_TIMEOUT` | `5` | Seconds to wait for the auth message |
+| `SIMCOM_API_LOGIN_MAX_ATTEMPTS` | `5` | Failed logins per username or client address before throttling |
+| `SIMCOM_API_LOGIN_WINDOW_SECONDS` | `300` | Window used to count failed logins |
+| `SIMCOM_API_LOGIN_BLOCK_SECONDS` | `300` | How long a throttled key stays blocked |
+| `SIMCOM_API_AUDIT_RETENTION_DAYS` | `90` | Persistent audit-event retention |
+| `SIMCOM_API_LOG_LEVEL` | `INFO` | Minimum application log level (`debug`, `info`, `warn`, `error`) |
+| `SIMCOM_API_PING_INTERFACE` | `usb0` | Interface used for `data`/`dns` checks |
+| `SIMCOM_API_PING_TARGETS` | `1.1.1.1,www.google.com` | Ping targets for `data` and `dns` |
+| `SIMCOM_API_DOCS_ENABLED` | `true` | Serve the interactive `/docs` page and `/openapi.json` |
+| `SIMCOM_API_DOCS_CLIENT_PATH` | auto | Override the compiled `/docs/app.js` path |
 | `SERVERPOD_RUN_MODE` | `development` | Serverpod run mode (`development`, `test`, `production`) |
 | `SERVERPOD_DATABASE_PASSWORD` | from `passwords.yaml` | PostgreSQL password |
 
-See `deploy/pi7600.env.example` for a production template.
+See `deploy/simcom_api.env.example` for a production template.
 
 ## Authentication
 
@@ -154,14 +154,15 @@ curl -X POST http://localhost:8082/token \
 Send the access token as `Authorization: Bearer <token>` on HTTP requests.
 Invalid, expired, revoked, and disabled-user tokens return `401` with
 `WWW-Authenticate: Bearer`. Access tokens expire after
-`PI7600_JWT_EXPIRE_MINUTES`; exchange the refresh token at
+`SIMCOM_API_JWT_EXPIRE_MINUTES`; exchange the refresh token at
 `POST /token/refresh` for a new pair. `POST /logout` increments the user's
 token version, revoking every outstanding access and refresh token for that
 user.
 
 Repeated failed logins are throttled per username and client address. After
-`PI7600_LOGIN_MAX_ATTEMPTS` failures inside `PI7600_LOGIN_WINDOW_SECONDS`, the
-endpoint returns `429` with `Retry-After` for `PI7600_LOGIN_BLOCK_SECONDS`.
+`SIMCOM_API_LOGIN_MAX_ATTEMPTS` failures inside
+`SIMCOM_API_LOGIN_WINDOW_SECONDS`, the endpoint returns `429` with
+`Retry-After` for `SIMCOM_API_LOGIN_BLOCK_SECONDS`.
 Throttle state is process-local and resets on restart.
 
 ### TOTP two-factor authentication
@@ -192,7 +193,7 @@ user administration are written to PostgreSQL. Administrators can read the
 newest events with `GET /audit?limit=100` and delete expired rows with
 `DELETE /audit/cleanup`; the configured `/at` response previews are bounded and
 sensitive commands are redacted before storage. Events older than
-`PI7600_AUDIT_RETENTION_DAYS` are removed only when cleanup is invoked.
+`SIMCOM_API_AUDIT_RETENTION_DAYS` are removed only when cleanup is invoked.
 
 ### WebSocket authentication
 
@@ -204,7 +205,7 @@ server accepts the connection and waits for a first JSON message:
 ```
 
 The socket is closed with code `1008` when authentication fails or the message
-does not arrive within `PI7600_WEBSOCKET_AUTH_TIMEOUT` seconds. Only then does
+does not arrive within `SIMCOM_API_WEBSOCKET_AUTH_TIMEOUT` seconds. Only then
 `/wss` echo messages or `/wss/video` subscribe the client to JPEG frames. If no
 camera is streaming, `/wss/video` closes with code `1011`.
 
@@ -265,12 +266,12 @@ All routes except `/token`, `/token/refresh`, `/healthz`, `/readyz`, `/docs`,
 | `WS` | `/wss/video` | Authenticated JPEG frame stream |
 
 The REST payloads, status codes, JWT claims, and WebSocket authentication
-protocol match the previous Python service.
+protocol are unchanged.
 
 ### Interactive API explorer
 
 `GET /docs` serves a server-rendered Jaspr page that lists every HTTP and
-WebSocket endpoint. Sign in with a Pi7600 username and password: the page
+WebSocket endpoint. Sign in with a Simcom API username and password: the page
 exchanges them for a JWT with `POST /token` and keeps only the token in
 `localStorage` for the current browser. Expand an endpoint to edit path
 parameters, JSON bodies, or form fields, then press **Execute** to send the
@@ -280,7 +281,7 @@ bearer/admin checks.
 `GET /openapi.json` returns the same endpoint catalog as an OpenAPI 3.1
 document, so the page and schema cannot drift apart. Both routes, and the
 `/docs/style.css` and `/docs/app.js` assets, are disabled with
-`PI7600_DOCS_ENABLED=false`.
+`SIMCOM_API_DOCS_ENABLED=false`.
 
 The interactive app is written in Dart with Jaspr. Its browser entrypoint is
 `lib/src/web/docs/docs_app.client.dart`; compile it with:
@@ -293,7 +294,7 @@ dart run tool/build_docs_client.dart
 The output, `web/docs/app.js`, is a build artifact and is not committed. If it
 is missing, `/docs/app.js` returns `503` and the server-rendered page remains
 read-only. The native bundle looks for the file at
-`/opt/pi7600/web/docs/app.js`.
+`/opt/simcom_api/web/docs/app.js`.
 
 ### Modem status
 
@@ -374,7 +375,7 @@ dart run bin/create_user.dart --username alice --admin
 ```
 
 In production, set `SERVERPOD_RUN_MODE=production` and
-`SERVERPOD_DATABASE_PASSWORD`, then run the same command from `/opt/pi7600`.
+`SERVERPOD_DATABASE_PASSWORD`, then run the same command from `/opt/simcom_api`.
 
 ## Deployment with systemd
 
@@ -407,53 +408,43 @@ The bundle is written to `simcom_api_server/build/pi/bundle/`. It contains
 
    ```bash
    sudo -u postgres psql <<'SQL'
-   CREATE ROLE pi7600 LOGIN PASSWORD 'change-me';
-   CREATE DATABASE pi7600 OWNER pi7600;
+   CREATE ROLE simcom_api LOGIN PASSWORD 'change-me';
+   CREATE DATABASE simcom_api OWNER simcom_api;
    SQL
    ```
 
 3. Create the service user and directories:
 
    ```bash
-   sudo useradd --system --home /opt/pi7600 --shell /usr/sbin/nologin pi7600
-   sudo usermod -aG dialout,video pi7600
-   sudo mkdir -p /opt/pi7600 /var/lib/pi7600 /etc/pi7600/keys
-   sudo chown -R pi7600:pi7600 /opt/pi7600 /var/lib/pi7600
+   sudo useradd --system --home /opt/simcom_api --shell /usr/sbin/nologin simcom_api
+   sudo usermod -aG dialout,video simcom_api
+   sudo mkdir -p /opt/simcom_api /var/lib/simcom_api /etc/simcom_api/keys
+   sudo chown -R simcom_api:simcom_api /opt/simcom_api /var/lib/simcom_api
    ```
 
 4. Copy the bundle, configuration, and migrations:
 
    ```bash
-   sudo cp -a build/pi/bundle/. /opt/pi7600/
-   sudo cp -a config migrations /opt/pi7600/
-   sudo chown -R pi7600:pi7600 /opt/pi7600
+   sudo cp -a build/pi/bundle/. /opt/simcom_api/
+   sudo cp -a config migrations /opt/simcom_api/
+   sudo chown -R simcom_api:simcom_api /opt/simcom_api
    ```
 
-   Existing installations only: the Serverpod module name changed from
-   `pi7600` to `simcom_api`. Before starting the renamed service, run the
-   one-time update from the repository checkout on the Pi:
-
-   ```bash
-   sudo -u postgres psql -d pi7600 -f scripts/rename_migration_module.sql
-   ```
-
-   Fresh databases do not need this step.
-
-5. Generate keys in `/etc/pi7600/keys`, copy
-   `deploy/pi7600.env.example` to `/etc/pi7600/pi7600.env`, and set the database
+5. Generate keys in `/etc/simcom_api/keys`, copy
+   `deploy/simcom_api.env.example` to `/etc/simcom_api/simcom_api.env`, and set the database
    password, `LIBSERIALPORT_PATH=libserialport.so.0`, and any host-specific
    paths.
 
 6. Install and start the unit:
 
    ```bash
-   sudo cp deploy/pi7600.service /etc/systemd/system/
+   sudo cp deploy/simcom_api.service /etc/systemd/system/
    sudo systemctl daemon-reload
-   sudo systemctl enable --now pi7600
-   sudo journalctl -u pi7600 -f
+   sudo systemctl enable --now simcom_api
+   sudo journalctl -u simcom_api -f
    ```
 
-The unit runs `/opt/pi7600/bin/main --apply-migrations`, so existing databases
+The unit runs `/opt/simcom_api/bin/main --apply-migrations`, so existing databases
 are migrated automatically.
 
 ## Development

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/auth/auth_service.dart';
 import 'package:simcom_api_server/src/auth/jwt_service.dart';
 import 'package:simcom_api_server/src/auth/login_rate_limiter.dart';
@@ -17,6 +16,7 @@ import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/services/status_service.dart';
 import 'package:simcom_api_server/src/services/user_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
+import 'package:simcom_modem/simcom_modem.dart';
 import 'package:serverpod/serverpod.dart';
 
 /// Process-wide dependencies shared by the REST and WebSocket routes.
@@ -154,20 +154,20 @@ class AppServices {
       serviceStatus.modemStarted();
       AppLog.info(
         'Modem initialized on ${config.atCom}',
-        name: 'pi7600.modem',
+        name: 'simcom_api.modem',
       );
     } on Object catch (error, stackTrace) {
       serviceStatus.modemFailed(error);
       AppLog.warning(
         'Modem unavailable: $error',
-        name: 'pi7600.modem',
+        name: 'simcom_api.modem',
         error: error,
         stackTrace: stackTrace,
       );
     }
 
     broadcaster.attach(camera.frames);
-    AppLog.info('Camera capture starts on demand', name: 'pi7600.camera');
+    AppLog.info('Camera capture starts on demand', name: 'simcom_api.camera');
 
     try {
       await recognition.initialize();
@@ -180,12 +180,12 @@ class AppServices {
       serviceStatus.recognitionFailed(error);
       AppLog.warning(
         'Facial recognition unavailable: $error',
-        name: 'pi7600.recognition',
+        name: 'simcom_api.recognition',
       );
     }
 
     serviceStatus.ready();
-    AppLog.info('Pi7600 services ready', name: 'pi7600');
+    AppLog.info('Simcom API services ready', name: 'simcom_api');
     if (!_ready.isCompleted) _ready.complete();
   }
 
@@ -221,13 +221,13 @@ class AppServices {
       AppLog.info(
         'Camera streaming from ${camera.devicePath} '
         '(${camera.frameWidth}x${camera.frameHeight} ${camera.frameFormat})',
-        name: 'pi7600.camera',
+        name: 'simcom_api.camera',
       );
     } on Object catch (error, stackTrace) {
       serviceStatus.cameraFailed(error);
       AppLog.warning(
         'Camera unavailable: $error',
-        name: 'pi7600.camera',
+        name: 'simcom_api.camera',
         error: error,
         stackTrace: stackTrace,
       );
@@ -264,11 +264,14 @@ class AppServices {
     try {
       await camera.stop();
       serviceStatus.cameraStopped();
-      AppLog.info('Camera stopped after idle timeout', name: 'pi7600.camera');
+      AppLog.info(
+        'Camera stopped after idle timeout',
+        name: 'simcom_api.camera',
+      );
     } on Object catch (error) {
       AppLog.warning(
         'Error stopping idle camera: $error',
-        name: 'pi7600.camera',
+        name: 'simcom_api.camera',
       );
     }
   }
@@ -283,12 +286,12 @@ class AppServices {
       await broadcaster.stop();
       await camera.dispose();
     } on Object catch (error) {
-      AppLog.error('Error stopping camera: $error', name: 'pi7600.camera');
+      AppLog.error('Error stopping camera: $error', name: 'simcom_api.camera');
     }
     try {
       await modem.close();
     } on Object catch (error) {
-      AppLog.error('Error closing modem: $error', name: 'pi7600.modem');
+      AppLog.error('Error closing modem: $error', name: 'simcom_api.modem');
     }
     serviceStatus.stopped();
     await serviceStatus.close();

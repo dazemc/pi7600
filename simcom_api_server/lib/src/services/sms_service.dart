@@ -42,7 +42,7 @@ class SmsService {
       } on Object catch (error) {
         AppLog.warning(
           'Unable to persist SMS message: $error',
-          name: 'pi7600.sms',
+          name: 'simcom_api.sms',
         );
       }
     }
@@ -179,7 +179,7 @@ class SmsService {
       if (index == null) {
         AppLog.warning(
           'SIM message ${message.id} has no modem index; leaving it in place',
-          name: 'pi7600.sms',
+          name: 'simcom_api.sms',
         );
         continue;
       }
@@ -188,7 +188,7 @@ class SmsService {
       if (!deleted) {
         AppLog.warning(
           'Unable to delete modem message ${message.messageIndex}',
-          name: 'pi7600.sms',
+          name: 'simcom_api.sms',
         );
         continue;
       }

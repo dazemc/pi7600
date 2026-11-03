@@ -9,7 +9,7 @@ import 'package:simcom_api_server/src/web/docs/api_catalog.dart';
 import 'package:universal_web/web.dart' as web;
 
 /// Key used to keep the JWT in browser storage.
-const docsTokenKey = 'pi7600.docs.token';
+const docsTokenKey = 'simcom_api.docs.token';
 
 /// The interactive `/docs` application.
 ///
@@ -217,7 +217,7 @@ class _DocsAppState extends State<DocsApp> {
         ]),
         footer(classes: 'footer', [
           Component.text(
-            'Pi7600 - interactive reference generated from the live API '
+            'Simcom API - interactive reference generated from the live API '
             'catalog.',
           ),
         ]),
@@ -228,7 +228,7 @@ class _DocsAppState extends State<DocsApp> {
   Component _topbar() {
     return header(classes: 'topbar', [
       div([
-        h1([Component.text('Pi7600 API')]),
+        h1([Component.text('Simcom API')]),
         p([
           Component.text(
             'SIM7600 modem, SMS, GPS, host information, and camera service.',
@@ -323,7 +323,7 @@ class _DocsAppState extends State<DocsApp> {
       h2([Component.text('Try the API')]),
       p([
         Component.text(
-          'Sign in above with your Pi7600 username and password. The page '
+          'Sign in above with your Simcom API username and password. The page '
           'exchanges them for a JWT with ',
         ),
         code([Component.text('POST /token')]),

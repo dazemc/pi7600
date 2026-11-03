@@ -35,7 +35,7 @@ database:
   # If using Docker or other external PostgreSQL instances, use their actual port
   # and remove `dataPath`.
   port: 0
-  name: pi7600_test
+  name: simcom_api_test
   user: postgres
   dataPath: .serverpod/test/pgdata
   #maxConnectionCount: 10 # Defaults to 10, a negative or null value removes the limit

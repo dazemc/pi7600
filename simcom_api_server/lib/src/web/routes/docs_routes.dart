@@ -10,7 +10,7 @@ import 'package:simcom_api_server/src/web/docs/docs_page.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:serverpod/serverpod.dart';
 
-/// Shared 404 for every docs route when `PI7600_DOCS_ENABLED=false`.
+/// Shared 404 for every docs route when `SIMCOM_API_DOCS_ENABLED=false`.
 Response _docsDisabled() {
   return Response(
     404,
@@ -146,7 +146,7 @@ class DocsScriptRoute extends Route {
         _reportedMissing = true;
         AppLog.warning(
           'Could not read the docs client bundle: $error',
-          name: 'pi7600.docs',
+          name: 'simcom_api.docs',
           error: error,
           stackTrace: stackTrace,
         );
@@ -161,7 +161,7 @@ class DocsScriptRoute extends Route {
         AppLog.warning(
           'Docs client bundle not found. Run '
           '`dart run tool/build_docs_client.dart` in simcom_api_server.',
-          name: 'pi7600.docs',
+          name: 'simcom_api.docs',
         );
       }
       return Response(

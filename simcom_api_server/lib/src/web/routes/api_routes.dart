@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:simcom_api_server/src/app_services.dart';
 import 'package:simcom_api_server/src/auth/jwt_service.dart';
-import 'package:simcom_modem/simcom_modem.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
 import 'package:simcom_api_server/src/generated/user.dart';
 import 'package:simcom_api_server/src/services/audit_service.dart';
@@ -13,6 +12,7 @@ import 'package:simcom_api_server/src/util/app_log.dart';
 import 'package:simcom_api_server/src/web/at_audit.dart';
 import 'package:simcom_api_server/src/web/http.dart';
 import 'package:simcom_api_server/src/web/metrics.dart';
+import 'package:simcom_modem/simcom_modem.dart';
 import 'package:serverpod/serverpod.dart' hide Message;
 
 /// Serialize a message with the snake_case keys used by the Python API.
@@ -105,7 +105,7 @@ class TokenRoute extends Route {
       final block = userBlock ?? addressBlock;
       AppLog.warning(
         'Failed login for $username',
-        name: 'pi7600.auth',
+        name: 'simcom_api.auth',
       );
       await audit.record(
         eventType: 'login',
@@ -187,7 +187,7 @@ class TokenRefreshRoute extends Route {
       }
       AppLog.info(
         '/token/refresh POST: Refreshed token for ${user.userName}',
-        name: 'pi7600.auth',
+        name: 'simcom_api.auth',
       );
       return _tokenResponse(services, user);
     } on TokenException {
@@ -587,7 +587,7 @@ class StatusRoute extends Route {
     await services.ready;
     AppLog.info(
       '/ GET: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
     final result = await services.status.status();
     return jsonResponse(result.toJson());
@@ -606,7 +606,7 @@ class InfoRoute extends Route {
     if (!auth.isAuthenticated) return auth.error!;
     AppLog.info(
       '/info GET: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
     final result = await services.status.info();
     return jsonResponse(result.toJson());
@@ -626,7 +626,7 @@ class GpsRoute extends Route {
     await services.ready;
     AppLog.info(
       '/gps GET: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
 
     final raw = await services.gps.getGpsPosition();
@@ -672,7 +672,7 @@ class CameraSnapshotRoute extends Route {
 
     AppLog.info(
       '/camera/snapshot GET: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
     return Response(
       200,
@@ -791,7 +791,7 @@ class PhoneCallRoute extends Route {
 
     AppLog.info(
       'Phone call requested by ${auth.user!.userName}',
-      name: 'pi7600.phone',
+      name: 'simcom_api.phone',
     );
     final connected = await services.phone.call(normalized);
     if (!connected) {
@@ -815,7 +815,7 @@ class PhoneHangupRoute extends Route {
 
     AppLog.info(
       'Phone hangup requested by ${auth.user!.userName}',
-      name: 'pi7600.phone',
+      name: 'simcom_api.phone',
     );
     final hungUp = await services.phone.hangupCall();
     if (!hungUp) {
@@ -869,7 +869,7 @@ class SmsRoute extends Route {
     await services.ready;
     AppLog.info(
       '/sms GET: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
 
     final query = request.url.queryParameters;
@@ -915,7 +915,7 @@ class SmsRoute extends Route {
     await services.ready;
     AppLog.info(
       '/sms POST: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
 
     final body = await readJsonObject(request);
@@ -952,7 +952,7 @@ class SmsRetryRoute extends Route {
     await services.ready;
     AppLog.info(
       '/sms/retry POST: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
 
     final rawId = request.rawPathParameters[#id];
@@ -986,7 +986,7 @@ class SmsDeleteRoute extends Route {
     await services.ready;
     AppLog.info(
       '/sms/delete DELETE: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
 
     final rawId = request.rawPathParameters[#id];
@@ -1023,7 +1023,7 @@ class SmsCleanupRoute extends Route {
     await services.ready;
     AppLog.info(
       '/sms/cleanup DELETE: Accessed by ${auth.user!.userName}',
-      name: 'pi7600',
+      name: 'simcom_api',
     );
     await services.smsService(session).cleanupSimMessages();
     return jsonResponse({'response': 'Ok'}, status: 202);

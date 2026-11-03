@@ -4,7 +4,7 @@ enum AppLogLevel { debug, info, warning, error }
 
 /// Small log-level filter for the service.
 ///
-/// `PI7600_LOG_LEVEL` is read into [AppConfig.logLevel] and applied at startup.
+/// `SIMCOM_API_LOG_LEVEL` is read into [AppConfig.logLevel] and applied at startup.
 /// Access logs are emitted at [AppLogLevel.info] and WebSocket message logs at
 /// [AppLogLevel.debug], so production can run at `warn` or `error` without
 /// losing audit-relevant failures.
@@ -24,22 +24,22 @@ abstract final class AppLog {
     return messageLevel.index >= level.index;
   }
 
-  static void debug(String message, {String name = 'pi7600'}) {
+  static void debug(String message, {String name = 'simcom_api'}) {
     _log(message, AppLogLevel.debug, name);
   }
 
-  static void info(String message, {String name = 'pi7600'}) {
+  static void info(String message, {String name = 'simcom_api'}) {
     _log(message, AppLogLevel.info, name);
   }
 
   /// Audit events are not filtered by the application log level.
-  static void audit(String message, {String name = 'pi7600.audit'}) {
+  static void audit(String message, {String name = 'simcom_api.audit'}) {
     developer.log(message, name: name, level: 1000);
   }
 
   static void warning(
     String message, {
-    String name = 'pi7600',
+    String name = 'simcom_api',
     Object? error,
     StackTrace? stackTrace,
   }) {
@@ -54,7 +54,7 @@ abstract final class AppLog {
 
   static void error(
     String message, {
-    String name = 'pi7600',
+    String name = 'simcom_api',
     Object? error,
     StackTrace? stackTrace,
   }) {

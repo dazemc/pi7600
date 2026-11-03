@@ -31,7 +31,7 @@ webServer:
 database:
   host: localhost
   port: 8090
-  name: pi7600
+  name: simcom_api
   user: postgres
   #requireSsl: true # defaults to false
   #isUnixSocket: true # defaults to false

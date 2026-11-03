@@ -1,4 +1,4 @@
-/// Static description of the Pi7600 HTTP API.
+/// Static description of the Simcom API HTTP contract.
 ///
 /// The same catalog drives the interactive `/docs` page and the generated
 /// `/openapi.json` document, so the two cannot drift apart.
@@ -119,7 +119,7 @@ class ApiEndpoint {
 
 const _jsonHeaders = 'application/json';
 
-/// Every HTTP operation in the Pi7600 contract.
+/// Every HTTP operation in the Simcom API contract.
 const apiEndpoints = <ApiEndpoint>[
   ApiEndpoint(
     method: 'POST',
@@ -395,7 +395,7 @@ const apiEndpoints = <ApiEndpoint>[
     path: '/audit/cleanup',
     summary: 'Delete expired audit events (admin only)',
     description:
-        'Deletes events older than `PI7600_AUDIT_RETENTION_DAYS` and records '
+        'Deletes events older than `SIMCOM_API_AUDIT_RETENTION_DAYS` and records '
         'the cleanup itself as an audit event.',
     auth: ApiAuth.admin,
     responses: {
@@ -501,7 +501,8 @@ const apiEndpoints = <ApiEndpoint>[
         'The message is stored before it is handed to the modem. If the modem '
         'cannot send it, the stored row is kept and the endpoint returns 502.',
     auth: ApiAuth.user,
-    jsonBody: '{\n  "number": "+15551234567",\n  "msg": "Hello from Pi7600"\n}',
+    jsonBody:
+        '{\n  "number": "+15551234567",\n  "msg": "Hello from Simcom API"\n}',
     responses: {
       '201': 'Message stored and sent',
       '401': 'Authentication required',
@@ -724,7 +725,7 @@ Map<String, Object?> buildOpenApiDocument() {
   return {
     'openapi': '3.1.0',
     'info': {
-      'title': 'Pi7600 API',
+      'title': 'Simcom API',
       'version': '1.0.0',
       'description':
           'SIM7600 modem, SMS, GPS, host information, and camera service. '

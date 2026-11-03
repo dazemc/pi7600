@@ -106,7 +106,7 @@ Future<bool> verifyPasswordAsync(String password, String encodedHash) async {
   try {
     return await Isolate.run(
       () => verifyPassword(password, encodedHash),
-      debugName: 'pi7600.bcrypt',
+      debugName: 'simcom_api.bcrypt',
     );
   } on Object {
     return false;
@@ -117,6 +117,6 @@ Future<bool> verifyPasswordAsync(String password, String encodedHash) async {
 Future<String> hashPasswordAsync(String password) {
   return Isolate.run(
     () => bcrypt(utf8.encode(password)),
-    debugName: 'pi7600.bcrypt',
+    debugName: 'simcom_api.bcrypt',
   );
 }

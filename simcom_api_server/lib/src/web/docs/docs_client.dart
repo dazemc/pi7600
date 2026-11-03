@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 /// Loads the compiled Jaspr client bundle served at `/docs/app.js`.
 ///
 /// The bundle is produced by `dart run tool/build_docs_client.dart` and is not
-/// committed to git. The resolver checks `PI7600_DOCS_CLIENT_PATH`, then the
+/// committed to git. The resolver checks `SIMCOM_API_DOCS_CLIENT_PATH`, then the
 /// `web/docs/app.js` path next to the running executable, then the same path
 /// under the current directory. This makes the same layout work for
 /// `dart run bin/main.dart`, the native `dart build cli` bundle, and tests.
@@ -37,7 +37,7 @@ Future<Uint8List?> loadDocsClientBundle({String? path}) async {
 Uint8List? _cached;
 
 Iterable<String> _candidatePaths() sync* {
-  final configured = Platform.environment['PI7600_DOCS_CLIENT_PATH'];
+  final configured = Platform.environment['SIMCOM_API_DOCS_CLIENT_PATH'];
   if (configured != null && configured.isNotEmpty) {
     yield p.normalize(p.absolute(configured));
     return;

@@ -4,7 +4,7 @@ import 'package:serverpod/serverpod.dart';
 import 'package:serverpod/src/server/serverpod.dart'
     show ServerpodInternalMethods;
 
-/// Middleware that replaces Serverpod's `/readyz` probe with the Pi7600
+/// Middleware that replaces Serverpod's `/readyz` probe with the Simcom API
 /// payload and database check.
 ///
 /// The built-in `HealthRoutes` already registers `GET /readyz`, so adding a
