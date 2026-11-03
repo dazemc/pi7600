@@ -86,6 +86,8 @@ cd simcom_api_server && serverpod create-migration
 | `simcom_api_server/tool/build_docs_client.dart` | Compile the Jaspr docs client to `web/docs/app.js` |
 | `simcom_api_server/tool/build_release.dart` | Build the docs client and native bundle together |
 | `simcom_api_server/tool/benchmark.dart` | Hardware-free AT/SMS/bcrypt/JWT/camera benchmarks |
+| `simcom_api_server/tool/docs_test_server.dart` | Fake docs/token/info server for the browser smoke test |
+| `simcom_api_server/tool/docs_browser_test.mjs` | Chrome DevTools docs login/try-it-out smoke test |
 | `simcom_api_server/migrations/` | PostgreSQL migrations |
 | `simcom_api_server/test/` | Hardware-free tests and fake serial transport |
 | `deploy/` | systemd unit and environment example |
@@ -216,7 +218,8 @@ modem, camera, or database.
 CI (`.github/workflows/ci.yml`) checks out submodules, installs the stable Dart
 SDK and `libserialport0`, then runs `dart format --set-exit-if-changed`,
 `dart analyze`, `dart test` for the service, and `dart test` for the modem
-library.
+library. A separate `docs-browser` job builds the Jaspr client and runs the
+Chrome DevTools docs smoke test against `tool/docs_test_server.dart`.
 
 ## Definition of done
 

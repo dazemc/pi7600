@@ -416,6 +416,19 @@ The harness measures AT command round trips, SMS PDU parsing, bcrypt
 verification (native and worker-isolate), JWT verification, and YUYV-to-JPEG
 conversion.
 
+A browser smoke test covers the docs login and try-it-out flow without a
+database or modem. It requires Node.js 22+ and Chrome/Chromium:
+
+```bash
+cd simcom_api_server
+dart run tool/build_docs_client.dart
+dart run tool/docs_test_server.dart &
+node tool/docs_browser_test.mjs
+```
+
+Stop the fake server after the test. CI runs the same flow in the
+`docs-browser` job.
+
 See `docs/roadmap.md` for SQLCipher/PostgreSQL encryption notes, TOTP, and
 face-recognition follow-up work.
 

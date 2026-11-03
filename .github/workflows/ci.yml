@@ -72,3 +72,47 @@ jobs:
       - name: Run modem library tests
         working-directory: simcom_modem
         run: dart test
+
+  docs-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install libserialport
+        run: sudo apt-get update && sudo apt-get install -y libserialport0
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Build docs client
+        working-directory: simcom_api_server
+        run: dart run tool/build_docs_client.dart
+
+      - name: Run docs browser smoke test
+        run: |
+          cd simcom_api_server
+          dart run tool/docs_test_server.dart > /tmp/docs-test-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8099/healthz >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          if ! curl -sf http://127.0.0.1:8099/healthz >/dev/null 2>&1; then
+            cat /tmp/docs-test-server.log
+            exit 1
+          fi
+          cd ..
+          node simcom_api_server/tool/docs_browser_test.mjs

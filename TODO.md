@@ -163,9 +163,11 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Deferred: full route tests need a Serverpod session/DB fixture; current
     service/auth/helper tests cover the underlying logic.
 
-- [ ] **Browser docs test in CI.**
+- [x] **Browser docs test in CI.**
   - Automate login, logout, unauthenticated execute, and authenticated execute.
   - Use the existing headless-browser flow or a lightweight Playwright setup.
+  - Implemented a fake docs server plus a Chrome DevTools smoke test; runs in
+    the `docs-browser` CI job.
 
 - [x] **Benchmark harness.**
   - Measure `/healthz`, `/token`, `/info`, `/`, and `/sms` with fake hardware.
