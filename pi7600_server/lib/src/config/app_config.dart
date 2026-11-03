@@ -27,6 +27,7 @@ class AppConfig {
     required this.logLevel,
     required this.pingInterface,
     required this.pingTargets,
+    required this.docsEnabled,
   });
 
   final String atCom;
@@ -52,6 +53,9 @@ class AppConfig {
   final String pingInterface;
   final List<String> pingTargets;
 
+  /// Whether `/docs` and `/openapi.json` are served.
+  final bool docsEnabled;
+
   static AppConfig fromEnvironment([Map<String, String>? environment]) {
     final env = _loadEnvironment(environment ?? Platform.environment);
 
@@ -65,6 +69,12 @@ class AppConfig {
 
     double decimal(String key, double fallback) =>
         double.tryParse(string(key, '$fallback')) ?? fallback;
+
+    bool boolean(String key, bool fallback) {
+      final value = string(key, '').toLowerCase();
+      if (value.isEmpty) return fallback;
+      return value == '1' || value == 'true' || value == 'yes' || value == 'on';
+    }
 
     final targets = string('PING_TARGETS', '1.1.1.1,www.google.com')
         .split(',')
@@ -99,6 +109,7 @@ class AppConfig {
       logLevel: string('LOG_LEVEL', 'INFO'),
       pingInterface: string('PING_INTERFACE', 'usb0'),
       pingTargets: targets.isEmpty ? const ['1.1.1.1'] : targets,
+      docsEnabled: boolean('DOCS_ENABLED', true),
     );
   }
 

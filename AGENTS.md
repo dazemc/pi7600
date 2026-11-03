@@ -72,7 +72,8 @@ cd pi7600_server && serverpod create-migration
 | `pi7600_server/lib/src/modem/` | `At`, stream-based serial transport, settings, SMS/PDU, GPS, phone |
 | `pi7600_server/lib/src/camera/` | V4L2 capture, video broadcaster, recognition interface |
 | `pi7600_server/lib/src/services/` | SMS/status business logic and service status Bloc |
-| `pi7600_server/lib/src/web/` | REST routes, WebSocket routes, `/readyz` middleware |
+| `pi7600_server/lib/src/web/` | REST/WebSocket routes, `/readyz` middleware, and the Jaspr `/docs` explorer |
+| `pi7600_server/lib/src/web/docs/` | Shared endpoint catalog, OpenAPI generator, and Jaspr docs page |
 | `pi7600_server/migrations/` | PostgreSQL migrations |
 | `pi7600_server/test/` | Hardware-free tests and fake serial transport |
 | `deploy/` | systemd unit and environment example |
@@ -91,6 +92,11 @@ cd pi7600_server && serverpod create-migration
 - **REST and WebSockets:** custom Relic routes are registered on
   `pod.webServer`. In production the web server port is `8000`; the Serverpod
   API/Insights ports are unused by the Pi7600 contract.
+- **Docs:** `GET /docs` is a server-rendered Jaspr page built from
+  `lib/src/web/docs/api_catalog.dart`; `GET /openapi.json` is generated from
+  the same catalog. The page's vanilla-JS asset sends requests from the
+  browser, so normal bearer/admin checks still apply. Disable the page and
+  schema with `PI7600_DOCS_ENABLED=false`.
 - **Database:** PostgreSQL through Serverpod's database layer. Schema changes
   are Serverpod migrations, not `create_all`. The development config launches
   an embedded PostgreSQL under `pi7600_server/.serverpod/`.

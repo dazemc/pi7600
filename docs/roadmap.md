@@ -55,3 +55,6 @@ pure Dart. Recognition is kept behind the `RecognitionBackend` interface:
 - WebSockets require a first message of
   `{"type": "auth", "token": "<jwt>"}` and close with `1008` on failure.
 - `/healthz` and `/readyz` are unauthenticated.
+- `/docs` is a server-rendered Jaspr API explorer driven by the same endpoint
+  catalog as `/openapi.json`; both are public and can be disabled with
+  `PI7600_DOCS_ENABLED=false`.

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:pi7600_server/src/app_services.dart';
 import 'package:pi7600_server/src/config/app_config.dart';
 import 'package:pi7600_server/src/web/routes/api_routes.dart';
+import 'package:pi7600_server/src/web/routes/docs_routes.dart';
 import 'package:pi7600_server/src/web/routes/readyz.dart';
 import 'package:pi7600_server/src/web/routes/websockets.dart';
 import 'package:serverpod/serverpod.dart';
@@ -27,6 +28,10 @@ void configureServer(Serverpod pod) {
     ..addRoute(SmsCleanupRoute(services), '/sms/cleanup/')
     ..addRoute(AtRoute(services), '/at')
     ..addRoute(HealthRoute(), '/healthz')
+    ..addRoute(DocsRoute(services.config.docsEnabled), '/docs')
+    ..addRoute(DocsStyleRoute(services.config.docsEnabled), '/docs/style.css')
+    ..addRoute(DocsScriptRoute(services.config.docsEnabled), '/docs/app.js')
+    ..addRoute(OpenApiRoute(services.config.docsEnabled), '/openapi.json')
     ..addRoute(EchoWebSocketRoute(services), '/wss')
     ..addRoute(VideoWebSocketRoute(services), '/wss/video');
 

@@ -99,6 +99,7 @@ file in the server working directory. Serverpod settings live in
 | `PI7600_WEBSOCKET_AUTH_TIMEOUT` | `5` | Seconds to wait for the auth message |
 | `PI7600_PING_INTERFACE` | `usb0` | Interface used for `data`/`dns` checks |
 | `PI7600_PING_TARGETS` | `1.1.1.1,www.google.com` | Ping targets for `data` and `dns` |
+| `PI7600_DOCS_ENABLED` | `true` | Serve the interactive `/docs` page and `/openapi.json` |
 | `SERVERPOD_RUN_MODE` | `development` | Serverpod run mode (`development`, `test`, `production`) |
 | `SERVERPOD_DATABASE_PASSWORD` | from `passwords.yaml` | PostgreSQL password |
 
@@ -152,7 +153,8 @@ Future<void> main() async {
 
 ## API
 
-All routes except `/token`, `/healthz`, and `/readyz` require a bearer token.
+All routes except `/token`, `/healthz`, `/readyz`, `/docs`, `/docs/*`, and
+`/openapi.json` require a bearer token.
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -166,11 +168,27 @@ All routes except `/token`, `/healthz`, and `/readyz` require a bearer token.
 | `POST` | `/at` | Send a raw AT command (**admin only**, audit-logged) |
 | `GET` | `/healthz` | Liveness |
 | `GET` | `/readyz` | Readiness (database check) |
+| `GET` | `/docs` | Interactive API explorer (FastAPI-style) |
+| `GET` | `/openapi.json` | OpenAPI 3.1 schema for the HTTP API |
 | `WS` | `/wss` | Authenticated echo |
 | `WS` | `/wss/video` | Authenticated JPEG frame stream |
 
 The REST payloads, status codes, JWT claims, and WebSocket authentication
 protocol match the previous Python service.
+
+### Interactive API explorer
+
+`GET /docs` serves a server-rendered Jaspr page that lists every HTTP and
+WebSocket endpoint. Expand an endpoint to edit path parameters, JSON bodies, or
+form fields, then press **Execute** to send the request from the browser. Paste
+a token from `POST /token` into the token bar; it is kept in `localStorage` for
+the current browser only. The page never bypasses the normal bearer/admin
+checks.
+
+`GET /openapi.json` returns the same endpoint catalog as an OpenAPI 3.1
+document, so the page and schema cannot drift apart. Both routes, and the
+`/docs/style.css` and `/docs/app.js` assets, are disabled with
+`PI7600_DOCS_ENABLED=false`.
 
 ### Modem status
 
