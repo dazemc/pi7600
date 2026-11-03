@@ -12,6 +12,7 @@ import 'package:simcom_api_server/src/data/message_store.dart';
 import 'package:simcom_api_server/src/data/user_store.dart';
 import 'package:simcom_api_server/src/services/audit_service.dart';
 import 'package:simcom_api_server/src/services/modem_info_service.dart';
+import 'package:simcom_api_server/src/services/modem_settings_service.dart';
 import 'package:simcom_api_server/src/services/service_status.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/services/status_service.dart';
@@ -141,6 +142,10 @@ class AppServices {
 
   ModemInfoService modemInfoService() {
     return ModemInfoService(modem: modem);
+  }
+
+  ModemSettingsService modemSettingsService() {
+    return ModemSettingsService(modem: modem);
   }
 
   AuditService auditService(Session session) {

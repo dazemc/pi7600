@@ -359,11 +359,43 @@ void main() {
     });
 
     test('requires authentication for the modem report', () async {
-      final result = await call(
+      final getResult = await call(
         ModemInfoRoute(services),
         buildRequest(Method.get, '/modem'),
       );
-      expect((await readJsonResponse(result)).$1, 401);
+      expect((await readJsonResponse(getResult)).$1, 401);
+
+      final patchResult = await call(
+        ModemInfoRoute(services),
+        buildRequest(
+          Method.patch,
+          '/modem',
+          body: jsonEncode({
+            'settings': {'AT+CMGF': '1'},
+          }),
+        ),
+      );
+      expect((await readJsonResponse(patchResult)).$1, 401);
+    });
+
+    test('requires admin for modem settings', () async {
+      final managed = makeUser(id: 2, name: 'managed', isAdmin: false);
+      db.users.addAll([makeUser(), managed]);
+      db.userLookups.add(managed);
+      final token = services.jwt.createToken('managed');
+
+      final result = await call(
+        ModemInfoRoute(services),
+        buildRequest(
+          Method.patch,
+          '/modem',
+          headers: {'authorization': bearer(token)},
+          body: jsonEncode({
+            'settings': {'AT+CMGF': '1'},
+          }),
+        ),
+      );
+      expect((await readJsonResponse(result)).$1, 403);
     });
 
     test('renders request metrics counters', () async {

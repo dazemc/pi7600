@@ -6,6 +6,7 @@ import 'package:simcom_api_server/src/auth/jwt_service.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
 import 'package:simcom_api_server/src/generated/user.dart';
 import 'package:simcom_api_server/src/services/audit_service.dart';
+import 'package:simcom_api_server/src/services/modem_settings_service.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/services/user_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
@@ -593,9 +594,9 @@ class InfoRoute extends Route {
   }
 }
 
-/// `GET /modem`
+/// `GET /modem` and `PATCH /modem`
 class ModemInfoRoute extends Route {
-  ModemInfoRoute(this.services) : super(methods: {Method.get});
+  ModemInfoRoute(this.services) : super(methods: {Method.get, Method.patch});
 
   final AppServices services;
 
@@ -603,6 +604,14 @@ class ModemInfoRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
+
+    if (request.method == Method.patch) {
+      if (auth.user!.isAdmin != true) {
+        return errorResponse(403, 'Administrator access required');
+      }
+      return _update(session, request, auth.user!);
+    }
+
     await services.ready;
     AppLog.info(
       '/modem GET: Accessed by ${auth.user!.userName}',
@@ -611,6 +620,69 @@ class ModemInfoRoute extends Route {
     final status = await services.status.status();
     final info = await services.modemInfoService().read();
     return jsonResponse({...status.toJson(), ...info});
+  }
+
+  Future<Result> _update(Session session, Request request, User actor) async {
+    await services.ready;
+
+    final body = await readJsonObject(request);
+    if (body == null) return errorResponse(422, 'Invalid JSON body');
+
+    final rawSettings = body['settings'];
+    if (rawSettings is! Map) {
+      return errorResponse(422, 'settings object is required');
+    }
+
+    final settings = <String, String>{};
+    for (final entry in rawSettings.entries) {
+      if (entry.key is! String || entry.value is! String) {
+        return errorResponse(422, 'settings keys and values must be strings');
+      }
+      settings[entry.key as String] = entry.value as String;
+    }
+
+    final save = body['save'];
+    if (save != null && save is! bool) {
+      return errorResponse(422, 'save must be a boolean');
+    }
+    if (settings.isEmpty && save != true) {
+      return errorResponse(422, 'No settings to apply');
+    }
+
+    List<ModemSettingResult> results;
+    try {
+      results = await services.modemSettingsService().apply(
+        settings,
+        save: save == true,
+      );
+    } on ModemSettingException catch (error) {
+      return errorResponse(422, error.message);
+    }
+
+    for (final result in results) {
+      AppLog.audit(
+        'Modem setting by ${actor.userName}: '
+        '${redactAtCommand(result.command)} '
+        'response=${auditAtResponse(result.command, result.response)}',
+      );
+    }
+    await services
+        .auditService(session)
+        .record(
+          eventType: 'modem_settings',
+          userName: actor.userName,
+          remoteAddress: request.connectionInfo.remote.address.toString(),
+          success: results.every((result) => result.success),
+          detail: results
+              .map((result) => redactAtCommand(result.command))
+              .join(';'),
+        );
+
+    return jsonResponse({
+      'success': results.every((result) => result.success),
+      'results': results.map((result) => result.toJson()).toList(),
+      'saved': save == true,
+    });
   }
 }
 

@@ -49,6 +49,9 @@ void main() {
         ]),
       );
 
+      final modem = paths['/modem'] as Map<String, Object?>;
+      expect(modem.keys, containsAll(['get', 'patch']));
+
       final sms = paths['/sms'] as Map<String, Object?>;
       expect(sms.keys, containsAll(['get', 'post']));
       final smsGet = sms['get'] as Map<String, Object?>;

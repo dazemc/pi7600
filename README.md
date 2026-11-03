@@ -245,6 +245,7 @@ All routes except `/token`, `/token/refresh`, `/healthz`, `/readyz`, `/docs`,
 | `POST` | `/totp/enable` | Enable TOTP with the first code |
 | `POST` | `/totp/disable` | Disable TOTP |
 | `GET` | `/modem` | Modem status summary plus full settings/status report |
+| `PATCH` | `/modem` | Apply modem settings and optionally save them (**admin only**) |
 | `GET` | `/info` | Hostname, kernel, date, architecture |
 | `GET` | `/gps` | Current GPS fix and Google Maps link |
 | `GET` | `/camera/snapshot` | Latest camera frame as JPEG |
@@ -280,6 +281,29 @@ settings dump.
 The response contains parsed core values under `parsed`, raw responses grouped
 under `sections`, and every command response under `raw`. Unsupported commands
 are reported with their error response instead of being omitted.
+
+### Changing modem settings
+
+`PATCH /modem` applies settings in order. Keys are AT command bases without
+`=`, and values are the text after `=`:
+
+```bash
+curl -X PATCH -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "settings": {
+      "AT+CMGF": "1",
+      "AT+CSCS": "\"GSM\"",
+      "AT+CMEE": "2"
+    },
+    "save": true
+  }' \
+  http://localhost:8082/modem
+```
+
+The response reports success and the raw response for every command. `save`
+runs `AT&W`. Use `/at` for arbitrary AT actions or commands outside the setting
+syntax. Settings are admin-only and audited.
 
 ### Interactive API explorer
 

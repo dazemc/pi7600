@@ -330,6 +330,28 @@ const apiEndpoints = <ApiEndpoint>[
     },
   ),
   ApiEndpoint(
+    method: 'PATCH',
+    path: '/modem',
+    summary: 'Apply modem settings (admin only)',
+    description:
+        'Applies a map of AT setting base commands to values in order, for '
+        'example `AT+CMGF` -> `1` or `AT+CSCS` -> `"GSM"`. Values are inserted '
+        'after `=`; send an empty value for commands that take no argument. '
+        'Set `save` to also run `AT&W` and persist the settings. Every command '
+        'and response is audited.',
+    auth: ApiAuth.admin,
+    jsonBody:
+        '{\n  "settings": {\n    "AT+CMGF": "1",\n'
+        '    "AT+CSCS": "\\"GSM\\"",\n'
+        '    "AT+CMEE": "2"\n  },\n  "save": true\n}',
+    responses: {
+      '200': 'Per-command results and overall success',
+      '401': 'Authentication required',
+      '403': 'Administrator access required',
+      '422': 'Invalid JSON, command, value, or request',
+    },
+  ),
+  ApiEndpoint(
     method: 'GET',
     path: '/info',
     summary: 'Host information',
