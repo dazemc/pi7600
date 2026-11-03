@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
@@ -50,6 +51,7 @@ class JwtService {
   /// Verify [token] and return its subject.
   String verifyToken(String token) {
     try {
+      _requireRs256(token);
       final jwt = JWT.verify(
         token,
         _verificationKey,
@@ -70,6 +72,23 @@ class JwtService {
       throw TokenException(error.message);
     } catch (error) {
       throw TokenException('$error');
+    }
+  }
+
+  static void _requireRs256(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) throw TokenException('invalid token');
+    try {
+      final header = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[0]))),
+      );
+      if (header is! Map || header['alg'] != 'RS256') {
+        throw TokenException('unsupported token algorithm');
+      }
+    } on TokenException {
+      rethrow;
+    } on Object {
+      throw TokenException('invalid token header');
     }
   }
 }

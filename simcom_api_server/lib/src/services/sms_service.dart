@@ -10,9 +10,13 @@ class SmsDeliveryException implements Exception {
 }
 
 class ModemDeleteException implements Exception {
-  ModemDeleteException(this.messageIndex);
+  ModemDeleteException(
+    this.messageIndex, {
+    this.reason = 'modem delete failed',
+  });
 
-  final int messageIndex;
+  final int? messageIndex;
+  final String reason;
 }
 
 /// Business logic for persisting and sending SMS messages.
@@ -73,7 +77,7 @@ class SmsService {
       ),
     );
 
-    if (message.messageType == 'SENT' && row.isSent != true) {
+    if (message.messageType == 'SENT' && message.isSent == false) {
       final destination = message.messageDestinationAddress;
       if (destination == null) {
         throw SmsDeliveryException(row);
@@ -117,13 +121,17 @@ class SmsService {
     final message = await store.findById(id);
     if (message == null) return false;
 
-    if (message.inSimMemory == true && message.messageIndex != null) {
-      final index = int.tryParse(message.messageIndex!);
-      if (index != null) {
-        final deleted = await sms.deleteMessage(index);
-        if (!deleted) {
-          throw ModemDeleteException(index);
-        }
+    if (message.inSimMemory == true) {
+      final index = int.tryParse(message.messageIndex ?? '');
+      if (index == null) {
+        throw ModemDeleteException(
+          null,
+          reason: 'SIM message has no modem index',
+        );
+      }
+      final deleted = await sms.deleteMessage(index);
+      if (!deleted) {
+        throw ModemDeleteException(index);
       }
     }
 
@@ -135,18 +143,22 @@ class SmsService {
   Future<void> cleanupSimMessages() async {
     final messages = await store.findInSimMemory();
     for (final message in messages) {
-      if (message.messageIndex != null) {
-        final index = int.tryParse(message.messageIndex!);
-        if (index != null) {
-          final deleted = await sms.deleteMessage(index);
-          if (!deleted) {
-            AppLog.warning(
-              'Unable to delete modem message ${message.messageIndex}',
-              name: 'pi7600.sms',
-            );
-            continue;
-          }
-        }
+      final index = int.tryParse(message.messageIndex ?? '');
+      if (index == null) {
+        AppLog.warning(
+          'SIM message ${message.id} has no modem index; leaving it in place',
+          name: 'pi7600.sms',
+        );
+        continue;
+      }
+
+      final deleted = await sms.deleteMessage(index);
+      if (!deleted) {
+        AppLog.warning(
+          'Unable to delete modem message ${message.messageIndex}',
+          name: 'pi7600.sms',
+        );
+        continue;
       }
       message.inSimMemory = false;
       await store.update(message);

@@ -92,17 +92,20 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Consider batching SMS persistence/upserts once the fingerprint index is in
     place.
   - Do not change API response shapes for this work.
+  - Evaluated: the composite SMS index is the main win and the default pool is
+    adequate for the Pi workload. Unix-socket and batching changes are deferred
+    until measurements show a need.
 
 ## Correctness and security
 
-- [ ] **Await `AppServices.ready` in hardware routes.**
+- [x] **Await `AppServices.ready` in hardware routes.**
   - `StatusRoute`, `SmsRoute`, `SmsDeleteRoute`, `SmsCleanupRoute`, and
     `AtRoute` can touch the modem before `ModemSettings.initialize()` runs.
   - Await `services.ready` before hardware use; readiness completes even when
     hardware fails, so the existing `ERROR` behavior remains.
   - Add a startup-race regression test if practical.
 
-- [ ] **Prevent duplicate sends of parsed `SENT` messages.**
+- [x] **Prevent duplicate sends of parsed `SENT` messages.**
   - `SmsService.createMessage` sends when `messageType == 'SENT'` and
     `isSent != true`.
   - Change the condition to only send when `isSent == false`, or mark parsed
@@ -118,20 +121,20 @@ Backlog for the `simcom_api` service and `simcom_modem` library.
   - Replace `DateTime.now()` frame timing with `Stopwatch` so NTP jumps do not
     cause bursts or stalls.
 
-- [ ] **Pin JWT verification to RS256.**
+- [x] **Pin JWT verification to RS256.**
   - Reject tokens whose header algorithm is not `RS256` before verification.
   - Keep issuer, expiry, and subject checks unchanged.
 
-- [ ] **Redact sensitive `/at` audit logs.**
+- [x] **Redact sensitive `/at` audit logs.**
   - Avoid logging PIN/password values from commands such as `AT+CPIN`,
     `AT+CLCK`, and `AT+CPWD`.
   - Keep the admin audit trail without leaking secrets.
 
-- [ ] **Handle malformed token form bodies.**
+- [x] **Handle malformed token form bodies.**
   - Catch `FormatException` from `Uri.splitQueryString` and return a controlled
     `422` instead of a 500.
 
-- [ ] **Handle SMS rows marked in SIM without a `messageIndex`.**
+- [x] **Handle SMS rows marked in SIM without a `messageIndex`.**
   - Delete/cleanup currently skips the modem operation and removes/updates the
     row, so the message can be re-imported.
   - Log or return a controlled error and decide whether the row should remain.

@@ -79,6 +79,24 @@ void main() {
       expect(() => jwt.verifyToken(tampered), throwsA(isA<TokenException>()));
     });
 
+    test('rejects a token with a non-RS256 header', () {
+      final token = jwt.createToken('alice');
+      final parts = token.split('.');
+      final header =
+          jsonDecode(
+                utf8.decode(
+                  base64Url.decode(base64Url.normalize(parts[0])),
+                ),
+              )
+              as Map<String, dynamic>;
+      header['alg'] = 'HS256';
+      final forged =
+          '${base64Url.encode(utf8.encode(jsonEncode(header)))}.'
+          '${parts[1]}.${parts[2]}';
+
+      expect(() => jwt.verifyToken(forged), throwsA(isA<TokenException>()));
+    });
+
     test('reports missing key files as a TokenException', () {
       final missing = JwtService(
         privateKeyPath: 'test/fixtures/missing.pem',

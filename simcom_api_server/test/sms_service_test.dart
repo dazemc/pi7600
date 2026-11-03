@@ -72,6 +72,7 @@ class FakeSms extends Sms {
       );
 
   final List<int> deleted = [];
+  final List<(String, String)> sent = [];
   List<ParsedMessage> inbox = const [];
   bool sendSucceeds = true;
 
@@ -80,6 +81,7 @@ class FakeSms extends Sms {
 
   @override
   Future<bool> sendMessage(String phoneNumber, String textMessage) async {
+    sent.add((phoneNumber, textMessage));
     return sendSucceeds;
   }
 
@@ -163,6 +165,27 @@ void main() {
     expect(store.rows.single.isSent, isTrue);
   });
 
+  test(
+    'does not resend a parsed SENT message with unknown sent state',
+    () async {
+      final parsed = ParsedMessage(
+        messageIndex: '4',
+        messageType: 'SENT',
+        messageDestinationAddress: '+31612345678',
+        messageDate: '2026-01-02',
+        messageTime: '03:04:05',
+        messageContents: 'Already sent',
+        isPartial: false,
+        inSimMemory: true,
+      );
+
+      final message = await service.createMessage(parsed);
+
+      expect(message.isSent, isNull);
+      expect(sms.sent, isEmpty);
+    },
+  );
+
   test('sendMessage throws when the modem rejects the message', () async {
     sms.sendSucceeds = false;
 
@@ -180,6 +203,17 @@ void main() {
     expect(deleted, isTrue);
     expect(sms.deleted, [4]);
     expect(store.rows, isEmpty);
+  });
+
+  test('deleteMessage refuses a SIM row without a modem index', () async {
+    final message = await service.createMessage(incoming(index: null));
+
+    await expectLater(
+      service.deleteMessage(message.id!),
+      throwsA(isA<ModemDeleteException>()),
+    );
+    expect(store.rows, hasLength(1));
+    expect(sms.deleted, isEmpty);
   });
 
   test('deleteMessage returns false for an unknown id', () async {
@@ -206,6 +240,15 @@ void main() {
 
     expect(sms.deleted, [4, 5]);
     expect(store.rows.every((row) => row.inSimMemory == false), isTrue);
+  });
+
+  test('cleanup leaves rows without a modem index in place', () async {
+    await service.createMessage(incoming(index: null));
+
+    await service.cleanupSimMessages();
+
+    expect(store.rows.single.inSimMemory, isTrue);
+    expect(sms.deleted, isEmpty);
   });
 
   test('Sms reads the modem timezone when parsing, not at construction', () {

@@ -4,6 +4,7 @@ import 'package:simcom_api_server/src/app_services.dart';
 import 'package:simcom_api_server/src/generated/message.dart';
 import 'package:simcom_api_server/src/services/sms_service.dart';
 import 'package:simcom_api_server/src/util/app_log.dart';
+import 'package:simcom_api_server/src/web/at_audit.dart';
 import 'package:simcom_api_server/src/web/http.dart';
 import 'package:serverpod/serverpod.dart' hide Message;
 
@@ -36,7 +37,12 @@ class TokenRoute extends Route {
   @override
   FutureOr<Result> handleCall(Session session, Request request) async {
     final body = await request.readAsString();
-    final form = Uri.splitQueryString(body);
+    final Map<String, String> form;
+    try {
+      form = Uri.splitQueryString(body);
+    } on Object {
+      return errorResponse(422, 'Invalid form body');
+    }
     final username = form['username'];
     final password = form['password'];
     if (username == null || password == null) {
@@ -74,6 +80,7 @@ class StatusRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
     AppLog.info(
       '/ GET: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
@@ -123,6 +130,7 @@ class SmsRoute extends Route {
   Future<Result> _list(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
     AppLog.info(
       '/sms GET: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
@@ -134,6 +142,7 @@ class SmsRoute extends Route {
   Future<Result> _create(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
     AppLog.info(
       '/sms POST: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
@@ -170,6 +179,7 @@ class SmsDeleteRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
     AppLog.info(
       '/sms/delete DELETE: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
@@ -188,10 +198,10 @@ class SmsDeleteRoute extends Route {
       }
       return jsonResponse({'response': 'Ok'}, status: 202);
     } on ModemDeleteException catch (error) {
-      return errorResponse(
-        502,
-        'Modem could not delete message ${error.messageIndex}',
-      );
+      final target = error.messageIndex == null
+          ? error.reason
+          : 'message ${error.messageIndex}';
+      return errorResponse(502, 'Modem could not delete $target');
     }
   }
 }
@@ -206,6 +216,7 @@ class SmsCleanupRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateRequest(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
     AppLog.info(
       '/sms/cleanup DELETE: Accessed by ${auth.user!.userName}',
       name: 'pi7600',
@@ -225,22 +236,23 @@ class AtRoute extends Route {
   FutureOr<Result> handleCall(Session session, Request request) async {
     final auth = await authenticateAdmin(session, request, services);
     if (!auth.isAuthenticated) return auth.error!;
+    await services.ready;
 
     final body = await readJsonObject(request);
     final command = body?['cmd'] is String ? body!['cmd'] as String : 'AT';
+    final auditCommand = redactAtCommand(command);
 
     AppLog.audit(
-      'AT audit: user=${auth.user!.userName} cmd=$command',
+      'AT audit: user=${auth.user!.userName} cmd=$auditCommand',
     );
     final response = await services.modem.sendRaw(
       command,
       timeoutSeconds: services.config.atTimeout,
     );
-    final preview = response.length > 500
-        ? response.substring(0, 500)
-        : response;
+    final preview = auditAtResponse(command, response);
     AppLog.audit(
-      'AT audit: user=${auth.user!.userName} cmd=$command response=$preview',
+      'AT audit: user=${auth.user!.userName} cmd=$auditCommand '
+      'response=$preview',
     );
     return jsonResponse(response, status: 202);
   }
