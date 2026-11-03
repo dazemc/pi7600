@@ -1,7 +1,6 @@
-from typing import Optional
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, Integer, String, Boolean, LargeBinary
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Boolean, Column, Integer, LargeBinary, String
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
@@ -30,20 +29,20 @@ class MessageCreate(Base):
 
 # SMS
 class Messages(BaseModel):
-    id: Optional[int] = None
-    message_index: Optional[str] = None
+    id: int | None = None
+    message_index: str | None = None
     message_type: str
-    message_originating_address: Optional[str] = None
-    message_destination_address: Optional[str] = None
+    message_originating_address: str | None = None
+    message_destination_address: str | None = None
     message_date: str
     message_time: str
     message_contents: str
-    partial_key: Optional[str] = None
-    partial_count: Optional[int] = None
-    partial_index: Optional[int] = None
+    partial_key: str | None = None
+    partial_count: int | None = None
+    partial_index: int | None = None
     is_partial: bool
     in_sim_memory: bool
-    is_sent: Optional[bool] = None
+    is_sent: bool | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,20 +52,22 @@ class UserDB(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_name = Column(String, nullable=False)
+    user_name = Column(String, nullable=False, unique=True, index=True)
     user_password = Column(LargeBinary, nullable=False)
     user_full_name = Column(String, nullable=True)
     user_email = Column(String, nullable=True)
     is_disabled = Column(Boolean, nullable=False, default=False)
+    is_admin = Column(Boolean, nullable=False, default=False)
 
 
 # User Validation
 class User(BaseModel):
     user_name: str
     user_password: str
-    user_full_name: Optional[str] = None
-    user_email: Optional[str] = None
-    is_disabled: Optional[bool] = False
+    user_full_name: str | None = None
+    user_email: str | None = None
+    is_disabled: bool = False
+    is_admin: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -89,7 +90,7 @@ class StatusResponse(BaseModel):
     data: str
     dns: str
     apn: str
-    timezone: int
+    timezone: int | None = None
 
 
 class SendMessageRequest(BaseModel):
@@ -99,3 +100,17 @@ class SendMessageRequest(BaseModel):
 
 class AtRequest(BaseModel):
     cmd: str = "AT"
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class DeleteResponse(BaseModel):
+    response: str
+
+
+class HealthResponse(BaseModel):
+    status: str
+    detail: str | None = None

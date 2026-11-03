@@ -1,49 +1,59 @@
-import jwt
+from datetime import UTC, datetime, timedelta
+from functools import lru_cache
+from pathlib import Path
+
 import bcrypt
-from datetime import datetime, timedelta, timezone
+import jwt
+
+from Config import get_settings
 
 
-PRIVATE_KEY_PATH = ".keys/private.pem"
-PUBLIC_KEY_PATH = ".keys/public.pem"
-EXPIRE_MINUTES = 30
+class TokenError(Exception):
+    """Raised when a JWT is missing, malformed, expired, or invalid."""
 
 
-with open(PRIVATE_KEY_PATH, "r") as file:
-    PRIVATE_KEY = file.read()
+@lru_cache(maxsize=1)
+def _load_keys() -> tuple[str, str]:
+    settings = get_settings()
+    private_key = Path(settings.jwt_private_key_path).read_text(encoding="utf-8")
+    public_key = Path(settings.jwt_public_key_path).read_text(encoding="utf-8")
+    return private_key, public_key
 
-with open(PUBLIC_KEY_PATH, "r") as file:
-    PUBLIC_KEY = file.read()
 
-
-def create_jwt(
-    data: dict, expires_delta: timedelta = timedelta(minutes=EXPIRE_MINUTES)
-):
+def create_jwt(data: dict, expires_delta: timedelta | None = None) -> str:
+    settings = get_settings()
+    private_key, _ = _load_keys()
+    now = datetime.now(UTC)
     payload = data.copy()
-    payload["exp"] = datetime.now(timezone.utc) + expires_delta
-    payload["iat"] = datetime.now(timezone.utc)
-    payload["iss"] = "pi.daazed.dev"
-    return jwt.encode(payload, PRIVATE_KEY, algorithm="RS256")
+    payload["exp"] = now + (
+        expires_delta
+        if expires_delta is not None
+        else timedelta(minutes=settings.jwt_expire_minutes)
+    )
+    payload["iat"] = now
+    payload["iss"] = settings.jwt_issuer
+    return jwt.encode(payload, private_key, algorithm="RS256")
 
 
-def verify_jwt(token: str):
+def verify_jwt(token: str) -> dict:
+    settings = get_settings()
+    _, public_key = _load_keys()
     try:
-        payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise ValueError("TOKEN EXPIRED")
-    except jwt.InvalidTokenError:
-        raise ValueError("INVALID TOKEN")
+        return jwt.decode(
+            token,
+            public_key,
+            algorithms=["RS256"],
+            issuer=settings.jwt_issuer,
+        )
+    except jwt.ExpiredSignatureError as exc:
+        raise TokenError("token expired") from exc
+    except jwt.InvalidTokenError as exc:
+        raise TokenError("invalid token") from exc
 
 
-def verify_password(password, hashed_password):
-    return bcrypt.checkpw(
-        bytes(password, encoding="utf-8"),
-        hashed_password,
-    )
+def verify_password(password: str, hashed_password: bytes) -> bool:
+    return bcrypt.checkpw(password.encode("utf-8"), hashed_password)
 
 
-def hash_password(password):
-    return bcrypt.hashpw(
-        bytes(password, encoding="utf-8"),
-        bcrypt.gensalt(),
-    )
+def hash_password(password: str) -> bytes:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
